@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { opcionesAuth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+// GET /api/reservas/mis-reservas — reservas del usuario autenticado
+export async function GET() {
+  const sesion = await getServerSession(opcionesAuth)
+  if (!sesion) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+  }
+
+  const ahora = new Date()
+
+  const [activas, historial] = await Promise.all([
+    // Reservas activas con hora de inicio futura
+    prisma.reserva.findMany({
+      where: {
+        usuarioId: sesion.user.id,
+        estado: "ACTIVA",
+        horaInicio: { gte: ahora },
+      },
+      include: { instalacion: { select: { id: true, nombre: true } } },
+      orderBy: { horaInicio: "asc" },
+    }),
+    // Historial: canceladas o cuya hora ya pasó
+    prisma.reserva.findMany({
+      where: {
+        usuarioId: sesion.user.id,
+        OR: [{ estado: "CANCELADA" }, { horaInicio: { lt: ahora } }],
+      },
+      include: { instalacion: { select: { id: true, nombre: true } } },
+      orderBy: { horaInicio: "desc" },
+      take: 20, // últimas 20 entradas del historial
+    }),
+  ])
+
+  return NextResponse.json({ activas, historial })
+}

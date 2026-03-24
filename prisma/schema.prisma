@@ -1,0 +1,89 @@
+// Esquema de base de datos — Sistema de Reservas Deportivas Municipales
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Modelos ─────────────────────────────────────────────────────────────────
+// Nota: SQLite no soporta enums nativos en Prisma.
+// Los campos de tipo enum se almacenan como String con valores controlados por la app:
+//   rol           → "CIUDADANO" | "ADMIN"
+//   tipo          → "PADEL" (extensible a otros tipos en el futuro)
+//   estado        → "ACTIVA" | "CANCELADA"
+
+// Usuario: ciudadanos y administradores del ayuntamiento
+model Usuario {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  nombre        String
+  passwordHash  String
+  rol           String   @default("CIUDADANO") // "CIUDADANO" | "ADMIN"
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  reservas           Reserva[] @relation("UsuarioReservas")
+  reservasCanceladas Reserva[] @relation("CanceladorReservas")
+  bloqueosCreados    Bloqueo[] @relation("AdminBloqueos")
+}
+
+// Instalacion: cada pista de pádel del complejo deportivo municipal
+model Instalacion {
+  id          String   @id @default(uuid())
+  nombre      String   @unique
+  tipo        String   // "PADEL" | "PISCINA"
+  descripcion String?
+  activa      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  // Relaciones
+  reservas Reserva[]
+  bloqueos Bloqueo[]
+}
+
+// Reserva: reserva de un ciudadano en una instalación para un slot de 1 hora
+model Reserva {
+  id            String   @id @default(uuid())
+  usuarioId     String
+  instalacionId String
+  fecha         DateTime
+  horaInicio    DateTime
+  horaFin       DateTime
+  estado        String   @default("ACTIVA") // "ACTIVA" | "CANCELADA"
+  creadoEn      DateTime @default(now())
+  canceladoEn   DateTime?
+  canceladoPor  String?
+
+  // Relaciones
+  usuario     Usuario     @relation("UsuarioReservas", fields: [usuarioId], references: [id])
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id])
+  cancelador  Usuario?    @relation("CanceladorReservas", fields: [canceladoPor], references: [id])
+
+  // Índices para búsquedas frecuentes y control de duplicados
+  @@index([instalacionId, fecha, horaInicio])
+  @@index([usuarioId, estado])
+}
+
+// Bloqueo: bloqueo de instalación por admin (mantenimiento, festivo, cierre, etc.)
+model Bloqueo {
+  id            String      @id @default(uuid())
+  instalacionId String
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  motivo        String
+  creadoPorId   String
+  creadoEn      DateTime    @default(now())
+  activo        Boolean     @default(true)
+
+  // Relaciones
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id])
+  creadoPor   Usuario     @relation("AdminBloqueos", fields: [creadoPorId], references: [id])
+
+  @@index([instalacionId, fechaInicio, fechaFin])
+}
