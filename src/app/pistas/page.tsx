@@ -1,0 +1,125 @@
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { opcionesAuth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+
+// Tipo que devuelve Prisma para una instalacion
+interface Instalacion {
+  id: string
+  nombre: string
+  tipo: string
+  descripcion: string | null
+  horario: string
+  activa: boolean
+}
+
+// Devuelve la etiqueta legible del tipo de instalacion
+function etiquetaTipo(tipo: string): string {
+  switch (tipo) {
+    case "PADEL": return "Padel"
+    case "PISCINA": return "Piscina"
+    default: return tipo
+  }
+}
+
+export default async function PaginaPistas() {
+  // Proteccion de ruta: si no hay sesion, redirige al login
+  const sesion = await getServerSession(opcionesAuth)
+  if (!sesion) {
+    redirect("/login")
+  }
+
+  // Fetch de instalaciones directamente en el servidor con Prisma
+  const instalaciones: Instalacion[] = await prisma.instalacion.findMany({
+    where: { activa: true },
+    select: { id: true, nombre: true, tipo: true, descripcion: true, horario: true, activa: true },
+    orderBy: { nombre: "asc" },
+  })
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        {/* Cabecera */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Pistas deportivas</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Selecciona una pista para ver su disponibilidad y reservar
+          </p>
+        </div>
+
+        {/* Sin instalaciones disponibles */}
+        {instalaciones.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
+            No hay pistas disponibles en este momento
+          </div>
+        )}
+
+        {/* Grid de tarjetas de instalaciones */}
+        {instalaciones.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {instalaciones.map((pista) => (
+              <Card key={pista.id} className="flex flex-col">
+                <CardHeader>
+                  {/* Indicador visual del tipo de pista */}
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${
+                      pista.tipo === "PADEL" ? "bg-blue-100" : "bg-cyan-100"
+                    }`}
+                  >
+                    <span
+                      className={`text-lg font-bold ${
+                        pista.tipo === "PADEL" ? "text-blue-600" : "text-cyan-600"
+                      }`}
+                    >
+                      {pista.tipo === "PADEL" ? "P" : "N"}
+                    </span>
+                  </div>
+                  <CardTitle className="text-base leading-tight">{pista.nombre}</CardTitle>
+                  <CardDescription>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs font-medium uppercase tracking-wide text-blue-700 bg-blue-50 hover:bg-blue-50"
+                    >
+                      {etiquetaTipo(pista.tipo)}
+                    </Badge>
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="flex-1 space-y-2">
+                  {pista.descripcion ? (
+                    <p className="text-sm text-gray-600">{pista.descripcion}</p>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Sin descripcion</p>
+                  )}
+                  <div className="text-xs text-gray-600 border-t border-gray-200 pt-2 mt-2">
+                    <p className="font-medium">Horario:</p>
+                    <p>{pista.horario}</p>
+                  </div>
+                </CardContent>
+
+                <CardFooter>
+                  <Link
+                    href={`/pistas/${pista.id}`}
+                    className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                  >
+                    Ver disponibilidad
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  )
+}
