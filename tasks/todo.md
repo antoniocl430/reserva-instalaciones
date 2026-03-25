@@ -48,6 +48,73 @@
 
 ## Bloque 2 — Funcionalidad ciudadano (en progreso)
 
+---
+
+## US-17: Admin crea reservas manualmente a nombre de ciudadanos
+
+### Plan de implementación
+
+**Backend:**
+- [x] 1. Añadir schema `schemaCrearReservaAdmin` en `src/lib/validaciones.ts`
+  - Campos: usuarioId, instalacionId, fecha, horaInicio
+  - Validaciones: fecha regex `/^\d{4}-\d{2}-\d{2}$/`, horaInicio en SLOTS_VALIDOS
+  - NO incluir límite de 2 reservas en validaciones (será en el endpoint)
+
+- [x] 2. Añadir POST handler en `src/app/api/admin/reservas/route.ts`
+  - Validar sesión + rol ADMIN
+  - Parsing con Zod del schema anterior
+  - Obtener datos instalación y usuario (validar existencia)
+  - Construir horaInicio y horaFin con `crearHoraEnMadrid`
+  - Verificar bloqueos activos (igual que ciudadano)
+  - Usar transacción para verificar slot disponible + crear
+  - NO verificar límite de 2 reservas (admin saltea la regla)
+  - Respuesta 201 con reserva creada
+  - try/catch con 500
+
+- [x] 3. Crear `src/app/api/admin/ciudadanos/route.ts` con GET
+  - Validar sesión + rol ADMIN
+  - Devolver usuarios con rol CIUDADANO y activo=true
+  - Devolver: id, nombre, email
+  - try/catch con 500
+
+**Frontend:**
+- [x] 4. Crear Dialog "Nueva reserva" en `src/app/admin/(panel)/reservas/page.tsx`
+  - Botón "Nueva reserva" junto al título h1
+  - Dialog con formulario:
+    - Select de usuario (fetch GET /api/admin/ciudadanos)
+    - Select de pista (fetch GET /api/admin/pistas)
+    - Input date para fecha
+    - Select de hora inicio (7 slots: 08:00, 09:15, 10:30, 11:45, 16:45, 18:00, 19:15)
+    - Botón "Crear reserva" (POST /api/admin/reservas)
+  - Al cerrar o crear exitosamente: recargar lista de reservas
+  - Manejo de errores: mostrar en Alert
+
+- [x] 5. Verificación
+  - Compilar: `npx tsc --noEmit` ✓ OK
+
+### Criterios de aceptación
+- [x] POST /api/admin/reservas crea reserva sin límite de 2 (admin saltea)
+- [x] GET /api/admin/ciudadanos devuelve lista de ciudadanos activos
+- [x] Dialog permite seleccionar usuario, pista, fecha, hora
+- [x] Reserva creada aparece inmediatamente en tabla
+- [x] Errores se muestran en Alert
+
+### Revisión — US-17 (completado 2026-03-25)
+- Schema `schemaCrearReservaAdmin` añadido a validaciones.ts con los 4 campos requeridos
+- POST /api/admin/reservas implementado con:
+  - Validación de sesión + rol ADMIN
+  - Verificación de usuario activo y existencia de instalación
+  - Bloqueos activos verificados
+  - Transacción con re-verificación de slot disponible
+  - NO se aplica límite de 2 reservas para admins
+  - Respuesta 201 con reserva creada
+- GET /api/admin/ciudadanos implementado: devuelve ciudadanos activos ordenados por nombre
+- Frontend: Dialog "Nueva reserva" con selects para usuario, pista, fecha e inputs funcionales
+- Button "Nueva reserva" añadido junto al título de la página
+- Carga de ciudadanos y pistas al abrir dialog, validación de campos completos
+- Recarga automática de lista tras crear reserva exitosamente
+- TypeScript sin errores (npx tsc --noEmit)
+
 ### Backend — API Routes
 - [x] `middleware.ts` — proteger /dashboard, /pistas, /mis-reservas (redirige a /login si no autenticado)
 - [x] `GET /api/instalaciones` — lista pistas activas

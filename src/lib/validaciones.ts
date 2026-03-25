@@ -94,3 +94,18 @@ export const schemaCrearUsuarioAdmin = z.object({
 })
 
 export type CrearUsuarioAdminInput = z.infer<typeof schemaCrearUsuarioAdmin>
+
+/**
+ * Schema para crear una reserva manualmente (admin)
+ */
+export const schemaCrearReservaAdmin = z.object({
+  usuarioId: z.string().min(1, "El usuario es obligatorio"),
+  instalacionId: z.string().min(1, "La instalación es obligatoria"),
+  fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  horaInicio: z.enum(SLOTS_VALIDOS as [string, ...string[]]).refine(
+    (val) => SLOTS_VALIDOS.includes(val),
+    { message: "La hora de inicio no corresponde a un slot válido" }
+  ),
+})
+
+export type CrearReservaAdminInput = z.infer<typeof schemaCrearReservaAdmin>

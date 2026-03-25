@@ -37,6 +37,17 @@ interface Reserva {
   }
 }
 
+interface Ciudadano {
+  id: string
+  nombre: string
+  email: string
+}
+
+interface Pista {
+  id: string
+  nombre: string
+}
+
 export default function PaginaReservasAdmin() {
   const [reservas, setReservas] = useState<Reserva[]>([])
   const [cargando, setCargando] = useState(true)
@@ -46,6 +57,19 @@ export default function PaginaReservasAdmin() {
   const [dialogCancelar, setDialogCancelar] = useState(false)
   const [reservaSeleccionada, setReservaSeleccionada] = useState<Reserva | null>(null)
   const [cancelando, setCancelando] = useState(false)
+
+  // Dialog para crear nueva reserva
+  const [dialogNuevaReserva, setDialogNuevaReserva] = useState(false)
+  const [ciudadanos, setCiudadanos] = useState<Ciudadano[]>([])
+  const [pistas, setPistas] = useState<Pista[]>([])
+  const [cargandoSelects, setCargandoSelects] = useState(false)
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState("")
+  const [pistaSeleccionada, setPistaSeleccionada] = useState("")
+  const [fechaNuevaReserva, setFechaNuevaReserva] = useState("")
+  const [horaNuevaReserva, setHoraNuevaReserva] = useState("")
+  const [creandoReserva, setCreandoReserva] = useState(false)
+
+  const SLOTS_DISPONIBLES = ["08:00", "09:15", "10:30", "11:45", "16:45", "18:00", "19:15"]
 
   // Cargar reservas
   async function cargarReservas() {
@@ -69,9 +93,82 @@ export default function PaginaReservasAdmin() {
     }
   }
 
+  // Cargar ciudadanos y pistas para el dialog
+  async function cargarSelectores() {
+    try {
+      setCargandoSelects(true)
+      const [resCiudadanos, resPistas] = await Promise.all([
+        fetch("/api/admin/ciudadanos"),
+        fetch("/api/admin/pistas"),
+      ])
+
+      if (!resCiudadanos.ok || !resPistas.ok) {
+        throw new Error("Error al cargar datos")
+      }
+
+      const dataCiudadanos = await resCiudadanos.json()
+      const dataPistas = await resPistas.json()
+
+      setCiudadanos(dataCiudadanos.ciudadanos || [])
+      setPistas(dataPistas.instalaciones || [])
+    } catch (err) {
+      console.error("Error cargando selectores:", err)
+    } finally {
+      setCargandoSelects(false)
+    }
+  }
+
+  // Crear nueva reserva
+  async function handleCrearReserva() {
+    if (!usuarioSeleccionado || !pistaSeleccionada || !fechaNuevaReserva || !horaNuevaReserva) {
+      setError("Completa todos los campos requeridos")
+      return
+    }
+
+    try {
+      setCreandoReserva(true)
+      const res = await fetch("/api/admin/reservas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuarioId: usuarioSeleccionado,
+          instalacionId: pistaSeleccionada,
+          fecha: fechaNuevaReserva,
+          horaInicio: horaNuevaReserva,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Error al crear reserva")
+      }
+
+      // Reset del formulario y cierre del dialog
+      setDialogNuevaReserva(false)
+      setUsuarioSeleccionado("")
+      setPistaSeleccionada("")
+      setFechaNuevaReserva("")
+      setHoraNuevaReserva("")
+
+      // Recargar lista
+      cargarReservas()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear reserva")
+    } finally {
+      setCreandoReserva(false)
+    }
+  }
+
   useEffect(() => {
     cargarReservas()
   }, [filtroEstado, filtroFecha])
+
+  // Cargar selectores cuando se abre el dialog
+  useEffect(() => {
+    if (dialogNuevaReserva) {
+      cargarSelectores()
+    }
+  }, [dialogNuevaReserva])
 
   // Cancelar reserva
   async function handleCancelar() {
@@ -107,9 +204,20 @@ export default function PaginaReservasAdmin() {
     <div className="p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Cabecera */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Reservas</h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">Visualiza y gestiona todas las reservas del sistema</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Reservas</h1>
+            <p className="text-sm sm:text-base text-gray-500 mt-1">Visualiza y gestiona todas las reservas del sistema</p>
+          </div>
+          <Button
+            onClick={() => {
+              setDialogNuevaReserva(true)
+              setError(null)
+            }}
+            className="sm:w-auto"
+          >
+            Nueva reserva
+          </Button>
         </div>
 
         {/* Filtros */}
@@ -281,6 +389,118 @@ export default function PaginaReservasAdmin() {
               disabled={cancelando}
             >
               {cancelando ? "Cancelando..." : "Sí, cancelar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para crear nueva reserva */}
+      <Dialog open={dialogNuevaReserva} onOpenChange={setDialogNuevaReserva}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Nueva reserva</DialogTitle>
+            <DialogDescription>
+              Crea una reserva manualmente a nombre de un ciudadano
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Select de usuario */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ciudadano
+              </label>
+              <Select value={usuarioSeleccionado} onValueChange={setUsuarioSeleccionado}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona un ciudadano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cargandoSelects ? (
+                    <div className="p-2 text-sm text-gray-500">Cargando...</div>
+                  ) : ciudadanos.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">No hay ciudadanos disponibles</div>
+                  ) : (
+                    ciudadanos.map((ciudadano) => (
+                      <SelectItem key={ciudadano.id} value={ciudadano.id}>
+                        {ciudadano.nombre} ({ciudadano.email})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Select de pista */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pista
+              </label>
+              <Select value={pistaSeleccionada} onValueChange={setPistaSeleccionada}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona una pista" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cargandoSelects ? (
+                    <div className="p-2 text-sm text-gray-500">Cargando...</div>
+                  ) : pistas.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">No hay pistas disponibles</div>
+                  ) : (
+                    pistas.map((pista) => (
+                      <SelectItem key={pista.id} value={pista.id}>
+                        {pista.nombre}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Input de fecha */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha
+              </label>
+              <Input
+                type="date"
+                value={fechaNuevaReserva}
+                onChange={(e) => setFechaNuevaReserva(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* Select de hora */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Hora de inicio
+              </label>
+              <Select value={horaNuevaReserva} onValueChange={setHoraNuevaReserva}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona una hora" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SLOTS_DISPONIBLES.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogNuevaReserva(false)}
+              disabled={creandoReserva}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCrearReserva}
+              disabled={creandoReserva}
+            >
+              {creandoReserva ? "Creando..." : "Crear reserva"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -31,9 +31,10 @@ import {
   GET as bloqueos_GET,
   POST as bloqueos_POST,
 } from "@/app/api/admin/bloqueos/route"
-import { GET as reservas_GET } from "@/app/api/admin/reservas/route"
+import { GET as reservas_GET, POST as reservas_POST } from "@/app/api/admin/reservas/route"
 import { PATCH as reservas_cancelar_PATCH } from "@/app/api/admin/reservas/[id]/cancelar/route"
 import { DELETE as usuarios_DELETE } from "@/app/api/admin/usuarios/[id]/route"
+import { GET as ciudadanos_GET } from "@/app/api/admin/ciudadanos/route"
 
 describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
   beforeEach(() => {
@@ -743,6 +744,315 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
       expect(response.status).toBe(200)
       const body = await response.json()
       expect(body.ok).toBe(true)
+    })
+  })
+
+  // ============================================================================
+  // POST /api/admin/reservas
+  // ============================================================================
+
+  describe("POST /api/admin/reservas", () => {
+    it("debería devolver 401 cuando no hay sesión", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce(null)
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-1",
+          fecha: "2026-03-30",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(401)
+      const body = await response.json()
+      expect(body.error).toBe("No autenticado")
+    })
+
+    it("debería devolver 403 cuando el usuario no es ADMIN", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "user-1", rol: "CIUDADANO" },
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-1",
+          fecha: "2026-03-30",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(403)
+    })
+
+    it("debería devolver 400 si la fecha no tiene formato YYYY-MM-DD", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-1",
+          fecha: "30/03/2026",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(400)
+      const body = await response.json()
+      expect(body.error).toContain("YYYY-MM-DD")
+    })
+
+    it("debería devolver 400 si la hora no es un slot válido", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-1",
+          fecha: "2026-03-30",
+          horaInicio: "15:00",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(400)
+      const body = await response.json()
+      expect(body.error).toBeTruthy()
+      const errorLower = body.error.toLowerCase()
+      expect(errorLower.includes("slot") || errorLower.includes("hora") || errorLower.includes("option")).toBe(true)
+    })
+
+    it("debería devolver 404 si el usuario no existe", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.usuario.findUnique.mockResolvedValueOnce(null)
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-no-existe",
+          instalacionId: "inst-1",
+          fecha: "2026-03-30",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(404)
+      const body = await response.json()
+      expect(body.error).toContain("usuario")
+    })
+
+    it("debería devolver 404 si la instalación no existe", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.usuario.findUnique.mockResolvedValueOnce({
+        id: "user-1",
+        activo: true,
+        email: "user@test.com",
+        nombre: "Usuario",
+      })
+
+      prismaMock.instalacion.findUnique.mockResolvedValueOnce(null)
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-no-existe",
+          fecha: "2026-03-30",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(404)
+      const body = await response.json()
+      expect(body.error).toContain("Instalación")
+    })
+
+    it("debería devolver 409 si el slot ya está ocupado", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.usuario.findUnique.mockResolvedValueOnce({
+        id: "user-1",
+        activo: true,
+        email: "user@test.com",
+        nombre: "Usuario",
+      })
+
+      prismaMock.instalacion.findUnique.mockResolvedValueOnce({
+        id: "inst-1",
+        activa: true,
+        nombre: "Pádel 1",
+      })
+
+      prismaMock.bloqueo.findFirst.mockResolvedValueOnce(null)
+
+      prismaMock.$transaction.mockImplementation(async (fn: any) => {
+        // Simular que el slot ya está ocupado dentro de la transacción
+        throw new Error("SLOT_OCUPADO")
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-1",
+          fecha: "2026-03-30",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(409)
+    })
+
+    it("debería devolver 201 con la reserva creada si los datos son correctos", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.usuario.findUnique.mockResolvedValueOnce({
+        id: "user-1",
+        activo: true,
+        email: "user@test.com",
+        nombre: "Usuario 1",
+      })
+
+      prismaMock.instalacion.findUnique.mockResolvedValueOnce({
+        id: "inst-1",
+        activa: true,
+        nombre: "Pádel 1",
+      })
+
+      prismaMock.bloqueo.findFirst.mockResolvedValueOnce(null)
+
+      prismaMock.$transaction.mockImplementation(async (fn: any) => {
+        return fn(prismaMock)
+      })
+
+      prismaMock.reserva.findFirst.mockResolvedValueOnce(null)
+
+      prismaMock.reserva.create.mockResolvedValueOnce({
+        id: "res-1",
+        usuarioId: "user-1",
+        instalacionId: "inst-1",
+        fecha: new Date("2026-03-30"),
+        horaInicio: new Date("2026-03-30T10:30:00.000Z"),
+        horaFin: new Date("2026-03-30T11:45:00.000Z"),
+        estado: "ACTIVA",
+        instalacion: { nombre: "Pádel 1" },
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
+        method: "POST",
+        body: JSON.stringify({
+          usuarioId: "user-1",
+          instalacionId: "inst-1",
+          fecha: "2026-03-30",
+          horaInicio: "10:30",
+        }),
+      })
+
+      const response = await reservas_POST(request)
+      expect(response.status).toBe(201)
+      const body = await response.json()
+      expect(body).toHaveProperty("reserva")
+      expect(body.reserva.id).toBe("res-1")
+    })
+  })
+
+  // ============================================================================
+  // GET /api/admin/ciudadanos
+  // ============================================================================
+
+  describe("GET /api/admin/ciudadanos", () => {
+    it("debería devolver 401 cuando no hay sesión", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce(null)
+
+      const request = new NextRequest("http://localhost:3000/api/admin/ciudadanos")
+      const response = await ciudadanos_GET(request)
+
+      expect(response.status).toBe(401)
+      const body = await response.json()
+      expect(body.error).toBe("No autenticado")
+    })
+
+    it("debería devolver 403 cuando el usuario no es ADMIN", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "user-1", rol: "CIUDADANO" },
+      })
+
+      const request = new NextRequest("http://localhost:3000/api/admin/ciudadanos")
+      const response = await ciudadanos_GET(request)
+
+      expect(response.status).toBe(403)
+      const body = await response.json()
+      expect(body.error).toContain("No tienes permiso")
+    })
+
+    it("debería devolver 200 con lista vacía cuando no hay ciudadanos", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.usuario.findMany.mockResolvedValueOnce([])
+
+      const request = new NextRequest("http://localhost:3000/api/admin/ciudadanos")
+      const response = await ciudadanos_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(Array.isArray(body.ciudadanos)).toBe(true)
+      expect(body.ciudadanos.length).toBe(0)
+    })
+
+    it("debería devolver 200 con lista de ciudadanos activos ordenados por nombre", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.usuario.findMany.mockResolvedValueOnce([
+        {
+          id: "user-1",
+          nombre: "Alice",
+          email: "alice@test.com",
+        },
+        {
+          id: "user-2",
+          nombre: "Bob",
+          email: "bob@test.com",
+        },
+      ])
+
+      const request = new NextRequest("http://localhost:3000/api/admin/ciudadanos")
+      const response = await ciudadanos_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(Array.isArray(body.ciudadanos)).toBe(true)
+      expect(body.ciudadanos.length).toBe(2)
+      expect(body.ciudadanos[0].nombre).toBe("Alice")
+      expect(body.ciudadanos[1].nombre).toBe("Bob")
     })
   })
 })
