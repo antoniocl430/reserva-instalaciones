@@ -3,33 +3,37 @@
 ## Fase 1 — Web app (actual)
 
 ### Bloque 1: Base del proyecto
-- [ ] Estructura Next.js 14 + TypeScript + Tailwind + shadcn/ui
-- [ ] Configuración Prisma + PostgreSQL (Supabase)
-- [ ] Esquema de base de datos completo (Usuario, Instalacion, Reserva, Bloqueo)
-- [ ] Seed de datos iniciales (13 instalaciones: 3 pádel + 10 piscina)
-- [ ] Sistema de autenticación con NextAuth.js (registro, login, roles)
+- [x] Estructura Next.js 14 + TypeScript + Tailwind + shadcn/ui
+- [x] Configuración Prisma + PostgreSQL (Supabase)
+- [x] Esquema de base de datos completo (Usuario, Instalacion, Reserva, Bloqueo)
+- [x] Seed de datos iniciales (3 pistas de pádel)
+- [x] Sistema de autenticación con NextAuth.js (registro, login, roles)
 
 ### Bloque 2: Funcionalidad ciudadano
-- [ ] Página de inicio con lista de instalaciones
-- [ ] Vista de disponibilidad semanal por instalación
-- [ ] Flujo completo de reserva con validaciones
-- [ ] Mis reservas (activas e historial)
-- [ ] Cancelación de reserva propia
-- [ ] Emails de confirmación (reserva y cancelación)
+- [x] Página splash de inicio con botones de acceso
+- [x] Vista de disponibilidad por pista y fecha (7 slots de 75 min)
+- [x] Flujo completo de reserva con validaciones
+- [x] Mis reservas (activas e historial)
+- [x] Cancelación de reserva propia
+- [x] Emails de confirmación (reserva y cancelación)
 
 ### Bloque 3: Panel de administración
-- [ ] Dashboard con resumen del día
-- [ ] Gestión de todas las reservas (ver, filtrar, cancelar)
-- [ ] Creación manual de reservas por el admin
-- [ ] Sistema de bloqueos (crear, ver, eliminar)
-- [ ] Gestión de cuentas de administrador
-- [ ] Exportación de reservas a CSV
+- [x] Dashboard con métricas del día (reservas hoy, activas, pistas activas, cancelaciones)
+- [x] Gestión de todas las reservas (ver, filtrar, cancelar)
+- [x] Sistema de bloqueos (crear mediante Dialog modal, ver listado, eliminar)
+- [x] Gestión de pistas (crear, editar, activar/desactivar)
+- [x] Gestión de cuentas de administrador
+- [ ] **Fase futura:** Creación manual de reservas por el admin
+- [ ] **Fase futura:** Exportación de reservas a CSV
 
 ### Bloque 4: Calidad y producción
-- [ ] Diseño responsive revisado en móvil real
-- [ ] Manejo de errores y estados de carga en toda la app
-- [ ] Variables de entorno configuradas en Vercel
-- [ ] Deploy en producción (Vercel + Supabase)
+- [x] Validación con Zod en todas las API Routes
+- [x] Rate limiting en login (5 intentos por IP / 15 min, implementado en memoria)
+- [x] Emails transaccionales con Resend
+- [x] Zona horaria Europe/Madrid en cálculos de slots
+- [x] Deploy en producción (Vercel + Supabase)
+- [x] Diseño responsive mobile-first en toda la app
+- [x] Manejo de errores y estados de carga
 - [ ] Pruebas de uso con el personal del ayuntamiento
 
 ---
@@ -52,3 +56,4 @@
 - [ ] Festivos predefinidos por calendario oficial
 - [ ] Estadísticas avanzadas de uso
 - [ ] Múltiples ayuntamientos (multitenancy)
+- [ ] Recuperación de contraseña por email

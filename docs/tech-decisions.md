@@ -8,44 +8,44 @@
 | Lenguaje | TypeScript | Tipos seguros, menos bugs, mejor autocompletado |
 | Estilos | Tailwind CSS | Desarrollo rápido, consistencia visual |
 | Componentes | shadcn/ui | Componentes accesibles y personalizables sin librería pesada |
-| Base de datos (local) | SQLite | Sin instalación, Prisma lo gestiona automáticamente, ideal para desarrollo |
-| Base de datos (producción) | PostgreSQL via Supabase | Robusto, relacional, plan gratuito, migración trivial desde SQLite con Prisma |
-| ORM | Prisma | Tipado automático, migraciones simples, compatible con SQLite y PostgreSQL |
+| Base de datos | PostgreSQL via Supabase | Robusto, relacional, transacciones con bloqueo a nivel de fila |
+| ORM | Prisma | Tipado automático, migraciones simples |
 | Autenticación | NextAuth.js | Integración nativa con Next.js, gestión de sesiones y roles |
+| Validación | Zod | Estándar de facto en el ecosistema Next.js + TypeScript, validación en todas las API Routes |
 | Emails | Resend | API simple, buena entregabilidad, 3.000 emails/mes gratis |
-| Deploy | Vercel | Deploy automático desde GitHub, SSL gratis, plan gratuito suficiente |
+| Deploy | Vercel + Supabase | Deploy automático desde GitHub, SSL gratis, plan gratuito suficiente |
 
 ---
 
-## Estrategia de base de datos por entorno
+## Estrategia de base de datos
+
+PostgreSQL (Supabase) se usa en todos los entornos, tanto en desarrollo local como en producción.
+No se usa SQLite en ningún entorno.
 
 | Entorno | Base de datos | Dónde corre |
 |---|---|---|
-| Desarrollo local | SQLite | PC del desarrollador, archivo local |
-| Producción (pruebas) | PostgreSQL | Supabase (plan gratuito, 500MB) |
-| Producción (definitivo) | PostgreSQL | Supabase o servidor del ayuntamiento |
+| Desarrollo local | PostgreSQL | Supabase (plan gratuito, 500MB) |
+| Producción | PostgreSQL | Supabase o servidor del ayuntamiento |
 
-La migración de SQLite a PostgreSQL cuando se suba a producción consiste en:
-1. Cambiar `provider = "sqlite"` a `provider = "postgresql"` en `schema.prisma`
-2. Actualizar `DATABASE_URL` en las variables de entorno de Vercel
-3. Ejecutar `prisma migrate deploy`
+---
 
-El código de la aplicación no cambia en absoluto.
+## Estrategia de testing
+
+| Tipo de test | Herramienta | Qué cubre |
+|---|---|---|
+| Tests de API (backend) | Jest | API Routes: lógica, validaciones Zod, rate limiting, reglas de negocio |
+| Tests de frontend | Vitest + Testing Library | Componentes React: renderizado, interacciones, formularios |
+
+Los tests de API se ubican en `src/__tests__/api/` y los de frontend en `src/__tests__/components/`.
 
 ---
 
 ## Decisiones importantes
 
-### Por qué SQLite en local y no PostgreSQL desde el principio
-SQLite no requiere instalar ningún servidor. Prisma crea el archivo de base de datos
-automáticamente al ejecutar las migraciones. Para un proyecto en fase de desarrollo
-con un solo desarrollador, elimina completamente la fricción de configuración inicial.
-Cuando el proyecto suba a producción, la migración a PostgreSQL es un cambio de dos líneas.
-
-### Por qué PostgreSQL en producción y no SQLite
-SQLite no está diseñado para múltiples usuarios simultáneos escribiendo a la vez.
-En producción, varios ciudadanos podrían intentar reservar el mismo slot al mismo tiempo.
-PostgreSQL gestiona esto con transacciones y bloqueos a nivel de fila, evitando reservas duplicadas.
+### Por qué PostgreSQL en todos los entornos
+PostgreSQL gestiona múltiples usuarios simultáneos con transacciones y bloqueos a nivel de fila,
+lo que evita reservas duplicadas. Al usar Supabase desde el principio (desarrollo y producción),
+se elimina la fricción de la migración y se garantiza paridad entre entornos.
 
 ### Por qué Next.js y no React puro
 Next.js permite tener frontend y backend (API Routes) en el mismo proyecto.
@@ -55,6 +55,26 @@ No necesitamos un servidor backend separado, lo que simplifica el deploy y el ma
 No es una librería de componentes tradicional — copia el código en el proyecto,
 por lo que no hay dependencias externas que puedan romperse.
 Los componentes son accesibles (WCAG) por defecto, importante para una app municipal.
+
+### Por qué Zod para validación
+Zod permite definir esquemas de validación con tipos TypeScript inferidos automáticamente.
+Todas las API Routes del proyecto validan los datos de entrada con Zod antes de procesarlos.
+Esto garantiza que los datos que llegan a la base de datos siempre tienen el formato correcto.
+
+### Por qué rate limiting en memoria (Map) y no Upstash/Redis
+Para una instancia única de Vercel (plan gratuito), el rate limiter en memoria con `Map`
+es suficiente y no requiere infraestructura adicional. Se implementa en `src/lib/rate-limit.ts`:
+- Máximo 5 intentos fallidos por IP en ventana de 15 minutos
+- Reset automático tras login exitoso
+- Reset automático cuando expira la ventana de tiempo
+
+Si en el futuro se escalan a múltiples instancias, se puede migrar a `@upstash/ratelimit` + Redis
+sin cambiar la interfaz de uso.
+
+### Zona horaria: Europe/Madrid
+Todos los cálculos de slots horarios se realizan en la zona horaria `Europe/Madrid`.
+Las API Routes de disponibilidad y reservas usan el helper `crearHoraEnMadrid()` para
+construir objetos `Date` correctos independientemente del servidor donde corra la aplicación.
 
 ### Por qué Resend para emails
 Alternativa más moderna a Nodemailer. API REST simple, buen plan gratuito (3.000 emails/mes),
@@ -86,4 +106,5 @@ Para convertir a app móvil en Fase 2:
 | Docker (por ahora) | Vercel y Supabase gestionan la infraestructura, no necesitamos contenedores |
 | Stripe / pagos | El servicio es gratuito |
 | MongoDB | NoSQL complica las relaciones entre entidades (Usuario → Reserva → Instalacion) |
-| PostgreSQL local | Requiere instalación y configuración manual, SQLite es suficiente para desarrollo |
+| SQLite | No está diseñado para múltiples usuarios simultáneos escribiendo a la vez |
+| @upstash/ratelimit | Innecesario para una sola instancia; el Map en memoria es suficiente |

@@ -13,43 +13,45 @@ Representa tanto a ciudadanos como a administradores.
 | email | String | Email único, usado para login |
 | nombre | String | Nombre completo |
 | passwordHash | String | Contraseña encriptada |
-| rol | Enum (CIUDADANO, ADMIN) | Tipo de usuario |
+| rol | String ("CIUDADANO" \| "ADMIN") | Tipo de usuario |
 | activo | Boolean | Si la cuenta está activa (default: true) |
 | creadoEn | DateTime | Fecha de registro |
 | actualizadoEn | DateTime | Última modificación |
 
+> **Nota:** Los campos `rol`, `tipo` y `estado` se almacenan como `String` en PostgreSQL, no como tipos Enum nativos. Los valores válidos están controlados por la aplicación y documentados en cada campo.
+
 ---
 
 ### Instalacion
-Cada unidad reservable (cada pista de pádel o cada calle de piscina es una instalación).
+Cada pista de pádel del complejo deportivo municipal.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
 | id | String (uuid) | Identificador único |
-| nombre | String | Ej: "Pádel 1", "Calle 3" |
-| tipo | Enum (PADEL, PISCINA) | Tipo de instalación |
+| nombre | String | Ej: "Pádel 1", "Pádel 2" — valor único (`@unique`) |
+| tipo | String ("PADEL") | Tipo de instalación |
 | descripcion | String? | Descripción opcional |
+| horario | String | Horario de apertura (default: "Lun-Dom: 8:00-13:00 y 16:45-20:30") |
 | activa | Boolean | Si aparece en el sistema (default: true) |
 | creadoEn | DateTime | Fecha de creación |
 
-**Instalaciones iniciales:**
+**Instalaciones iniciales (seed):**
 - Pádel 1, Pádel 2, Pádel 3 (tipo: PADEL)
-- Calle 1 a Calle 10 (tipo: PISCINA)
 
 ---
 
 ### Reserva
-Una reserva de un ciudadano en una instalación para un slot horario.
+Una reserva de un ciudadano en una instalación para un slot horario de 75 minutos.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
 | id | String (uuid) | Identificador único |
 | usuarioId | String | FK → Usuario |
 | instalacionId | String | FK → Instalacion |
-| fecha | Date | Día de la reserva |
-| horaInicio | DateTime | Inicio del slot (ej: 10:00) |
-| horaFin | DateTime | Fin del slot (ej: 11:00) — siempre +1h |
-| estado | Enum (ACTIVA, CANCELADA) | Estado de la reserva |
+| fecha | DateTime | Día de la reserva |
+| horaInicio | DateTime | Inicio del slot (ej: 10:30) |
+| horaFin | DateTime | Fin del slot (ej: 11:45) — siempre +75 minutos |
+| estado | String ("ACTIVA" \| "CANCELADA") | Estado de la reserva |
 | creadoEn | DateTime | Cuándo se hizo la reserva |
 | canceladoEn | DateTime? | Cuándo se canceló (si aplica) |
 | canceladoPor | String? | FK → Usuario (quién canceló: el propio usuario o un admin) |
@@ -88,7 +90,7 @@ Usuario         1 ──── N    Bloqueo (creadoPor)
 - No pueden existir dos reservas ACTIVAS para la misma instalación en el mismo slot
 - Un slot bloqueado no puede tener reservas ACTIVAS
 - Un usuario CIUDADANO no puede tener más de 2 reservas con estado ACTIVA
-- La horaFin siempre es horaInicio + 1 hora
+- La horaFin siempre es horaInicio + 75 minutos
 - Solo usuarios con rol ADMIN pueden crear o modificar Bloqueos
 - Solo usuarios con rol ADMIN pueden cancelar reservas de otros usuarios
 
@@ -96,21 +98,21 @@ Usuario         1 ──── N    Bloqueo (creadoPor)
 
 ## Slots horarios disponibles
 
-Horario: 8:00 a 22:00 — 14 slots por día por instalación
+Horario: 8:00-13:00 y 16:45-20:30 (con pausa al mediodía) — 7 slots de 75 minutos por día por instalación
 
 ```
-08:00 - 09:00
-09:00 - 10:00
-10:00 - 11:00
-11:00 - 12:00
-12:00 - 13:00
-13:00 - 14:00
-14:00 - 15:00
-15:00 - 16:00
-16:00 - 17:00
-17:00 - 18:00
-18:00 - 19:00
-19:00 - 20:00
-20:00 - 21:00
-21:00 - 22:00
+Mañana:
+08:00 - 09:15
+09:15 - 10:30
+10:30 - 11:45
+11:45 - 13:00
+
+[Pausa: 13:00 - 16:45]
+
+Tarde:
+16:45 - 18:00
+18:00 - 19:15
+19:15 - 20:30
 ```
+
+Todos los horarios se gestionan en la zona horaria **Europe/Madrid**.

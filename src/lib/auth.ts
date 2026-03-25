@@ -70,16 +70,35 @@ export const opcionesAuth: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Primer login: poblar el token con los datos del usuario
       if (user) {
         token.id = user.id
         token.rol = (user as unknown as { rol: string }).rol
+        return token
       }
+
+      // Refresh posterior: verificar que el usuario sigue activo en la BD.
+      // Esto invalida sesiones de usuarios desactivados sin esperar la expiración del JWT.
+      const usuarioActivo = await prisma.usuario.findUnique({
+        where: { id: token.id },
+        select: { activo: true },
+      })
+
+      if (!usuarioActivo || !usuarioActivo.activo) {
+        // Marcar el token como inválido; el callback session lo propagará al cliente
+        return { ...token, error: "SessionInvalidada" as const }
+      }
+
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
         session.user.rol = token.rol as string
+      }
+      // Propagar el error de sesión invalidada para que el cliente lo detecte
+      if (token.error === "SessionInvalidada") {
+        session.error = "SessionInvalidada"
       }
       return session
     },

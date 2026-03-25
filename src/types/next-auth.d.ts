@@ -8,6 +8,8 @@ declare module "next-auth" {
       id: string
       rol: string
     } & DefaultSession["user"]
+    // Presente cuando la sesión ha sido invalidada (usuario desactivado)
+    error?: "SessionInvalidada"
   }
 }
 
@@ -15,5 +17,7 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string
     rol: string
+    // Presente cuando la sesión ha sido invalidada (usuario desactivado)
+    error?: "SessionInvalidada"
   }
 }

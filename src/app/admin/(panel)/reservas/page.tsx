@@ -118,12 +118,12 @@ export default function PaginaReservasAdmin() {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Estado
             </label>
-            <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+            <Select value={filtroEstado || "todos"} onValueChange={(v) => setFiltroEstado(v === "todos" ? "" : v)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los estados</SelectItem>
+                <SelectItem value="todos">Todos los estados</SelectItem>
                 <SelectItem value="ACTIVA">Activas</SelectItem>
                 <SelectItem value="CANCELADA">Canceladas</SelectItem>
               </SelectContent>

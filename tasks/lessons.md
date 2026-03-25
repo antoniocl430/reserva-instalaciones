@@ -78,6 +78,12 @@ Revisar este archivo al inicio de cada sesión.
 **Corrección:** Refactorizar la transacción para que devuelva explícitamente los datos necesarios: `const datos = await prisma.$transaction(async (tx) => { ...; return reserva })`.
 **Regla:** Si una transacción necesita pasar datos a la lógica siguiente (emails, respuesta HTTP enriquecida), diseñarla para devolver esos datos desde el inicio.
 
+### LESSON-012: El callback jwt de NextAuth no verifica la BD en refreshes posteriores al login
+**Contexto:** El callback `jwt` solo poblaba el token en el primer login (`if (user)`). En los refreshes posteriores devolvía el token directamente sin consultar la BD.
+**Error:** Un usuario desactivado (`activo = false`) conservaba su sesión JWT activa hasta 8 horas porque el token nunca se revalidaba contra la BD.
+**Corrección:** En el path de refresh (cuando no existe `user`), consultar `prisma.usuario.findUnique` con `select: { activo: true }`. Si no existe o `activo === false`, devolver `{ ...token, error: "SessionInvalidada" as const }`. El callback `session` propaga el error al cliente. Extender los tipos JWT y Session en `next-auth.d.ts` para incluir `error?: "SessionInvalidada"`.
+**Regla:** El callback `jwt` siempre debe tener dos ramas: (1) primer login con `user` presente → poblar token, (2) refresh → verificar estado del usuario en BD y marcar error si fue desactivado.
+
 ### LESSON-008: Los tests necesitan importar NextRequest cuando se usan en conjuntos nuevos
 **Contexto:** Al crear admin.test.ts con tests de API routes, se usaba NextRequest() pero no estaba importado.
 **Error:** ReferenceError: NextRequest is not defined durante la ejecución de tests.

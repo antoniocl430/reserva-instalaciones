@@ -72,76 +72,30 @@ Sin rate limiting, un atacante puede probar miles de contraseñas contra una cue
 
 ### 1.2 Rate limiting en Next.js API Routes
 
-#### Librería recomendada: `@upstash/ratelimit` + `@upstash/redis`
+#### Implementación actual: Map en memoria (`src/lib/rate-limit.ts`)
 
-Es la solución más adoptada en el ecosistema Next.js (funciona con Vercel Edge, serverless y Node.js). Upstash ofrece un plan gratuito (10.000 requests/día).
+El proyecto implementa rate limiting con un `Map` en memoria de Node.js, sin dependencias externas.
+Es adecuado para una instancia única de Vercel (plan gratuito) y no requiere configurar Redis.
 
-**Instalación:**
-```bash
-npm install @upstash/ratelimit @upstash/redis
-```
+**Parámetros configurados:**
+- Máximo **5 intentos fallidos** por IP
+- Ventana de **15 minutos**
+- **Reset automático** tras login exitoso
+- Reset automático cuando expira la ventana de tiempo
 
-**Alternativa sin infraestructura externa:** `lru-cache` en memoria (solo funciona en un único proceso, no apto para producción con múltiples instancias).
-
-**Implementación para el endpoint de login** (`src/lib/rate-limit.ts`):
-
-```typescript
-import { Ratelimit } from '@upstash/ratelimit'
-import { Redis } from '@upstash/redis'
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-})
-
-// Login: máximo 5 intentos por IP cada 15 minutos
-export const rateLimitLogin = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, '15 m'),
-  analytics: true,
-})
-
-// API general: 60 requests por minuto
-export const rateLimitGeneral = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(60, '1 m'),
-})
-```
-
-**Uso en la API Route de login** o en middleware antes de NextAuth:
+**Interfaz pública del módulo:**
 
 ```typescript
-// src/app/api/auth/[...nextauth]/route.ts — envolver authorize con rate limit
-// O crear un endpoint intermedio src/app/api/auth/login/route.ts
-import { rateLimitLogin } from '@/lib/rate-limit'
-import { headers } from 'next/headers'
+// Verifica si una IP ha superado el límite de intentos
+verificarRateLimit(ip, maxIntentos?, ventanaMs?): { bloqueado: boolean; restantes: number }
 
-export async function POST(request: Request) {
-  const ip = headers().get('x-forwarded-for') ?? 'anonimo'
-  const { success, remaining, reset } = await rateLimitLogin.limit(ip)
-
-  if (!success) {
-    return Response.json(
-      { error: 'Demasiados intentos. Espera antes de volver a intentarlo.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
-          'X-RateLimit-Remaining': String(remaining),
-        }
-      }
-    )
-  }
-  // ... continuar con la autenticación
-}
+// Resetea el contador tras login exitoso
+resetearRateLimit(ip: string): void
 ```
 
-**Nota para desarrollo local (SQLite):** Para evitar depender de Upstash en desarrollo, se puede usar un rate limiter en memoria con `lru-cache` condicionalmente:
+**Respuesta cuando se supera el límite:** HTTP 429 con mensaje `"Demasiados intentos de inicio de sesión. Espera 15 minutos antes de volver a intentarlo."`.
 
-```typescript
-// Solo usar Upstash si las variables de entorno están definidas
-const isUpstashConfigured = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-```
+**Limitación a tener en cuenta:** Al usar memoria del proceso, el contador se reinicia si el servidor se reinicia o si hay múltiples instancias. Si en el futuro se escala a múltiples instancias de Vercel, migrar a `@upstash/ratelimit` + Redis sin cambiar la interfaz de uso.
 
 ---
 
@@ -193,7 +147,7 @@ Los JWT son stateless: una vez emitidos, son válidos hasta que expiran aunque e
 
 1. **Expiración corta (recomendado):** Con `maxAge: 8h`, si se desactiva un usuario, su sesión caducará en máximo 8 horas. Aceptable para este contexto.
 
-2. **Verificar `activo` en cada request (recomendado para este proyecto):** Añadir una consulta a BD en el callback `jwt` para verificar que el usuario sigue activo:
+2. **Verificar `activo` en cada request (recomendado para este proyecto):** Añadir una consulta a BD en el callback `jwt` para verificar que el usuario sigue activo. **Nota:** Esta verificación está en proceso de corrección en el codebase actual. El comportamiento correcto es retornar `null` (no lanzar excepción) cuando el usuario está desactivado.
 
 ```typescript
 callbacks: {
