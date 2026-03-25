@@ -1,38 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
-
-// Regex simple para validar formato de email
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { schemaRegistro } from "@/lib/validaciones"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { nombre, email, password } = body
 
-    // Validar que los campos existen y no están vacíos
-    if (!nombre?.trim() || !email?.trim() || !password?.trim()) {
+    // Validar entrada con Zod
+    const resultado = schemaRegistro.safeParse(body)
+    if (!resultado.success) {
+      const primerError = resultado.error.issues[0]
       return NextResponse.json(
-        { error: "Los campos nombre, email y contraseña son obligatorios" },
+        { error: primerError.message },
         { status: 400 }
       )
     }
 
-    // Validar formato de email
-    if (!EMAIL_REGEX.test(email)) {
-      return NextResponse.json(
-        { error: "El formato del email no es válido" },
-        { status: 400 }
-      )
-    }
-
-    // Validar longitud mínima de contraseña
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "La contraseña debe tener al menos 6 caracteres" },
-        { status: 400 }
-      )
-    }
+    const { nombre, email, password } = resultado.data
 
     // Comprobar si el email ya está registrado
     const usuarioExistente = await prisma.usuario.findUnique({

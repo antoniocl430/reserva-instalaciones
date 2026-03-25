@@ -3,11 +3,16 @@ import { prisma } from "@/lib/prisma"
 
 // GET /api/instalaciones — devuelve todas las pistas activas (ruta pública)
 export async function GET() {
-  const instalaciones = await prisma.instalacion.findMany({
-    where: { activa: true },
-    select: { id: true, nombre: true, tipo: true, descripcion: true, activa: true },
-    orderBy: { nombre: "asc" },
-  })
+  try {
+    const instalaciones = await prisma.instalacion.findMany({
+      where: { activa: true },
+      select: { id: true, nombre: true, tipo: true, descripcion: true, horario: true, activa: true },
+      orderBy: { nombre: "asc" },
+    })
 
-  return NextResponse.json({ instalaciones })
+    return NextResponse.json({ instalaciones })
+  } catch (err) {
+    console.error("Error al obtener instalaciones:", err)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
 }

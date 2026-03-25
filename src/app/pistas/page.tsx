@@ -48,11 +48,11 @@ export default async function PaginaPistas() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Cabecera */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pistas deportivas</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pistas deportivas</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Selecciona una pista para ver su disponibilidad y reservar
           </p>
         </div>

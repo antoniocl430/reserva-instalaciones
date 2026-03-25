@@ -2,6 +2,46 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { enviarEmailReserva } from "@/lib/email"
+import { schemaCrearReserva } from "@/lib/validaciones"
+
+/**
+ * Crea un objeto Date cuyo instante UTC corresponde a la hora y minutos indicados
+ * en la zona horaria Europe/Madrid (UTC+1 invierno / UTC+2 verano).
+ *
+ * Ejemplo (horario de invierno, UTC+1):
+ *   crearHoraEnMadrid("2026-03-25", 11, 45) → 2026-03-25T10:45:00.000Z
+ *   Formateado con timeZone "Europe/Madrid" → "11:45" ✓
+ */
+function crearHoraEnMadrid(fechaStr: string, hora: number, minutos: number = 0): Date {
+  // Crear instante provisional asumiendo que la hora es UTC
+  const base = new Date(`${fechaStr}T${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:00.000Z`)
+  // Averiguar qué hora muestra Madrid para ese instante UTC provisional
+  const horaMadrid = parseInt(
+    base.toLocaleString("en-US", {
+      timeZone: "Europe/Madrid",
+      hour: "numeric",
+      hour12: false,
+    })
+  )
+  // diff = cuántas horas está Madrid por delante de UTC en ese momento
+  let diff = horaMadrid - hora
+  if (diff > 12) diff -= 24
+  if (diff < -12) diff += 24
+  // Restamos el offset para que Madrid muestre exactamente 'hora:minutos'
+  return new Date(base.getTime() - diff * 60 * 60 * 1000)
+}
+
+// Slots válidos — deben coincidir con los de /api/disponibilidad/route.ts
+const SLOTS_VALIDOS: Record<string, string> = {
+  "08:00": "09:15",
+  "09:15": "10:30",
+  "10:30": "11:45",
+  "11:45": "13:00",
+  "16:45": "18:00",
+  "18:00": "19:15",
+  "19:15": "20:30",
+}
 
 // POST /api/reservas — crea una reserva con todas las validaciones de negocio
 export async function POST(request: NextRequest) {
@@ -11,28 +51,35 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { instalacionId, fecha, horaInicio } = body
 
-  // Validar campos requeridos
-  if (!instalacionId || !fecha || !horaInicio) {
+  // Validar entrada con Zod
+  const resultado = schemaCrearReserva.safeParse(body)
+  if (!resultado.success) {
+    const primerError = resultado.error.issues[0]
     return NextResponse.json(
-      { error: "Los campos instalacionId, fecha y horaInicio son obligatorios" },
+      { error: primerError.message },
       { status: 400 }
     )
   }
 
-  // Validar formato horaInicio (HH:MM) y que esté en rango 08-21
+  const { instalacionId, fecha, horaInicio } = resultado.data
+
+  // Obtener la hora fin desde SLOTS_VALIDOS
+  const horaFin = SLOTS_VALIDOS[horaInicio]
+  if (!horaFin) {
+    // Esto no debería ocurrir si Zod validó correctamente, pero para seguridad
+    return NextResponse.json(
+      { error: "La hora de inicio no corresponde a un slot válido" },
+      { status: 400 }
+    )
+  }
+
   const [horas, minutos] = horaInicio.split(":").map(Number)
-  if (isNaN(horas) || isNaN(minutos) || minutos !== 0 || horas < 8 || horas > 21) {
-    return NextResponse.json(
-      { error: "La hora de inicio debe estar entre 08:00 y 21:00" },
-      { status: 400 }
-    )
-  }
+  const [horasFin, minutosFin] = horaFin.split(":").map(Number)
 
-  // Construir fechas UTC del slot
-  const horaInicioDate = new Date(`${fecha}T${String(horas).padStart(2, "0")}:00:00.000Z`)
-  const horaFinDate = new Date(horaInicioDate.getTime() + 60 * 60 * 1000)
+  // Construir fechas UTC del slot usando hora local española (Europe/Madrid)
+  const horaInicioDate = crearHoraEnMadrid(fecha, horas, minutos)
+  const horaFinDate = crearHoraEnMadrid(fecha, horasFin, minutosFin)
 
   // Validar que el slot es futuro (mínimo 1 minuto de margen)
   if (horaInicioDate.getTime() <= Date.now() + 60_000) {
@@ -42,7 +89,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Verificar instalación activa
+  // Verificar instalación activa (fuera de transacción está bien: es solo lectura)
   const instalacion = await prisma.instalacion.findUnique({
     where: { id: instalacionId },
   })
@@ -50,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Instalación no disponible" }, { status: 404 })
   }
 
-  // Verificar bloqueo activo que cubra este slot
+  // Verificar bloqueo activo que cubra este slot (fuera de transacción: solo lectura)
   const bloqueo = await prisma.bloqueo.findFirst({
     where: {
       instalacionId,
@@ -66,52 +113,57 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Verificar límite de 2 reservas activas (solo ciudadanos)
-  if (sesion.user.rol === "CIUDADANO") {
-    const reservasActivas = await prisma.reserva.count({
-      where: {
-        usuarioId: sesion.user.id,
-        estado: "ACTIVA",
-        horaInicio: { gte: new Date() },
-      },
+  // Crear reserva en transacción.
+  // El conteo de reservas activas del ciudadano se realiza DENTRO de la transacción
+  // para evitar que dos peticiones simultáneas superen el límite de 2 reservas (BUG-03).
+  let reserva
+  try {
+    reserva = await prisma.$transaction(async (tx) => {
+      // Verificar límite de 2 reservas activas dentro de la transacción (solo ciudadanos)
+      if (sesion.user.rol === "CIUDADANO") {
+        const reservasActivas = await tx.reserva.count({
+          where: {
+            usuarioId: sesion.user.id,
+            estado: "ACTIVA",
+            horaInicio: { gte: new Date() },
+          },
+        })
+        if (reservasActivas >= 2) {
+          throw new Error("LIMITE_RESERVAS")
+        }
+      }
+
+      // Re-verificar disponibilidad dentro de la transacción (evita race conditions)
+      const reservaExistente = await tx.reserva.findFirst({
+        where: {
+          instalacionId,
+          estado: "ACTIVA",
+          horaInicio: horaInicioDate,
+        },
+      })
+      if (reservaExistente) {
+        throw new Error("SLOT_OCUPADO")
+      }
+
+      return tx.reserva.create({
+        data: {
+          usuarioId: sesion.user.id,
+          instalacionId,
+          fecha: crearHoraEnMadrid(fecha, 0),
+          horaInicio: horaInicioDate,
+          horaFin: horaFinDate,
+          estado: "ACTIVA",
+        },
+        include: { instalacion: { select: { nombre: true } } },
+      })
     })
-    if (reservasActivas >= 2) {
+  } catch (err) {
+    if (err instanceof Error && err.message === "LIMITE_RESERVAS") {
       return NextResponse.json(
         { error: "Ya tienes 2 reservas activas. Cancela una antes de hacer una nueva" },
         { status: 409 }
       )
     }
-  }
-
-  // Crear reserva en transacción verificando doble reserva
-  let reserva
-  try {
-    reserva = await prisma.$transaction(async (tx) => {
-    // Re-verificar disponibilidad dentro de la transacción (evita race conditions)
-    const reservaExistente = await tx.reserva.findFirst({
-      where: {
-        instalacionId,
-        estado: "ACTIVA",
-        horaInicio: horaInicioDate,
-      },
-    })
-    if (reservaExistente) {
-      throw new Error("SLOT_OCUPADO")
-    }
-
-    return tx.reserva.create({
-      data: {
-        usuarioId: sesion.user.id,
-        instalacionId,
-        fecha: new Date(`${fecha}T00:00:00.000Z`),
-        horaInicio: horaInicioDate,
-        horaFin: horaFinDate,
-        estado: "ACTIVA",
-      },
-      include: { instalacion: { select: { nombre: true } } },
-    })
-    })
-  } catch (err) {
     if (err instanceof Error && err.message === "SLOT_OCUPADO") {
       return NextResponse.json(
         { error: "Este slot acaba de ser reservado por otro usuario. Elige otro horario" },
@@ -120,6 +172,18 @@ export async function POST(request: NextRequest) {
     }
     throw err
   }
+
+  // Enviar email de confirmación de forma asíncrona (el fallo no bloquea la respuesta)
+  const horaInicioStr = horaInicio
+  const horaFinStr = horaFin
+  enviarEmailReserva({
+    emailUsuario: sesion.user.email!,
+    nombreUsuario: sesion.user.name ?? sesion.user.email!,
+    nombreInstalacion: reserva.instalacion.nombre,
+    fecha,
+    horaInicio: horaInicioStr,
+    horaFin: horaFinStr,
+  }).catch((err) => console.error("[Email] Error al enviar confirmación de reserva:", err))
 
   return NextResponse.json({ reserva }, { status: 201 })
 }

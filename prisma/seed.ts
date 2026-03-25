@@ -9,9 +9,9 @@ async function main() {
 
   // ─── Pistas de pádel ──────────────────────────────────────────────────────
   const instalaciones = [
-    { nombre: "Pádel 1", tipo: "PADEL", descripcion: "Pista de pádel cubierta" },
-    { nombre: "Pádel 2", tipo: "PADEL", descripcion: "Pista de pádel cubierta" },
-    { nombre: "Pádel 3", tipo: "PADEL", descripcion: "Pista de pádel exterior" },
+    { nombre: "Pádel 1", tipo: "PADEL", descripcion: "Pista de pádel cubierta", horario: "Lun-Dom: 8:00-13:00 y 16:45-20:30" },
+    { nombre: "Pádel 2", tipo: "PADEL", descripcion: "Pista de pádel cubierta", horario: "Lun-Dom: 8:00-13:00 y 16:45-20:30" },
+    { nombre: "Pádel 3", tipo: "PADEL", descripcion: "Pista de pádel exterior", horario: "Lun-Dom: 8:00-13:00 y 16:45-20:30" },
   ]
 
   for (const inst of instalaciones) {

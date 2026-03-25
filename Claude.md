@@ -105,7 +105,13 @@ Para cada tarea sigue este flujo estrictamente:
 
 ---
 
-## Subagentes disponibles
-- `frontend` — páginas, componentes y estilos
-- `backend` — API Routes, lógica de negocio y base de datos
-- `revisor` — revisión de código y detección de errores
+## Subagentes a usar
+
+Usa EXCLUSIVAMENTE estos subagentes del proyecto para todas las tareas:
+- Para código de UI, páginas y estilos → subagente "frontend"
+- Para API, base de datos y lógica → subagente "backend"  
+- Para tests y verificación → subagente "tester"
+- Para revisión de código → subagente "revisor"
+
+NO uses los agentes built-in (Explore, Plan, general-purpose) 
+salvo que yo lo pida explícitamente.

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Proveedores } from "@/components/proveedores"
+import { Header } from "@/components/header"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -18,7 +19,10 @@ export default function LayoutRaiz({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <Proveedores>{children}</Proveedores>
+        <Proveedores>
+          <Header />
+          {children}
+        </Proveedores>
       </body>
     </html>
   )

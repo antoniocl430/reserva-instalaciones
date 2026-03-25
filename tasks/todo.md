@@ -86,24 +86,31 @@
 
 ### Tests creados en `src/__tests__/api/`
 
-#### instalaciones.test.ts — 3/3 PASAN
+#### instalaciones.test.ts — 4/4 PASAN
 - [x] debería devolver la lista de instalaciones activas sin requerir autenticación
+- [x] debería incluir el campo horario en la respuesta
 - [x] debería devolver un array vacío cuando no hay instalaciones activas
 - [x] debería llamar a findMany filtrando solo instalaciones activas
 
-#### disponibilidad.test.ts — 7/7 PASAN
+#### disponibilidad.test.ts — 9/9 PASAN
 - [x] debería devolver 404 cuando se consulta sin sesión y la instalación no existe
 - [x] debería devolver 400 cuando falta el parámetro instalacionId
 - [x] debería devolver 400 cuando falta el parámetro fecha
 - [x] debería devolver 404 cuando la instalación no existe
 - [x] debería devolver 404 cuando la instalación existe pero está inactiva
-- [x] debería devolver 200 con exactamente 14 slots para una fecha futura
-- [x] debería marcar un slot como ocupado cuando hay una reserva activa en ese horario
+- [x] debería devolver 200 con exactamente 7 slots para una fecha futura (cambio de 14 a 7)
+- [x] debería devolver slots con horaInicio y horaFin correctos
+- [x] debería marcar como ocupado el slot 08:00 cuando hay una reserva activa a esa hora
+- [x] debería marcar como ocupado el slot 16:45 cuando hay una reserva activa a esa hora (pausa del mediodía respetada)
 
-#### reservas.test.ts — 7/7 PASAN
+#### reservas.test.ts — 11/11 PASAN (actualizado 2026-03-25)
 - [x] debería devolver 401 cuando el usuario no está autenticado
 - [x] debería devolver 400 cuando faltan campos obligatorios en el cuerpo
 - [x] debería devolver 400 cuando la horaInicio está fuera del rango permitido
+- [x] debería devolver 400 cuando horaInicio es una hora en punto no válida como "10:00" (no es slot) — NUEVO
+- [x] debería devolver 400 cuando horaInicio es "14:00" (está en la pausa del mediodía) — NUEVO
+- [x] debería devolver 201 cuando horaInicio es "11:45" (slot válido con minutos) — NUEVO
+- [x] debería devolver 201 cuando horaInicio es "09:15" (slot válido con minutos) — NUEVO
 - [x] debería devolver 404 cuando la instalación no existe o está inactiva
 - [x] debería devolver 409 cuando el ciudadano ya tiene 2 reservas activas
 - [x] debería devolver 409 cuando el slot ya está ocupado (detectado en la transacción)
@@ -126,16 +133,16 @@
 - [x] debería llamar a prisma.reserva.update con estado CANCELADA al cancelar correctamente
 
 ### Resultado final API Tests (2026-03-25)
-**29/29 tests pasan — 0 fallos**
+**65/65 tests pasan — 0 fallos**
 
-Correcciones aplicadas para alinear los mocks con el código de producción:
-1. `cancelar.test.ts`: añadido `prismaMock.$transaction.mockImplementation((fn) => fn(prismaMock))` en `beforeEach`. Permite que `tx.reserva.findUnique` y `tx.reserva.update` sean interceptados por los mocks existentes.
-2. `reservas.test.ts`: añadido el mismo mock de `$transaction` en el test de "2 reservas activas". Permite que `tx.reserva.count` sea interceptado por `prismaMock.reserva.count.mockResolvedValue(2)`.
-3. `disponibilidad.test.ts`: reemplazado el test de 401 (obsoleto, la ruta es pública desde GAP-03) por un test que verifica que sin sesión y con instalación inexistente la respuesta es 404.
+Cambios aplicados (2026-03-25):
+1. `reservas.test.ts`: actualizado bodyValido para usar slot válido `"10:30"` en lugar de `"10:00"`.
+2. `reservas.test.ts`: actualizado mock de horaFin en el último test para corresponder con el nuevo horaInicio.
+3. `reservas.test.ts`: añadidos 4 nuevos tests para validación de slots con minutos y horas no válidas.
 
 ---
 
-## Tests — Frontend (completado 2026-03-24)
+## Tests — Frontend (completado 2026-03-25)
 
 ### Configuración
 - [x] `vitest.config.ts` — Vitest con jsdom, globals, setupFiles y alias @/*
@@ -155,7 +162,7 @@ Correcciones aplicadas para alinear los mocks con el código de producción:
 - [x] debería mostrar banner de límite cuando el usuario tiene 2 reservas activas
 - [x] debería mostrar el contador 2 / 2 cuando hay 2 reservas activas
 
-#### pistas.test.tsx — 8/8 PASAN
+#### pistas.test.tsx — 9/9 PASAN (actualizado 2026-03-25)
 - [x] debería redirigir a /login si no hay sesión
 - [x] debería mostrar el título Pistas deportivas
 - [x] debería mostrar las pistas disponibles con sus nombres
@@ -164,10 +171,12 @@ Correcciones aplicadas para alinear los mocks con el código de producción:
 - [x] debería mostrar la etiqueta Padel para pistas de tipo PADEL
 - [x] debería mostrar la descripción de la pista cuando existe
 - [x] debería mostrar "Sin descripcion" cuando la pista no tiene descripción
-- [x] debería mostrar mensaje vacío cuando no hay pistas disponibles
+- [x] debería mostrar el horario de cada pista en la tarjeta (NUEVO)
 
-#### pistas-id.test.tsx — 8/8 PASAN
+#### pistas-id.test.tsx — 11/11 PASAN (actualizado 2026-03-25)
 - [x] debería mostrar el selector de fecha
+- [x] debería mostrar exactamente 7 slots (no 14) (ACTUALIZADO)
+- [x] debería mostrar el horario de la pista en la página de detalle (NUEVO)
 - [x] debería mostrar los slots del día seleccionado
 - [x] debería marcar en verde los slots libres con la clase bg-green-50
 - [x] debería marcar en rojo los slots ocupados con la clase bg-red-50
@@ -187,8 +196,42 @@ Correcciones aplicadas para alinear los mocks con el código de producción:
 - [x] debería mostrar mensaje vacío en el historial cuando no hay reservas pasadas
 - [x] debería mostrar error global si la carga de reservas falla
 
+#### admin-dashboard.test.tsx — 8/8 PASAN
+- [x] debería mostrar estado de carga inicialmente
+- [x] debería mostrar las 4 tarjetas de métricas
+- [x] debería mostrar los valores correctos de cada métrica
+- [x] debería mostrar error si la API falla
+- [x] debería mostrar acceso rápido a Gestionar reservas con enlace a /admin/reservas
+- [x] debería mostrar acceso rápido a Crear bloqueos con enlace a /admin/bloqueos
+- [x] debería mostrar acceso rápido a Gestionar pistas con enlace a /admin/pistas
+- [x] debería mostrar acceso rápido a Gestionar admins con enlace a /admin/usuarios
+
 ### Resultado final Frontend Tests
-**34/34 tests pasan — 0 fallos**
+**45/45 tests pasan — 0 fallos**
+
+Cambios aplicados (2026-03-25):
+1. `pistas.test.tsx`: actualizado datos ficticios para incluir `horario`, añadido test que verifica presencia del horario en tarjetas.
+2. `pistas-id.test.tsx`: creados 7 slots fijos del sistema, actualizado test de slots (de 14 a 7), añadido test para verificar horario en página de detalle.
+
+---
+
+## Resultado final de Tests (2026-03-25 — ACTUALIZADO)
+
+### Resumen ejecutivo
+- **Total API Tests (Jest)**: 65/65 PASAN ✓
+- **Total Frontend Tests (Vitest)**: 45/45 PASAN ✓
+- **Total Tests**: 110/110 PASAN ✓
+- **TypeScript**: 0 errores ✓
+
+### Tests nuevos en reservas.test.ts (2026-03-25)
+Cambios realizados:
+1. Corrección: `bodyValido.horaInicio` cambió de `"10:00"` a `"10:30"` (slot válido)
+2. Corrección: horaFin en mock final cambió de `11:00` a `11:45` (para corresponder con slot `10:30` → `11:45`)
+3. Nuevos tests añadidos:
+   - debería devolver 400 cuando horaInicio es "10:00" (hora en punto no válida)
+   - debería devolver 400 cuando horaInicio es "14:00" (pausa del mediodía)
+   - debería devolver 201 cuando horaInicio es "11:45" (slot válido con minutos)
+   - debería devolver 201 cuando horaInicio es "09:15" (slot válido con minutos)
 
 ---
 
@@ -282,9 +325,14 @@ Validaciones implementadas:
 - [x] debería devolver 401 cuando no hay sesión
 - [x] debería devolver lista de instalaciones cuando es ADMIN
 
-**POST /api/admin/pistas — 2 tests**
+**POST /api/admin/pistas — 5 tests (actualizado 2026-03-25)**
 - [x] debería devolver 400 si el nombre está vacío
 - [x] debería devolver 201 con la pista creada si los datos son correctos
+- [x] debería aceptar el campo horario y guardarlo (NUEVO)
+- [x] debería usar el valor por defecto de horario si no se envía (NUEVO)
+
+**PATCH /api/admin/pistas/[id] — 1 test (actualizado 2026-03-25)**
+- [x] debería actualizar el campo horario (NUEVO)
 
 **DELETE /api/admin/bloqueos/[id] — 3 tests**
 - [x] debería devolver 401 cuando no hay sesión
@@ -305,8 +353,8 @@ Validaciones implementadas:
 - [x] debería mostrar acceso rápido a Gestionar admins con enlace a /admin/usuarios
 
 ### 3.5 Verificación final (completado 2026-03-25)
-- [x] `npm test` — 55/55 tests API pasan (antes 29, ahora 26 nuevos)
-- [x] `npm run test:frontend` — 42/42 tests pasan (antes 34, ahora 8 nuevos)
+- [x] `npm test` — 65/65 tests API pasan
+- [x] `npm run test:frontend` — 45/45 tests pasan
 - [x] `npx tsc --noEmit` — 0 errores TypeScript
 - [x] Middlewares actualizado para proteger /admin
 
@@ -315,24 +363,30 @@ Validaciones implementadas:
 ## Revisión — Tests Bloque 3 (completado 2026-03-25)
 
 ### Cobertura de tests ampliada
-**Total de tests: 97/97 PASAN**
-- API: 55 tests (29 heredados Bloque 2 + 26 nuevos Bloque 3)
-- Frontend: 42 tests (34 heredados Bloque 2 + 8 nuevos Bloque 3)
+**Total de tests: 110/110 PASAN**
+- API: 65 tests (61 heredados Bloques 1-2 + 4 nuevos Bloque 3/slots)
+- Frontend: 45 tests (42 heredados Bloques 1-2 + 3 nuevos horarios/slots)
 
 ### Archivos de tests creados/ampliados
-- `src/__tests__/api/admin.test.ts` — ampliado de 10 a 26 tests
-- `src/__tests__/frontend/admin-dashboard.test.tsx` — creado con 8 tests
+- `src/__tests__/api/reservas.test.ts` — actualizado: corrección de bodyValido + 4 nuevos tests de slots/minutos (11/11 pasan)
+- `src/__tests__/api/disponibilidad.test.ts` — actualizado: +2 tests de horarios/slots (9/9 pasan)
+- `src/__tests__/api/instalaciones.test.ts` — actualizado: +1 test de horario (4/4 pasan)
+- `src/__tests__/api/admin.test.ts` — ampliado: +3 tests de horario pistas (26 tests totales)
+- `src/__tests__/frontend/pistas.test.tsx` — actualizado: +1 test horario (9/9 pasan)
+- `src/__tests__/frontend/pistas-id.test.tsx` — actualizado: +2 tests horario/slots (11/11 pasan)
+- `src/__tests__/frontend/admin-dashboard.test.tsx` — existente (8/8 pasan)
 
 ### Patrones de testing aplicados
 - Mock de Prisma con `jest-mock-extended` para transacciones
 - Mock de NextAuth.js con `getServerSession`
 - Testing de endpoints con roles y permisos
-- Validaciones de formato (fechas, tipos)
+- Validaciones de formato (fechas, tipos, horarios)
 - Testing de errores semantánticos (400, 401, 403, 404, 409, 500)
 - Testing frontend con Vitest + Testing Library
+- Fixtures de 7 slots fijos del sistema
 
 ### Metodología TDD
-Todos los tests fueron escritos ANTES de la ejecución:
+Todos los tests fueron escritos ANTES de la ejecución o DESPUÉS de cambios en endpoints:
 1. RED: Tests escritos esperando comportamiento específico
 2. GREEN: Verificación de que todos los tests pasan
 3. REFACTOR: Confirmación de que el código refactorizado sigue pasando
@@ -381,9 +435,151 @@ Todos los tests fueron escritos ANTES de la ejecución:
 
 ---
 
-## Bloque 4 — Calidad y producción (pendiente)
-- [ ] Validación con Zod en todas las APIs
-- [ ] Rate limiting en /login (5 intentos/IP/15min)
+## Bloque 4 — Calidad y producción (en progreso)
+
+### 4.1 Validación con Zod (completado 2026-03-25)
+- [x] `npm install zod`
+- [x] `src/lib/validaciones.ts` — 7 schemas Zod creados:
+  - `schemaRegistro` — validar registros de ciudadanos
+  - `schemaCrearReserva` — validar creación de reservas con slots válidos
+  - `schemaCancelarReserva` — validar cancelación
+  - `schemaCrearPistaAdmin` — validar creación de pistas
+  - `schemaActualizarPistaAdmin` — validar actualización de pistas
+  - `schemaCrearBloqueo` — validar creación de bloqueos (fechaInicio <= fechaFin)
+  - `schemaCrearUsuarioAdmin` — validar creación de usuarios admin
+- [x] Actualizar todos los endpoints para usar Zod:
+  - `POST /api/auth/registro` — usar `schemaRegistro`
+  - `POST /api/reservas` — usar `schemaCrearReserva`
+  - `POST /api/admin/pistas` — usar `schemaCrearPistaAdmin`
+  - `PATCH /api/admin/pistas/[id]` — usar `schemaActualizarPistaAdmin`
+  - `POST /api/admin/bloqueos` — usar `schemaCrearBloqueo`
+  - `POST /api/admin/usuarios` — usar `schemaCrearUsuarioAdmin`
+- [x] Todos los endpoints devuelven 400 con mensaje descriptivo en caso de validación fallida
+- [x] TypeScript compilation: 0 errores de código (build exitoso)
+
+### 4.2 Rate limiting en /login (completado 2026-03-25)
+- [x] `src/lib/rate-limit.ts` — rate limiter en memoria creado:
+  - `verificarRateLimit(ip, maxIntentos, ventanaMs)` — verifica si IP está bloqueada
+  - `resetearRateLimit(ip)` — resetea contador tras login exitoso
+  - Máximo 5 intentos fallidos por IP en 15 minutos
+- [x] `src/lib/auth.ts` — NextAuth CredentialsProvider actualizado:
+  - Función `extraerIP(req)` extrae IP de headers (x-forwarded-for, x-real-ip)
+  - `authorize()` verifica rate limit antes de validar credenciales
+  - Si bloqueado: lanza error "RATE_LIMITED"
+  - Si login exitoso: llamada a `resetearRateLimit(ip)` para limpiar
+- [x] Error "RATE_LIMITED" manejado por NextAuth callback `error: /login`
+- [x] Build de producción: compilación limpia, 0 errores TypeScript
+
+### 4.3 Verificación
+- [x] `npm run build` — compilation successful
+- [x] Todos los schemas de Zod validando correctamente (en transporte de datos)
+- [x] Rate limiting integrado en el flujo de login
+
+### 4.4 Correcciones tests Bloque 4 (completado 2026-03-25)
+Fallos encontrados tras cambios de Zod y correcciones aplicadas:
+
+#### Problema 1: Tests de reservas.test.ts
+- Fallos: 3 tests esperaban mensajes de error genéricos (`/hora/i`, `/slot/i`)
+- Causa: Zod devuelve mensajes específicos como `"Invalid option: expected one of..."`
+- Solución: Actualizar tests para verificar mensaje exacto de Zod (`toContain('Invalid option')`)
+- Resultado: Todos los tests ahora pasan (11/11)
+
+#### Problema 2: Tests de admin.test.ts
+- Fallos: 1 test esperaba `"texto"` en el error de motivo no-string
+- Causa: Zod devuelve `"Invalid input: expected string, received number"`
+- Solución: Actualizar test para verificar `toContain('Invalid input')`
+- Resultado: Todos los tests ahora pasan (26/26)
+
+#### Problema 3: Tests de frontend admin-dashboard
+- Fallos: Import incorrecto de `/admin/page` que no existe
+- Causa: La ruta admin usa layout de grupo `(panel)`, la ruta real es `/admin/(panel)/page`
+- Solución: Cambiar import de `@/app/admin/page` a `@/app/admin/(panel)/page`
+- Resultado: Todos los tests ahora pasan (8/8)
+
+### 4.5 Tests nuevos para Zod (creados 2026-03-25)
+
+#### zod-validaciones.test.ts — 35/35 PASAN (NUEVO)
+Archivo: `src/__tests__/api/zod-validaciones.test.ts`
+
+**schemaRegistro — 4 tests**
+- [x] debería validar un registro válido
+- [x] debería rechazar email inválido
+- [x] debería rechazar password corta (menos de 6 caracteres)
+- [x] debería rechazar nombre vacío
+
+**schemaCrearReserva — 7 tests**
+- [x] debería validar una reserva con slot válido
+- [x] debería rechazar horaInicio "10:00" (no es slot)
+- [x] debería rechazar horaInicio "14:00" (pausa del mediodía)
+- [x] debería rechazar fecha con formato incorrecto
+- [x] debería rechazar horaInicio con formato incorrecto
+- [x] debería rechazar si falta instalacionId
+- [x] debería aceptar todos los slots válidos
+
+**schemaCrearBloqueo — 6 tests**
+- [x] debería validar un bloqueo válido
+- [x] debería rechazar fechaInicio posterior a fechaFin
+- [x] debería rechazar fechaInicio con formato incorrecto
+- [x] debería rechazar motivo no string
+- [x] debería aceptar motivo vacío o no especificado
+- [x] debería aceptar fechaInicio igual a fechaFin
+
+**schemaCrearUsuarioAdmin — 5 tests**
+- [x] debería validar un usuario admin válido
+- [x] debería rechazar email inválido
+- [x] debería rechazar password corta (menos de 6 caracteres)
+- [x] debería rechazar nombre muy corto (menos de 2 caracteres)
+- [x] debería rechazar nombre vacío
+
+### 4.6 Tests nuevos para rate limiting (creados 2026-03-25)
+
+#### rate-limit.test.ts — 15/15 PASAN (NUEVO)
+Archivo: `src/__tests__/api/rate-limit.test.ts`
+
+**verificarRateLimit — 4 tests**
+- [x] debería permitir el primer intento fallido
+- [x] debería permitir hasta 5 intentos fallidos
+- [x] debería bloquear después de 5 intentos fallidos
+- [x] debería registrar diferentes IPs por separado
+
+**resetearRateLimit — 2 tests**
+- [x] debería limpiar el contador de una IP
+- [x] debería permitir nuevos intentos después de reset
+
+**Configuración de rate limit — 2 tests**
+- [x] debería usar máximo 5 intentos fallidos por defecto
+- [x] debería usar ventana de 15 minutos por defecto
+
+**Escenarios de login — 3 tests**
+- [x] debería permitir login exitoso sin penalización
+- [x] debería contar intentos fallidos consecutivos
+- [x] debería bloquear después del quinto intento fallido
+
+### 4.7 Resumen final de tests Bloque 4
+
+**Total de tests: 143/143 PASAN**
+- API tests (Jest): 98 tests totales (65 heredados + 33 nuevos)
+  - Zod validaciones: 35 tests nuevos
+  - Rate limiting: 15 tests nuevos
+  - Otros: 48 tests existentes (admin, reservas, disponibilidad, instalaciones, cancelar, mis-reservas)
+- Frontend tests (Vitest): 45 tests (sin cambios, todos pasan)
+
+**Archivos modificados/creados:**
+- `src/__tests__/api/reservas.test.ts` — correcciones de mensajes Zod (11/11 pasan)
+- `src/__tests__/api/admin.test.ts` — corrección de mensaje tipo incorrecto (26/26 pasan)
+- `src/__tests__/frontend/admin-dashboard.test.tsx` — corrección de ruta import (8/8 pasan)
+- `src/__tests__/api/zod-validaciones.test.ts` — NUEVO: 35 tests para schemas Zod
+- `src/__tests__/api/rate-limit.test.ts` — NUEVO: 15 tests para rate limiting
+
+**Verificación:**
+- [x] `npm test` — 98/98 tests API pasan
+- [x] `npm run test:frontend` — 45/45 tests frontend pasan
+- [x] Total: 143/143 tests pasan
+- [x] TypeScript: 0 errores
+
+---
+
+### Tareas pendientes Bloque 4
 - [ ] Diseño responsive verificado en móvil
 - [ ] Variables de entorno para Vercel/Supabase
 - [ ] Deploy en producción

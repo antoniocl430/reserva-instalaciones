@@ -1,0 +1,119 @@
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { opcionesAuth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { formatearFechaCorta, formatearHora } from "@/lib/formato"
+
+export default async function PaginaDashboard() {
+  // Proteccion de ruta: si no hay sesion, redirige al login
+  const sesion = await getServerSession(opcionesAuth)
+  if (!sesion) {
+    redirect("/login")
+  }
+
+  // Cargamos las reservas activas directamente desde Prisma en el servidor
+  const ahora = new Date()
+  const reservasActivas = await prisma.reserva.findMany({
+    where: {
+      usuarioId: sesion.user.id,
+      estado: "ACTIVA",
+      horaInicio: { gte: ahora },
+    },
+    include: { instalacion: { select: { id: true, nombre: true } } },
+    orderBy: { horaInicio: "asc" },
+    take: 2, // maximo 2 reservas activas por las reglas de negocio
+  })
+
+  const totalActivas = reservasActivas.length
+  const limitePistas = totalActivas >= 2
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
+        {/* Saludo de bienvenida */}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Bienvenido/a, {sesion.user.name ?? "usuario"}
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Gestiona tus reservas de instalaciones deportivas
+          </p>
+        </div>
+
+        {/* Aviso cuando el usuario ha alcanzado el limite de reservas */}
+        {limitePistas && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-yellow-800">
+            Has alcanzado el limite de 2 reservas activas. Cancela una antes de reservar otra pista.
+          </div>
+        )}
+
+        {/* Accesos rapidos */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Link
+            href="/pistas"
+            className="flex flex-col items-start gap-1 bg-blue-600 text-white font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            <span className="text-sm sm:text-base font-semibold">Reservar pista</span>
+            <span className="text-xs sm:text-sm text-blue-100">Ver disponibilidad y reservar</span>
+          </Link>
+          <Link
+            href="/mis-reservas"
+            className="flex flex-col items-start gap-1 bg-white border border-gray-200 text-gray-800 font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            <span className="text-sm sm:text-base font-semibold">Mis reservas</span>
+            <span className="text-xs sm:text-sm text-gray-500">
+              {totalActivas === 0
+                ? "No tienes reservas activas"
+                : totalActivas === 1
+                ? "1 reserva activa"
+                : `${totalActivas} reservas activas`}
+            </span>
+          </Link>
+        </div>
+
+        {/* Seccion: reservas activas */}
+        <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-800">Reservas activas</h2>
+            {totalActivas > 0 && (
+              <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                {totalActivas} / 2
+              </span>
+            )}
+          </div>
+
+          {reservasActivas.length === 0 ? (
+            <div className="px-4 py-8 text-center space-y-2">
+              <p className="text-sm text-gray-500">No tienes reservas activas</p>
+              <Link
+                href="/pistas"
+                className="inline-block text-sm text-blue-600 hover:underline font-medium"
+              >
+                Reserva una pista ahora
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {reservasActivas.map((reserva) => (
+                <li key={reserva.id} className="px-4 py-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {reserva.instalacion.nombre}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {formatearFechaCorta(reserva.horaInicio)} · {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                    Activa
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </main>
+  )
+}

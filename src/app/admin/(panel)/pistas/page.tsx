@@ -164,19 +164,19 @@ export default function PaginaPistasAdmin() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Cabecera */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestión de Pistas</h1>
-            <p className="text-gray-500 mt-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Pistas</h1>
+            <p className="text-sm sm:text-base text-gray-500 mt-1">
               Crea, edita y gestiona las instalaciones deportivas disponibles
             </p>
           </div>
           <Button
             onClick={() => setDialogNueva(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
           >
             Nueva pista
           </Button>
@@ -275,7 +275,7 @@ export default function PaginaPistasAdmin() {
 
       {/* Dialog de crear nueva pista */}
       <Dialog open={dialogNueva} onOpenChange={setDialogNueva}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
             <DialogTitle>Crear nueva pista</DialogTitle>
             <DialogDescription>
@@ -345,7 +345,7 @@ export default function PaginaPistasAdmin() {
 
       {/* Dialog de editar pista */}
       <Dialog open={dialogEditar} onOpenChange={setDialogEditar}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
             <DialogTitle>Editar pista</DialogTitle>
             <DialogDescription>

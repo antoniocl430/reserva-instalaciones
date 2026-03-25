@@ -39,6 +39,7 @@ model Instalacion {
   nombre      String   @unique
   tipo        String   // "PADEL" | "PISCINA"
   descripcion String?
+  horario     String   @default("Lun-Dom: 8:00-13:00 y 16:45-20:30")
   activa      Boolean  @default(true)
   creadoEn    DateTime @default(now())
 

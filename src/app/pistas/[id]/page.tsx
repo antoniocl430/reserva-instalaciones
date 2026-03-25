@@ -185,19 +185,19 @@ export default function PaginaDetallePista({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Cabecera con botón volver */}
-        <div className="flex items-center gap-3">
+        <div>
           <button
             onClick={() => router.push("/pistas")}
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2"
           >
             ← Volver
           </button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{nombrePista}</h1>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{nombrePista}</h1>
             {pista?.descripcion && (
-              <p className="text-sm text-gray-500 mt-0.5">{pista.descripcion}</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{pista.descripcion}</p>
             )}
             {pista?.horario && (
               <p className="text-xs text-gray-600 mt-1">
@@ -295,7 +295,7 @@ export default function PaginaDetallePista({ params }: Props) {
 
       {/* Dialog de confirmación de reserva */}
       <Dialog open={dialogAbierto} onOpenChange={(abierto) => { if (!abierto) cerrarDialog() }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
             <DialogTitle>Confirmar reserva</DialogTitle>
             <DialogDescription>
