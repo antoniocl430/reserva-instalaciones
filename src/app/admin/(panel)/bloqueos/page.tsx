@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -187,7 +188,11 @@ export default function PaginaBloqueoAdmin() {
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {cargando ? (
             <div className="p-8 text-center text-gray-500">
-              Cargando bloqueos...
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
             </div>
           ) : bloqueos.length === 0 ? (
             <div className="p-8 text-center text-gray-500">

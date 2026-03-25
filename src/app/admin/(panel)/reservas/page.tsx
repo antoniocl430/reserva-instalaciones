@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -275,7 +276,12 @@ export default function PaginaReservasAdmin() {
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {cargando ? (
             <div className="p-8 text-center text-gray-500">
-              Cargando reservas...
+              
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
             </div>
           ) : reservas.length === 0 ? (
             <div className="p-8 text-center text-gray-500">

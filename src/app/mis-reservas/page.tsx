@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -147,11 +148,7 @@ export default function PaginaMisReservas() {
         {cargando ? (
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse flex gap-3">
-                <div className="h-4 bg-gray-200 rounded w-1/3" />
-                <div className="h-4 bg-gray-200 rounded w-1/4" />
-                <div className="h-4 bg-gray-200 rounded w-1/4" />
-              </div>
+              <Skeleton key={i} className="h-20 w-full" />
             ))}
           </div>
         ) : (

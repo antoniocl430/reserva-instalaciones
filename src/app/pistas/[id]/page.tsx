@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -257,9 +258,9 @@ export default function PaginaDetallePista({ params }: Props) {
 
           <div className="p-4">
             {cargandoSlots ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 space-y-2">
                 {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
+                  <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
             ) : errorSlots ? (

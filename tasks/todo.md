@@ -650,3 +650,66 @@ Archivo: `src/__tests__/api/rate-limit.test.ts`
 - [ ] Diseño responsive verificado en móvil
 - [ ] Variables de entorno para Vercel/Supabase
 - [ ] Deploy en producción
+
+---
+
+## Implementar Loading Skeletons (completado 2026-03-25)
+
+### Plan de implementación
+- [x] Crear componente `Skeleton` en `src/components/ui/skeleton.tsx`
+- [x] Reemplazar estado de carga en `/mis-reservas` (3 filas skeleton)
+- [x] Reemplazar estado de carga en `/pistas/[id]` (7 slots skeleton)
+- [x] Reemplazar estado de carga en `/admin` dashboard (4 tarjetas skeleton)
+- [x] Reemplazar estado de carga en `/admin/reservas` (5 filas skeleton)
+- [x] Reemplazar estado de carga en `/admin/pistas` (3 filas skeleton)
+- [x] Reemplazar estado de carga en `/admin/bloqueos` (3 filas skeleton)
+- [x] Reemplazar estado de carga en `/admin/usuarios` (3 filas skeleton)
+- [x] Verificar TypeScript sin errores
+- [x] Verificar que tests aún pasen
+
+### Cambios realizados
+
+**Archivo nuevo:**
+- `src/components/ui/skeleton.tsx` — Componente Skeleton con animación pulse
+
+**Archivos modificados:**
+1. `src/app/mis-reservas/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga: 3 Skeleton components con clase `h-20 w-full`
+
+2. `src/app/pistas/[id]/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga: 7 Skeleton components con clase `h-16 w-full`
+
+3. `src/app/admin/(panel)/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga dashboard: 4 Skeleton components con clase `h-24 w-full`
+
+4. `src/app/admin/(panel)/reservas/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga tabla: 5 Skeleton components con clase `h-12 w-full`
+
+5. `src/app/admin/(panel)/pistas/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga tabla: 3 Skeleton components con clase `h-12 w-full`
+
+6. `src/app/admin/(panel)/bloqueos/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga tabla: 3 Skeleton components con clase `h-12 w-full`
+
+7. `src/app/admin/(panel)/usuarios/page.tsx`
+   - Agregado import: `import { Skeleton } from "@/components/ui/skeleton"`
+   - Estado de carga tabla: 3 Skeleton components con clase `h-12 w-full`
+
+### Verificación final
+- [x] TypeScript compila sin errores: `npx tsc --noEmit`
+- [x] Frontend tests: 45/45 PASAN (`npm run test:frontend`)
+- [x] Backend tests: 65/65 PASAN (`npm test`)
+- [x] Total: 110/110 PASAN
+
+### Notas técnicas
+- El componente Skeleton usa `animate-pulse` de Tailwind CSS
+- Cada página tiene un número apropiado de skeletons según su contenido
+- Los skeletons se adaptan al diseño responsive (h-12 para tablas, h-16-24 para tarjetas)
+- No se modificó lógica de negocio, solo UI de estados de carga
+- Todos los cambios son solo en el frontend, sin impacto en API
