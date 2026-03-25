@@ -1,0 +1,21 @@
+VARIABLES DE ENTORNO PARA VERCEL
+=================================
+
+DATABASE_URL
+postgresql://postgres.njxddgmppvzrkwqohgux:58945218ttUU@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+
+DIRECT_URL
+postgresql://postgres.njxddgmppvzrkwqohgux:58945218ttUU@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
+
+NEXTAUTH_SECRET
+C/EEkEi3azOmrtzvb2BOKFit3NX1eHHYFwrI7o7pSZ8=
+
+NEXTAUTH_URL
+https://NOMBRE-DE-TU-APP.vercel.app
+(cambiar por la URL real que te asigne Vercel)
+
+RESEND_API_KEY
+re_LpFKvBHA_FdM46w3AxRoELyYSDdVdQVQH
+
+EMAIL_FROM
+(el email que tengas verificado en Resend)

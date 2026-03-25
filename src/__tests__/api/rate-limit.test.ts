@@ -22,40 +22,40 @@ describe('Rate Limiting en /login', () => {
     it('debería permitir el primer intento fallido', () => {
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 4,
+        restantes: 4,
       })
 
       const resultado = verificarRateLimit('192.168.1.1', 5, 15 * 60 * 1000)
       expect(resultado.bloqueado).toBe(false)
-      expect(resultado.intentosRestantes).toBe(4)
+      expect(resultado.restantes).toBe(4)
     })
 
     it('debería permitir hasta 5 intentos fallidos', () => {
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 0,
+        restantes: 0,
       })
 
       const resultado = verificarRateLimit('192.168.1.1', 5, 15 * 60 * 1000)
       expect(resultado.bloqueado).toBe(false)
-      expect(resultado.intentosRestantes).toBe(0)
+      expect(resultado.restantes).toBe(0)
     })
 
     it('debería bloquear después de 5 intentos fallidos', () => {
       mockVerificar.mockReturnValue({
         bloqueado: true,
-        tiempoRestante: 300,
+        restantes: 0,
       })
 
       const resultado = verificarRateLimit('192.168.1.1', 5, 15 * 60 * 1000)
       expect(resultado.bloqueado).toBe(true)
-      expect(resultado.tiempoRestante).toBe(300)
+      expect(resultado.restantes).toBe(0)
     })
 
     it('debería registrar diferentes IPs por separado', () => {
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 4,
+        restantes: 4,
       })
 
       const ip1 = '192.168.1.1'
@@ -82,14 +82,14 @@ describe('Rate Limiting en /login', () => {
       mockReset.mockReturnValue(true)
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 5,
+        restantes: 5,
       })
 
       resetearRateLimit('192.168.1.1')
       const resultado = verificarRateLimit('192.168.1.1', 5, 15 * 60 * 1000)
 
       expect(resultado.bloqueado).toBe(false)
-      expect(resultado.intentosRestantes).toBe(5)
+      expect(resultado.restantes).toBe(5)
     })
   })
 
@@ -97,7 +97,7 @@ describe('Rate Limiting en /login', () => {
     it('debería usar máximo 5 intentos fallidos por defecto', () => {
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 4,
+        restantes: 4,
       })
 
       const maxIntentos = 5
@@ -110,7 +110,7 @@ describe('Rate Limiting en /login', () => {
     it('debería usar ventana de 15 minutos por defecto', () => {
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 4,
+        restantes: 4,
       })
 
       const ventanaMs = 15 * 60 * 1000 // 15 minutos
@@ -124,7 +124,7 @@ describe('Rate Limiting en /login', () => {
     it('debería permitir login exitoso sin penalización', () => {
       mockVerificar.mockReturnValue({
         bloqueado: false,
-        intentosRestantes: 5,
+        restantes: 5,
       })
       mockReset.mockReturnValue(true)
 
@@ -141,19 +141,19 @@ describe('Rate Limiting en /login', () => {
       // Primer intento fallido
       mockVerificar.mockReturnValueOnce({
         bloqueado: false,
-        intentosRestantes: 4,
+        restantes: 4,
       })
 
       // Segundo intento fallido
       mockVerificar.mockReturnValueOnce({
         bloqueado: false,
-        intentosRestantes: 3,
+        restantes: 3,
       })
 
       // Tercero...
       mockVerificar.mockReturnValueOnce({
         bloqueado: false,
-        intentosRestantes: 2,
+        restantes: 2,
       })
 
       const ip = '192.168.1.1'
@@ -173,13 +173,13 @@ describe('Rate Limiting en /login', () => {
     it('debería bloquear después del quinto intento fallido', () => {
       // 5 intentos fallidos
       mockVerificar
-        .mockReturnValueOnce({ bloqueado: false, intentosRestantes: 4 })
-        .mockReturnValueOnce({ bloqueado: false, intentosRestantes: 3 })
-        .mockReturnValueOnce({ bloqueado: false, intentosRestantes: 2 })
-        .mockReturnValueOnce({ bloqueado: false, intentosRestantes: 1 })
-        .mockReturnValueOnce({ bloqueado: false, intentosRestantes: 0 })
+        .mockReturnValueOnce({ bloqueado: false, restantes: 4 })
+        .mockReturnValueOnce({ bloqueado: false, restantes: 3 })
+        .mockReturnValueOnce({ bloqueado: false, restantes: 2 })
+        .mockReturnValueOnce({ bloqueado: false, restantes: 1 })
+        .mockReturnValueOnce({ bloqueado: false, restantes: 0 })
         // Sexto intento: bloqueado
-        .mockReturnValueOnce({ bloqueado: true, tiempoRestante: 900 })
+        .mockReturnValueOnce({ bloqueado: true, restantes: 0 })
 
       const ip = '192.168.1.1'
       const maxIntentos = 5
