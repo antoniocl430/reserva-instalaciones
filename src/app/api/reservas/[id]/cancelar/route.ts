@@ -4,7 +4,7 @@ import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { enviarEmailCancelacion } from "@/lib/email"
 
-// PATCH /api/reservas/[id]/cancelar — cancela una reserva
+// PATCH /api/reservas/[id]/cancelar — cancela una reserva del tenant del usuario autenticado
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -28,8 +28,11 @@ export async function PATCH(
     // transacción para evitar race conditions entre la validación y el update.
     // La transacción devuelve los datos de la reserva para el email.
     datosReserva = await prisma.$transaction(async (tx) => {
-      const reserva = await tx.reserva.findUnique({
-        where: { id: params.id },
+      // Buscar la reserva filtrando por id Y tenantId simultáneamente.
+      // Esto garantiza que un usuario no puede cancelar reservas de otro tenant
+      // aunque conozca el ID (evita información filtrada y race conditions).
+      const reserva = await tx.reserva.findFirst({
+        where: { id: params.id, tenantId: sesion.user.tenantId },
         include: {
           instalacion: { select: { nombre: true } },
           usuario: { select: { nombre: true, email: true } },
@@ -37,8 +40,7 @@ export async function PATCH(
       })
 
       if (!reserva) {
-        const err = new Error("RESERVA_NO_ENCONTRADA")
-        throw err
+        throw new Error("RESERVA_NO_ENCONTRADA")
       }
 
       // Verificar que el usuario es el dueño o es admin

@@ -1,6 +1,10 @@
 /**
  * Tests para POST /api/reservas
  * Requiere autenticación — crea una reserva con todas las validaciones de negocio
+ *
+ * Fase 4 multi-tenant:
+ *   - La ruta usa findFirst con { id, tenantId } para verificar instalación y bloqueo
+ *   - La sesión incluye tenantId (LESSON-016)
  */
 
 // eslint-disable-next-line no-var
@@ -27,6 +31,7 @@ import { getServerSession } from 'next-auth'
 
 const mockGetServerSession = getServerSession as jest.Mock
 
+const TENANT_ID = 'tenant-test'
 const FECHA_FUTURA = '2099-12-30'
 const bodyValido = {
   instalacionId: 'inst-1',
@@ -34,10 +39,24 @@ const bodyValido = {
   horaInicio: '10:30',
 }
 
-const sesionCiudadano = { user: { id: 'usuario-1', rol: 'CIUDADANO', email: 'test@test.com' } }
+// La sesión incluye tenantId desde Fase 4
+const sesionCiudadano = {
+  user: {
+    id: 'usuario-1',
+    rol: 'CIUDADANO',
+    email: 'test@test.com',
+    tenantId: TENANT_ID,
+  },
+}
 
 const instalacionActiva = {
-  id: 'inst-1', nombre: 'Pista 1', tipo: 'PADEL', descripcion: null, activa: true, creadoEn: new Date(),
+  id: 'inst-1',
+  tenantId: TENANT_ID,
+  nombre: 'Pista 1',
+  tipo: 'PADEL',
+  descripcion: null,
+  activa: true,
+  creadoEn: new Date(),
 }
 
 describe('POST /api/reservas', () => {
@@ -122,12 +141,14 @@ describe('POST /api/reservas', () => {
 
   it('debería devolver 201 cuando horaInicio es "11:45" (slot válido con minutos)', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
-    prismaMock.instalacion.findUnique.mockResolvedValue(instalacionActiva)
+    // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.bloqueo.findFirst.mockResolvedValue(null)
     prismaMock.reserva.count.mockResolvedValue(0)
 
     const reservaCreada = {
       id: 'reserva-nueva',
+      tenantId: TENANT_ID,
       usuarioId: 'usuario-1',
       instalacionId: 'inst-1',
       fecha: new Date(`${FECHA_FUTURA}T00:00:00.000Z`),
@@ -156,12 +177,14 @@ describe('POST /api/reservas', () => {
 
   it('debería devolver 201 cuando horaInicio es "09:15" (slot válido con minutos)', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
-    prismaMock.instalacion.findUnique.mockResolvedValue(instalacionActiva)
+    // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.bloqueo.findFirst.mockResolvedValue(null)
     prismaMock.reserva.count.mockResolvedValue(0)
 
     const reservaCreada = {
       id: 'reserva-nueva-2',
+      tenantId: TENANT_ID,
       usuarioId: 'usuario-1',
       instalacionId: 'inst-1',
       fecha: new Date(`${FECHA_FUTURA}T00:00:00.000Z`),
@@ -190,7 +213,8 @@ describe('POST /api/reservas', () => {
 
   it('debería devolver 404 cuando la instalación no existe o está inactiva', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
-    prismaMock.instalacion.findUnique.mockResolvedValue(null)
+    // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+    prismaMock.instalacion.findFirst.mockResolvedValue(null)
 
     const req = new Request('http://localhost/api/reservas', {
       method: 'POST',
@@ -206,7 +230,8 @@ describe('POST /api/reservas', () => {
 
   it('debería devolver 409 cuando el ciudadano ya tiene 2 reservas activas', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
-    prismaMock.instalacion.findUnique.mockResolvedValue(instalacionActiva)
+    // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.bloqueo.findFirst.mockResolvedValue(null)
     // El conteo de reservas activas ocurre DENTRO de prisma.$transaction (BUG-03).
     // Para que tx.reserva.count sea interceptado, hacemos que $transaction ejecute
@@ -228,7 +253,8 @@ describe('POST /api/reservas', () => {
 
   it('debería devolver 409 cuando el slot ya está ocupado (detectado en la transacción)', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
-    prismaMock.instalacion.findUnique.mockResolvedValue(instalacionActiva)
+    // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.bloqueo.findFirst.mockResolvedValue(null)
     prismaMock.reserva.count.mockResolvedValue(0)
     // La transacción lanza el error interno de slot ocupado
@@ -248,12 +274,14 @@ describe('POST /api/reservas', () => {
 
   it('debería devolver 201 y la reserva cuando todos los datos son correctos', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
-    prismaMock.instalacion.findUnique.mockResolvedValue(instalacionActiva)
+    // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.bloqueo.findFirst.mockResolvedValue(null)
     prismaMock.reserva.count.mockResolvedValue(0)
 
     const reservaCreada = {
       id: 'reserva-nueva',
+      tenantId: TENANT_ID,
       usuarioId: 'usuario-1',
       instalacionId: 'inst-1',
       fecha: new Date(`${FECHA_FUTURA}T00:00:00.000Z`),

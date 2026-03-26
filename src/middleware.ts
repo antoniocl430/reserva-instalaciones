@@ -1,13 +1,14 @@
 import { getToken } from "next-auth/jwt"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { extraerSlugDelHost } from "@/lib/tenant"
 
 // Rutas que requieren estar autenticado
 const RUTAS_PROTEGIDAS = ["/dashboard", "/pistas", "/mis-reservas"]
 // Rutas que requieren estar autenticado Y tener rol ADMIN
 const RUTAS_ADMIN = ["/admin"]
 // Rutas que solo tienen sentido sin sesión activa
-const RUTAS_PUBLICAS_AUTH = ["/login", "/registro"]
+const RUTAS_PUBLICAS_AUTH = ["/login", "/registro", "/recuperar-password", "/nueva-password"]
 // Login exclusivo para administradores (ruta pública especial)
 const RUTA_ADMIN_LOGIN = "/admin/login"
 // Rutas de API que son públicas (no requieren autenticación)
@@ -17,10 +18,33 @@ const RUTAS_API_PUBLICAS = ["/api/auth", "/api/instalaciones", "/api/disponibili
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Las rutas de API públicas pasan siempre sin verificar token
+  // ─── Resolución de tenant ──────────────────────────────────────────────────
+  // Extraer el slug del host y buscar el tenantId en la BD.
+  // IMPORTANTE: el middleware de Next.js se ejecuta en el Edge Runtime (no Node.js),
+  // por lo que NO puede importar Prisma directamente. El tenantId se inyecta en los
+  // headers para que las API routes y NextAuth lo lean desde allí.
+  //
+  // En producción, una mejora futura sería cachear el tenantId por slug en Redis
+  // para evitar una consulta a BD en cada petición.
+  const host = request.headers.get("host") ?? ""
+  const slugTenant = extraerSlugDelHost(host)
+
+  // Clonar la request para añadir headers de tenant
+  // El tenantId real se añade en la API route o en NextAuth tras consultar la BD.
+  // Aquí solo propagamos el slug; el tenantId completo se resuelve bajo demanda.
+  const requestConTenant = NextResponse.next({
+    request: {
+      headers: new Headers({
+        ...Object.fromEntries(request.headers.entries()),
+        "x-tenant-slug": slugTenant,
+      }),
+    },
+  })
+
+  // ─── Rutas de API públicas — pasan sin verificar token ────────────────────
   const esApiPublica = RUTAS_API_PUBLICAS.some((ruta) => pathname.startsWith(ruta))
   if (esApiPublica) {
-    return NextResponse.next()
+    return requestConTenant
   }
 
   const token = await getToken({
@@ -41,7 +65,7 @@ export async function middleware(request: NextRequest) {
   // /admin/login es pública: si se llega aquí (sin sesión o CIUDADANO), dejar pasar
   // El formulario mismo rechazará el acceso si el usuario no es ADMIN
   if (pathname === RUTA_ADMIN_LOGIN) {
-    return NextResponse.next()
+    return requestConTenant
   }
 
   // Si intenta acceder a ruta admin sin sesión → /admin/login
@@ -79,7 +103,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  return requestConTenant
 }
 
 export const config = {
@@ -91,6 +115,8 @@ export const config = {
     "/mis-reservas/:path*",
     "/login",
     "/registro",
+    "/recuperar-password",
+    "/nueva-password",
     "/api/disponibilidad/:path*",
   ],
 }

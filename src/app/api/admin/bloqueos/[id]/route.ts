@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// DELETE /api/admin/bloqueos/[id] — elimina un bloqueo
+// DELETE /api/admin/bloqueos/[id] — elimina un bloqueo del tenant del admin
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -21,9 +21,10 @@ export async function DELETE(
   }
 
   try {
-    // Verificar que el bloqueo existe
-    const bloqueo = await prisma.bloqueo.findUnique({
-      where: { id: params.id },
+    // Verificar que el bloqueo existe Y pertenece al tenant del admin
+    // (findFirst con id + tenantId evita acceso cruzado entre tenants)
+    const bloqueo = await prisma.bloqueo.findFirst({
+      where: { id: params.id, tenantId: sesion.user.tenantId },
     })
 
     if (!bloqueo) {

@@ -46,10 +46,18 @@ function crearHoraEnMadrid(fechaStr: string, horaStr: string): Date {
 
 // GET /api/disponibilidad?instalacionId=xxx&fecha=2026-03-24
 // Ruta pública: no requiere autenticación (UI-FLOWS.md — disponibilidad es pública)
+// El tenantId se obtiene del header x-tenant-id inyectado por el middleware.
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const instalacionId = searchParams.get("instalacionId")
   const fecha = searchParams.get("fecha") // formato esperado: "YYYY-MM-DD"
+
+  // Obtener el tenantId inyectado por el middleware
+  const tenantId = request.headers.get("x-tenant-id")
+
+  if (!tenantId) {
+    return NextResponse.json({ error: "Tenant no identificado" }, { status: 400 })
+  }
 
   if (!instalacionId || !fecha) {
     return NextResponse.json(
@@ -67,9 +75,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Verificar que la instalación existe y está activa
-    const instalacion = await prisma.instalacion.findUnique({
-      where: { id: instalacionId },
+    // Verificar que la instalación existe, está activa Y pertenece al tenant del request
+    const instalacion = await prisma.instalacion.findFirst({
+      where: { id: instalacionId, tenantId },
     })
     if (!instalacion || !instalacion.activa) {
       return NextResponse.json({ error: "Instalación no encontrada" }, { status: 404 })
@@ -83,6 +91,7 @@ export async function GET(request: NextRequest) {
 
     const reservasDelDia = await prisma.reserva.findMany({
       where: {
+        tenantId,
         instalacionId,
         estado: "ACTIVA",
         horaInicio: { gte: inicioDia, lte: finDia },
@@ -90,9 +99,10 @@ export async function GET(request: NextRequest) {
       select: { horaInicio: true, horaFin: true },
     })
 
-    // Obtener bloqueos activos que cubran algún momento del día
+    // Obtener bloqueos activos del tenant que cubran algún momento del día
     const bloqueos = await prisma.bloqueo.findMany({
       where: {
+        tenantId,
         instalacionId,
         activo: true,
         fechaInicio: { lte: finDia },

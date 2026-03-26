@@ -41,3 +41,19 @@ Construir y mantener toda la capa de servidor: API Routes, lógica de negocio, a
 
 ## Antes de crear cualquier endpoint
 Lee `docs/DATA-MODEL.md` para respetar la estructura de datos definida.
+
+## TDD — obligatorio en todo desarrollo
+Aplica TDD estrictamente. No das una tarea por finalizada hasta que los tests pasen.
+
+1. **RED** — escribe el test antes de escribir el endpoint o la lógica. Ejecuta y confirma que falla.
+2. **GREEN** — implementa el mínimo código para que el test pase.
+3. **REFACTOR** — limpia el código y verifica que los tests siguen en verde.
+
+Reglas:
+- Usa **Vitest** para tests unitarios e integración
+- Usa SQLite en memoria para tests de base de datos (sin mocks de Prisma)
+- Los tests se guardan en `src/__tests__/api/` respetando la estructura de rutas
+- Nomenclatura: `describe('POST /api/reservas')` + `it('debería devolver 409 cuando el slot ya está ocupado')`
+- Un test por regla de negocio o caso de error
+- Todo en español
+- Ejecuta los tests con `npx vitest run` antes de declarar la tarea completada

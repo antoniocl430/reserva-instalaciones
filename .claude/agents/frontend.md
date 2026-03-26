@@ -37,3 +37,18 @@ Construir y mantener toda la capa visual: páginas, componentes, formularios, es
 
 ## Antes de crear cualquier pantalla
 Lee `docs/UI-FLOWS.md` para respetar los flujos de navegación definidos.
+
+## TDD — obligatorio en todo desarrollo
+Aplica TDD estrictamente. No das una tarea por finalizada hasta que los tests pasen.
+
+1. **RED** — escribe el test antes de escribir el componente. Ejecuta y confirma que falla.
+2. **GREEN** — implementa el mínimo código para que el test pase.
+3. **REFACTOR** — limpia el código y verifica que los tests siguen en verde.
+
+Reglas:
+- Usa **Vitest** + **Testing Library** para tests de componentes
+- Los tests se guardan en `src/__tests__/` respetando la misma estructura de carpetas
+- Nomenclatura: `describe('NombreComponente')` + `it('debería hacer X cuando Y')`
+- Un test por comportamiento observable, no por función interna
+- Todo en español
+- Ejecuta los tests con `npx vitest run` antes de declarar la tarea completada

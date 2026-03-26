@@ -5,6 +5,7 @@
  *
  * NOTA: La ruta usa request.nextUrl (propiedad de NextRequest de Next.js),
  * por lo que los tests deben usar NextRequest, no el Request nativo del navegador.
+ * El middleware inyecta x-tenant-id en cada request; los tests lo simulan manualmente.
  */
 
 // eslint-disable-next-line no-var
@@ -24,6 +25,28 @@ jest.mock('next-auth', () => ({
 import { GET } from '@/app/api/disponibilidad/route'
 import { NextRequest } from 'next/server'
 
+// ID de tenant de prueba
+const TENANT_ID = 'tenant-test'
+
+// Helper: crea un NextRequest con el header de tenant inyectado
+function crearRequest(url: string) {
+  return new NextRequest(url, {
+    headers: { 'x-tenant-id': TENANT_ID },
+  })
+}
+
+// Instalación activa de prueba
+const instalacionActiva = {
+  id: 'inst-1',
+  tenantId: TENANT_ID,
+  nombre: 'Pista 1',
+  tipo: 'PADEL',
+  descripcion: null,
+  activa: true,
+  creadoEn: new Date(),
+  horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30',
+}
+
 describe('GET /api/disponibilidad', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -32,9 +55,9 @@ describe('GET /api/disponibilidad', () => {
   it('debería devolver 404 cuando se consulta sin sesión y la instalación no existe', async () => {
     // La ruta es pública (GAP-03): no requiere autenticación.
     // Sin sesión y con una instalación inexistente, la respuesta debe ser 404.
-    prismaMock.instalacion.findUnique.mockResolvedValue(null)
+    prismaMock.instalacion.findFirst.mockResolvedValue(null)
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=no-existe&fecha=2099-06-01')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=no-existe&fecha=2099-06-01')
     const res = await GET(req)
     const body = await res.json()
 
@@ -43,7 +66,7 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería devolver 400 cuando falta el parámetro instalacionId', async () => {
-    const req = new NextRequest('http://localhost/api/disponibilidad?fecha=2026-06-01')
+    const req = crearRequest('http://localhost/api/disponibilidad?fecha=2026-06-01')
     const res = await GET(req)
     const body = await res.json()
 
@@ -52,7 +75,7 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería devolver 400 cuando falta el parámetro fecha', async () => {
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=inst-1')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1')
     const res = await GET(req)
     const body = await res.json()
 
@@ -61,9 +84,9 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería devolver 404 cuando la instalación no existe', async () => {
-    prismaMock.instalacion.findUnique.mockResolvedValue(null)
+    prismaMock.instalacion.findFirst.mockResolvedValue(null)
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=no-existe&fecha=2026-06-01')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=no-existe&fecha=2026-06-01')
     const res = await GET(req)
     const body = await res.json()
 
@@ -72,24 +95,23 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería devolver 404 cuando la instalación existe pero está inactiva', async () => {
-    prismaMock.instalacion.findUnique.mockResolvedValue({
-      id: 'inst-1', nombre: 'Pista 1', tipo: 'PADEL', descripcion: null, activa: false, creadoEn: new Date(), horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30',
+    prismaMock.instalacion.findFirst.mockResolvedValue({
+      ...instalacionActiva,
+      activa: false,
     })
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2026-06-01')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2026-06-01')
     const res = await GET(req)
 
     expect(res.status).toBe(404)
   })
 
   it('debería devolver 200 con exactamente 7 slots para una fecha futura', async () => {
-    prismaMock.instalacion.findUnique.mockResolvedValue({
-      id: 'inst-1', nombre: 'Pista 1', tipo: 'PADEL', descripcion: null, activa: true, creadoEn: new Date(), horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30',
-    })
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.reserva.findMany.mockResolvedValue([])
     prismaMock.bloqueo.findMany.mockResolvedValue([])
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
     const res = await GET(req)
     const body = await res.json()
 
@@ -99,13 +121,11 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería devolver slots con horaInicio y horaFin correctos', async () => {
-    prismaMock.instalacion.findUnique.mockResolvedValue({
-      id: 'inst-1', nombre: 'Pista 1', tipo: 'PADEL', descripcion: null, activa: true, creadoEn: new Date(), horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30',
-    })
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.reserva.findMany.mockResolvedValue([])
     prismaMock.bloqueo.findMany.mockResolvedValue([])
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
     const res = await GET(req)
     const body = await res.json()
 
@@ -123,9 +143,7 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería marcar como ocupado el slot 08:00 cuando hay una reserva activa a esa hora', async () => {
-    prismaMock.instalacion.findUnique.mockResolvedValue({
-      id: 'inst-1', nombre: 'Pista 1', tipo: 'PADEL', descripcion: null, activa: true, creadoEn: new Date(), horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30',
-    })
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     // Diciembre está en UTC+1 (horario de invierno Madrid).
     // crearHoraEnMadrid("2099-12-31", 08:00) genera T07:00:00.000Z para que Madrid muestre 08:00.
     prismaMock.reserva.findMany.mockResolvedValue([
@@ -136,7 +154,7 @@ describe('GET /api/disponibilidad', () => {
     ])
     prismaMock.bloqueo.findMany.mockResolvedValue([])
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
     const res = await GET(req)
     const body = await res.json()
 
@@ -147,9 +165,7 @@ describe('GET /api/disponibilidad', () => {
   })
 
   it('debería marcar como ocupado el slot 16:45 cuando hay una reserva activa a esa hora (pausa del mediodía respetada)', async () => {
-    prismaMock.instalacion.findUnique.mockResolvedValue({
-      id: 'inst-1', nombre: 'Pista 1', tipo: 'PADEL', descripcion: null, activa: true, creadoEn: new Date(), horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30',
-    })
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     // crearHoraEnMadrid("2099-12-31", 16:45) genera T15:45:00.000Z para que Madrid muestre 16:45.
     prismaMock.reserva.findMany.mockResolvedValue([
       {
@@ -159,7 +175,7 @@ describe('GET /api/disponibilidad', () => {
     ])
     prismaMock.bloqueo.findMany.mockResolvedValue([])
 
-    const req = new NextRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
+    const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2099-12-31')
     const res = await GET(req)
     const body = await res.json()
 

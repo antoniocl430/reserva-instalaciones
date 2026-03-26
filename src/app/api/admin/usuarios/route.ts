@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const usuarios = await prisma.usuario.findMany({
-      where: { rol: "ADMIN" },
+      where: { tenantId: sesion.user.tenantId, rol: "ADMIN" },
       select: {
         id: true,
         nombre: true,
@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
 
     const { nombre, email, password } = resultado.data
 
-    // Comprobar si el email ya está registrado
-    const usuarioExistente = await prisma.usuario.findUnique({
-      where: { email: email.toLowerCase() },
+    // Comprobar si el email ya está registrado en este tenant
+    const usuarioExistente = await prisma.usuario.findFirst({
+      where: { email: email.toLowerCase(), tenantId: sesion.user.tenantId },
     })
 
     if (usuarioExistente) {
@@ -82,9 +82,10 @@ export async function POST(request: NextRequest) {
     // Hashear contraseña con coste 12
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // Crear el usuario con rol ADMIN
+    // Crear el usuario con rol ADMIN en el tenant actual
     const usuario = await prisma.usuario.create({
       data: {
+        tenantId: sesion.user.tenantId,
         nombre: nombre.trim(),
         email: email.toLowerCase(),
         passwordHash,

@@ -109,9 +109,19 @@ Para cada tarea sigue este flujo estrictamente:
 
 Usa EXCLUSIVAMENTE estos subagentes del proyecto para todas las tareas:
 - Para código de UI, páginas y estilos → subagente "frontend"
-- Para API, base de datos y lógica → subagente "backend"  
-- Para tests y verificación → subagente "tester"
+- Para API, base de datos y lógica → subagente "backend"
+- Para verificación de calidad y reporte de tests → subagente "tester"
 - Para revisión de código → subagente "revisor"
 
-NO uses los agentes built-in (Explore, Plan, general-purpose) 
+NO uses los agentes built-in (Explore, Plan, general-purpose)
 salvo que yo lo pida explícitamente.
+
+## TDD — responsabilidad de frontend y backend
+
+Los agentes **frontend** y **backend** aplican TDD en todo desarrollo:
+1. Escriben el test antes del código (RED)
+2. Implementan hasta que pase (GREEN)
+3. Refactorizan con los tests en verde (REFACTOR)
+4. No dan una tarea por finalizada hasta que `npx vitest run` pase
+
+El agente **tester** no aplica TDD. Su rol es ejecutar la suite completa, detectar regresiones y reportar estado de cobertura.

@@ -1,41 +1,119 @@
-import Link from "next/link"
+import { headers } from "next/headers"
+import Tablon, { Aviso } from "@/components/Tablon"
+import { extraerSlugDelHost, obtenerTenantPorSlug } from "@/lib/tenant"
 
-export default function Inicio() {
+// Tipo de instalación devuelto por la API
+interface Instalacion {
+  id: string
+  nombre: string
+  tipo: string
+  descripcion: string | null
+  horario: string
+  activa: boolean
+}
+
+// Pistas ficticias usadas como fallback si la API no responde
+const PISTAS_FALLBACK: Instalacion[] = [
+  {
+    id: "fallback-1",
+    nombre: "Pista de Pádel 1",
+    tipo: "PADEL",
+    descripcion: "Pista de pádel cubierta con iluminación LED",
+    horario: "Lunes a Domingo: 08:00 - 22:00",
+    activa: true,
+  },
+  {
+    id: "fallback-2",
+    nombre: "Pista de Pádel 2",
+    tipo: "PADEL",
+    descripcion: "Pista exterior con superficie de césped artificial",
+    horario: "Lunes a Domingo: 08:00 - 22:00",
+    activa: true,
+  },
+  {
+    id: "fallback-3",
+    nombre: "Pista de Pádel 3",
+    tipo: "PADEL",
+    descripcion: null,
+    horario: "Lunes a Domingo: 08:00 - 22:00",
+    activa: true,
+  },
+]
+
+// Obtiene las pistas activas desde la API. Si falla, devuelve el fallback.
+async function obtenerPistas(): Promise<Instalacion[]> {
+  try {
+    // URL absoluta necesaria en Server Components
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+
+    const respuesta = await fetch(`${baseUrl}/api/instalaciones`, {
+      cache: "no-store",
+    })
+
+    if (!respuesta.ok) {
+      return PISTAS_FALLBACK
+    }
+
+    const datos = await respuesta.json()
+    const pistas: Instalacion[] = datos.instalaciones ?? []
+
+    // Filtrar solo las pistas activas; si no hay ninguna, usar fallback
+    const pistasActivas = pistas.filter((p) => p.activa)
+    return pistasActivas.length > 0 ? pistasActivas : PISTAS_FALLBACK
+  } catch {
+    // Error de red u otro fallo: usar pistas ficticias
+    return PISTAS_FALLBACK
+  }
+}
+
+// Obtiene los avisos activos desde la API. Si falla, devuelve array vacío.
+async function obtenerAvisos(): Promise<Aviso[]> {
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+
+    const respuesta = await fetch(`${baseUrl}/api/avisos`, {
+      cache: "no-store",
+    })
+
+    if (!respuesta.ok) return []
+
+    const datos: Aviso[] = await respuesta.json()
+    return Array.isArray(datos) ? datos : []
+  } catch {
+    // Error de red u otro fallo: no mostrar avisos
+    return []
+  }
+}
+
+// Obtiene el municipio del tenant actual para personalizar el título del tablón.
+// Si falla o no existe el tenant, devuelve undefined (Tablon usará el título por defecto).
+async function obtenerMunicipioTenant(): Promise<string | undefined> {
+  try {
+    const headersList = await headers()
+    const host = headersList.get("host") ?? ""
+    const slug = extraerSlugDelHost(host)
+    const tenant = await obtenerTenantPorSlug(slug)
+    return tenant?.municipio ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Server Component — no lleva "use client"
+export default async function Inicio() {
+  const [pistas, avisos, municipio] = await Promise.all([
+    obtenerPistas(),
+    obtenerAvisos(),
+    obtenerMunicipioTenant(),
+  ])
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="w-full max-w-sm space-y-8 text-center">
-        {/* Logo / cabecera */}
-        <div className="space-y-2">
-          <div className="text-5xl">🏊</div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Reservas Deportivas
-          </h1>
-          <p className="text-sm text-gray-500">
-            Instalaciones deportivas municipales
-          </p>
-        </div>
-
-        {/* Acciones */}
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/login"
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 text-center font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            Iniciar sesión
-          </Link>
-          <Link
-            href="/registro"
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-center font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Crear cuenta
-          </Link>
-        </div>
-
-        {/* Info */}
-        <p className="text-xs text-gray-400">
-          Servicio gratuito para ciudadanos
-        </p>
-      </div>
+    <main>
+      <Tablon pistas={pistas} avisos={avisos} municipio={municipio} />
     </main>
   )
 }

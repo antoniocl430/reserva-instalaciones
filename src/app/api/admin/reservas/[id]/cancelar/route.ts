@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// PATCH /api/admin/reservas/[id]/cancelar — cancela una reserva sin restricción de 2h
+// PATCH /api/admin/reservas/[id]/cancelar — cancela una reserva del tenant sin restricción de 2h
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -23,8 +23,11 @@ export async function PATCH(
   try {
     // Toda la lógica dentro de una transacción para evitar race conditions
     const reserva = await prisma.$transaction(async (tx) => {
-      const reservaEncontrada = await tx.reserva.findUnique({
-        where: { id: params.id },
+      // Buscar la reserva filtrando por id Y tenantId simultáneamente.
+      // Esto evita que un admin de un tenant pueda cancelar reservas de otro tenant
+      // aunque conozca el ID.
+      const reservaEncontrada = await tx.reserva.findFirst({
+        where: { id: params.id, tenantId: sesion.user.tenantId },
       })
 
       if (!reservaEncontrada) {

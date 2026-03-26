@@ -35,8 +35,7 @@ describe('AdminDashboard — /admin/(panel)/page.tsx', () => {
 
     render(<AdminDashboard />)
 
-    // Debe mostrar el título Dashboard mientras carga
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Resumen de actividad')).toBeInTheDocument()
   })
 
   it('debería mostrar las 4 tarjetas de métricas', async () => {
@@ -50,7 +49,7 @@ describe('AdminDashboard — /admin/(panel)/page.tsx', () => {
     await waitFor(() => {
       expect(screen.getByText('Reservas hoy')).toBeInTheDocument()
       expect(screen.getByText('Reservas activas')).toBeInTheDocument()
-      expect(screen.getByText('Pistas activas')).toBeInTheDocument()
+      expect(screen.getByText('Instalaciones activas')).toBeInTheDocument()
       expect(screen.getByText('Cancelaciones hoy')).toBeInTheDocument()
     })
   })
@@ -111,7 +110,7 @@ describe('AdminDashboard — /admin/(panel)/page.tsx', () => {
     })
   })
 
-  it('debería mostrar acceso rápido a Gestionar pistas con enlace a /admin/pistas', async () => {
+  it('debería mostrar acceso rápido a Gestionar instalaciones con enlace a /admin/pistas', async () => {
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => metricasEjemplo,
@@ -120,12 +119,12 @@ describe('AdminDashboard — /admin/(panel)/page.tsx', () => {
     render(<AdminDashboard />)
 
     await waitFor(() => {
-      const enlace = screen.getByRole('link', { name: /Gestionar pistas/i })
+      const enlace = screen.getByRole('link', { name: /Gestionar instalaciones/i })
       expect(enlace).toHaveAttribute('href', '/admin/pistas')
     })
   })
 
-  it('debería mostrar acceso rápido a Gestionar admins con enlace a /admin/usuarios', async () => {
+  it('debería mostrar acceso rápido a Gestionar administradores con enlace a /admin/usuarios', async () => {
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => metricasEjemplo,
@@ -134,7 +133,7 @@ describe('AdminDashboard — /admin/(panel)/page.tsx', () => {
     render(<AdminDashboard />)
 
     await waitFor(() => {
-      const enlace = screen.getByRole('link', { name: /Gestionar admins/i })
+      const enlace = screen.getByRole('link', { name: /Gestionar administradores/i })
       expect(enlace).toHaveAttribute('href', '/admin/usuarios')
     })
   })

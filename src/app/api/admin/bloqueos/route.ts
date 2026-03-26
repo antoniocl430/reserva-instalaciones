@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const bloqueos = await prisma.bloqueo.findMany({
+      where: { tenantId: sesion.user.tenantId },
       include: { instalacion: { select: { nombre: true } } },
       orderBy: { fechaInicio: "desc" },
     })
@@ -64,9 +65,9 @@ export async function POST(request: NextRequest) {
     const fechaInicioDate = new Date(`${fechaInicio}T00:00:00.000Z`)
     const fechaFinDate = new Date(`${fechaFin}T23:59:59.999Z`)
 
-    // Verificar que la instalación existe
-    const instalacion = await prisma.instalacion.findUnique({
-      where: { id: instalacionId },
+    // Verificar que la instalación existe Y pertenece al tenant del admin
+    const instalacion = await prisma.instalacion.findFirst({
+      where: { id: instalacionId, tenantId: sesion.user.tenantId },
     })
 
     if (!instalacion) {
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
     // Crear el bloqueo
     const bloqueo = await prisma.bloqueo.create({
       data: {
+        tenantId: sesion.user.tenantId,
         instalacionId,
         fechaInicio: fechaInicioDate,
         fechaFin: fechaFinDate,

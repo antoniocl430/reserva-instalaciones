@@ -5,8 +5,13 @@ import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
+interface HeaderProps {
+  /** Nombre del servicio a mostrar en el logo. Si no se pasa, usa el valor por defecto. */
+  nombreServicio?: string
+}
+
 // Cabecera de navegación principal — adaptativa según rol y estado de sesión
-export function Header() {
+export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) {
   const { data: sesion, status } = useSession()
   const [menuAbierto, setMenuAbierto] = useState(false)
 
@@ -20,24 +25,23 @@ export function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="w-full px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 font-bold text-blue-700 text-lg shrink-0">
             <span className="text-xl">🏓</span>
-            <span className="hidden sm:inline">Reservas Deportivas</span>
+            <span className="hidden sm:inline">{nombreServicio}</span>
             <span className="sm:hidden">Reservas</span>
           </Link>
 
           {/* Navegación desktop */}
-          {!cargandoSesion && (
-            <nav className="hidden md:flex items-center gap-4">
-              {/* Sin sesión: solo login y registro */}
+          <nav className="hidden md:flex items-center gap-4">
+              {/* Sin sesión o cargando: mostrar login y registro */}
               {!sesion && (
                 <>
                   <Link
                     href="/login"
-                    className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
+                    className="text-sm font-medium text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     Iniciar sesión
                   </Link>
@@ -45,7 +49,7 @@ export function Header() {
                     href="/registro"
                     className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Registrarse
+                    Crear cuenta
                   </Link>
                 </>
               )}
@@ -98,7 +102,6 @@ export function Header() {
                 </>
               )}
             </nav>
-          )}
 
           {/* Botón hamburger — solo móvil */}
           {!cargandoSesion && (
@@ -142,7 +145,7 @@ export function Header() {
                   className="px-3 py-2 text-sm font-medium text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
-                  Registrarse
+                  Crear cuenta
                 </Link>
               </>
             )}

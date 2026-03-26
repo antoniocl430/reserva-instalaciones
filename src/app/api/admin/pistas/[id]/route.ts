@@ -34,9 +34,10 @@ export async function PATCH(
       )
     }
 
-    // Verificar que la instalación existe
-    const instalacionExistente = await prisma.instalacion.findUnique({
-      where: { id: params.id },
+    // Verificar que la instalación existe Y pertenece al tenant del admin
+    // (findFirst con id + tenantId evita acceso cruzado entre tenants)
+    const instalacionExistente = await prisma.instalacion.findFirst({
+      where: { id: params.id, tenantId: sesion.user.tenantId },
     })
 
     if (!instalacionExistente) {

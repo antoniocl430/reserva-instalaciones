@@ -1,0 +1,200 @@
+================================================================================
+INFORME DE RESULTADOS — DESARROLLO PÁGINA DE INICIO CON CARRUSEL
+Fecha: 2026-03-26
+Desarrollado por: Agente Frontend
+Probado por: Agente Tester
+================================================================================
+
+## RESUMEN EJECUTIVO
+
+La página de inicio rediseñada con carrusel vertical de pistas ha sido analizada
+exhaustivamente. La compilación TypeScript pasa sin errores. La suite completa de
+117 tests existentes pasa. El código sigue correctamente el patrón Server/Client
+Component de Next.js 14. El manejo de errores y fallback es robusto. Se identifican
+dos observaciones menores (no bloqueantes): la navegación del carrusel con una sola
+pista es funcional pero innecesariamente muestra controles, y el middleware no
+intercepta la ruta raíz "/", lo cual es correcto y esperado.
+
+
+## 1. ARCHIVOS CREADOS/MODIFICADOS
+
+- src/app/page.tsx
+    Server Component asíncrono que actúa como página de inicio. Contiene el header
+    con logo SVG inline y botones de navegación, llama a la función obtenerPistas()
+    para cargar datos desde la API y pasa el resultado al componente CarruselPistas.
+
+- src/components/CarruselPistas.tsx
+    Client Component ("use client") que recibe un array de instalaciones y renderiza
+    un carrusel vertical con navegación por flechas (arriba/abajo) e indicadores de
+    posición laterales. Gestiona el estado del índice activo con useState.
+
+
+## 2. COMPILACIÓN TYPESCRIPT
+
+Estado: PASS
+
+Sin errores. El compilador no produjo ninguna salida, lo que indica compilación
+limpia. Todos los tipos definidos localmente (interface Instalacion, interface
+CarruselPistasProps) son coherentes entre ambos archivos y no generan conflictos.
+
+
+## 3. TESTS AUTOMATIZADOS
+
+Estado: PASS
+
+Test Suites: 9 passed, 9 total
+Tests:       117 passed, 117 total
+Snapshots:   0 total
+Tiempo de ejecución: 0.953 s
+
+No existen tests específicos para page.tsx ni CarruselPistas.tsx. Los 117 tests
+existentes cubren otras partes del sistema (API routes, dashboard, pistas, reservas,
+validaciones, etc.) y ninguno fue roto por los cambios introducidos.
+
+NOTA: Se recomienda escribir tests para los nuevos componentes (ver sección 6).
+
+
+## 4. ANÁLISIS ESTÁTICO — ESTRUCTURA Y ARQUITECTURA
+
+[OK]  page.tsx es Server Component correcto: no tiene directiva "use client", la
+      función es async y hace await de obtenerPistas(). Cumple el patrón de
+      Next.js 14 App Router.
+
+[OK]  CarruselPistas.tsx tiene "use client" en la línea 1, obligatorio al usar
+      useState y useCallback. Correctamente separado del Server Component.
+
+[OK]  Los tipos TypeScript son correctos. La interface Instalacion está definida
+      en ambos archivos de forma idéntica (id, nombre, tipo, descripcion, horario,
+      activa). En producción podría extraerse a un archivo de tipos compartido,
+      pero no es un error.
+
+[OK]  El fetch a /api/instalaciones usa URL absoluta construida a partir de
+      NEXT_PUBLIC_APP_URL o VERCEL_URL o localhost:3000, lo cual es el patrón
+      correcto para Server Components que deben llamar a sus propias API routes.
+
+[OK]  El fallback está correctamente implementado: si la respuesta HTTP no es ok,
+      si el array viene vacío o si hay una excepción de red, se devuelven
+      PISTAS_FALLBACK con 3 pistas ficticias. El bloque try/catch en línea 64
+      cubre todos los casos de fallo.
+
+[OK]  El carrusel funciona con 1 pista: irAnterior e irSiguiente calculan
+      (prev === 0 ? pistas.length - 1 : prev - 1) y (prev === pistas.length - 1
+      ? 0 : prev + 1) respectivamente. Con 1 pista, ambas flechas mantienen el
+      índice en 0. No hay bucle infinito ni error de índice.
+
+[OK]  Con 0 pistas: el componente renderiza un mensaje de estado vacío en línea 40
+      ("No hay pistas disponibles en este momento.") antes de acceder a
+      pistas[indiceActivo], evitando un acceso a índice undefined.
+
+[OK]  No hay posibles errores de hidratación SSR/client. El Server Component
+      page.tsx solo pasa datos serializables (array de objetos planos) al Client
+      Component. No se pasan funciones, fechas complejas ni objetos no
+      serializables como props.
+
+[OK]  Los botones de navegación tienen handlers correctos. irAnterior está asignado
+      al botón "Pista anterior" (flecha arriba, línea 107) e irSiguiente al botón
+      "Pista siguiente" (flecha abajo, línea 119). La lógica es circular (wrap-around)
+      en ambas direcciones.
+
+[OK]  El middleware NO intercepta la ruta "/". El matcher del middleware (líneas
+      86-97 de middleware.ts) no incluye "/" ni ningún patrón que la cubra. La
+      página de inicio es completamente pública, lo cual es el comportamiento
+      correcto para una landing page municipal.
+
+[OK]  /api/instalaciones está en RUTAS_API_PUBLICAS (línea 15 de middleware.ts),
+      por lo que la llamada fetch del Server Component nunca será bloqueada por
+      autenticación.
+
+
+## 5. CASOS LÍMITE ANALIZADOS
+
+Caso 1: API no disponible / error de red
+  Comportamiento esperado: mostrar pistas fallback
+  Estado: CORRECTO — el bloque catch en línea 64 de page.tsx captura cualquier
+  excepción y retorna PISTAS_FALLBACK.
+
+Caso 2: API responde con array vacío (0 instalaciones activas)
+  Comportamiento esperado: mostrar pistas fallback
+  Estado: CORRECTO — línea 63 de page.tsx: si pistasActivas.length === 0 se
+  retorna PISTAS_FALLBACK.
+
+Caso 3: API responde con 1 sola pista activa
+  Comportamiento esperado: carrusel funcional, flechas no crashean
+  Estado: CORRECTO — la navegación circular mantiene el índice en 0. Los
+  indicadores laterales muestran 1 solo punto. Sin embargo, las flechas de
+  navegación siguen visibles aunque no tienen efecto visual de cambio (observación
+  menor, no es un bug).
+
+Caso 4: API responde con 2 pistas activas
+  Comportamiento esperado: navegación entre ambas pistas
+  Estado: CORRECTO — la navegación circular alterna entre índice 0 y 1.
+
+Caso 5: API responde con 3 pistas activas (caso nominal)
+  Comportamiento esperado: carrusel completo con indicadores
+  Estado: CORRECTO — los 3 PISTAS_FALLBACK demuestran que este caso es el
+  diseñado como principal.
+
+Caso 6: Pista con descripcion: null
+  Comportamiento esperado: mostrar DESCRIPCION_DEFECTO
+  Estado: CORRECTO — línea 87 de CarruselPistas.tsx usa el operador nullish
+  coalescing: {pista.descripcion ?? DESCRIPCION_DEFECTO}. El fallback-3 en
+  page.tsx tiene descripcion: null para verificar este caso.
+
+Caso 7: Carrusel con 0 pistas recibidas por props
+  Comportamiento esperado: mensaje informativo, sin crash
+  Estado: CORRECTO — guarda de seguridad en líneas 39-45 de CarruselPistas.tsx
+  antes de cualquier acceso al array.
+
+Caso 8: Usuario ya autenticado visita la página de inicio
+  Comportamiento esperado: ver la landing sin redirección automática
+  Estado: CORRECTO — el middleware no actúa sobre "/" para usuarios autenticados,
+  lo que es coherente con una landing pública. No hay redirección al dashboard.
+
+
+## 6. POSIBLES PROBLEMAS O MEJORAS
+
+1. Tests unitarios ausentes para los nuevos componentes.
+   page.tsx y CarruselPistas.tsx no tienen tests dedicados. Se recomienda crear
+   src/__tests__/frontend/carrusel-pistas.test.tsx que cubra al menos:
+   - Renderizado con array vacío (guarda de pistas.length === 0)
+   - Renderizado con 1 pista (sin navegación efectiva)
+   - Navegación hacia adelante y hacia atrás con 3 pistas
+   - Manejo de pista con descripcion null
+
+2. Flechas de navegación visibles con 1 sola pista (observación de UX).
+   Con una única pista, los botones ChevronUp y ChevronDown están presentes pero
+   son funcionalmente inertes (mantienen el índice en 0). Podría ocultarse con
+   {pistas.length > 1 && <button...>}. No es un bug pero sí un detalle de pulido.
+
+3. Duplicación de la interface Instalacion.
+   La misma interface está definida en page.tsx (líneas 5-12) y en
+   CarruselPistas.tsx (líneas 8-15). Para proyectos de mayor escala conviene
+   extraerla a src/types/instalacion.ts y reutilizarla. No es un error funcional.
+
+4. Sin animación de transición entre slides.
+   La clase transition-opacity duration-500 está en el div del slide (línea 57 de
+   CarruselPistas.tsx), pero como el componente reemplaza el contenido del mismo
+   div (no hay dos divs coexistiendo), la opacidad no produce una transición visual
+   real entre slides. La animación requeriría framer-motion o un doble-buffer de
+   slides. Actualmente el cambio es instantáneo.
+
+5. No hay test de integración para obtenerPistas().
+   La función async del Server Component podría testearse con un mock de fetch para
+   verificar el comportamiento completo incluyendo el filtrado de pistas inactivas.
+
+
+## 7. VEREDICTO FINAL
+
+Estado global: APTO PARA DEMOSTRACIÓN
+
+La implementación es sólida y correcta en todos los aspectos arquitectónicos
+críticos: separación Server/Client correcta, sin errores de TypeScript, fallback
+robusto ante fallos de API, lógica de carrusel sin riesgo de acceso a índices
+inválidos, y acceso público garantizado por la configuración del middleware.
+
+Los 4 problemas identificados son observaciones de mejora (tests faltantes, UX
+menor, duplicación de tipos, animación no activa) y ninguno impide la
+demostración funcional del componente. El código supera el estándar esperado para
+una iteración de sprint y puede presentarse al equipo sin correcciones bloqueantes.
+
+================================================================================

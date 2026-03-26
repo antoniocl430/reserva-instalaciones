@@ -213,10 +213,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 404 cuando la reserva no existe", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.reserva.findUnique.mockResolvedValueOnce(null)
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.reserva.findFirst.mockResolvedValueOnce(null)
 
       const request = new NextRequest(
         "http://localhost:3000/api/admin/reservas/no-existe/cancelar",
@@ -233,10 +234,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 409 cuando la reserva ya está cancelada", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.reserva.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.reserva.findFirst.mockResolvedValueOnce({
         id: "res-1",
         estado: "CANCELADA",
       })
@@ -256,11 +258,12 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 200 y cancelar la reserva si el admin lo solicita", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
       const reservaActiva = {
         id: "res-1",
+        tenantId: "tenant-test",
         estado: "ACTIVA",
         fecha: new Date("2099-12-30"),
         horaInicio: new Date("2099-12-30T10:00:00Z"),
@@ -268,7 +271,8 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
         instalacion: { nombre: "Pádel 1" },
       }
 
-      prismaMock.reserva.findUnique.mockResolvedValueOnce(reservaActiva)
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.reserva.findFirst.mockResolvedValueOnce(reservaActiva)
       prismaMock.reserva.update.mockResolvedValueOnce({
         ...reservaActiva,
         estado: "CANCELADA",
@@ -367,10 +371,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 201 con el bloqueo creado si los datos son correctos", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce({
         id: "inst-1",
         nombre: "Pádel 1",
       })
@@ -547,10 +552,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 201 con la pista creada si los datos son correctos", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-1" },
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce(null)
+      // El código usa findFirst (no findUnique) para verificar nombre único por tenant
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce(null)
       prismaMock.instalacion.create.mockResolvedValueOnce({
         id: "new-id",
         nombre: "Pádel 4",
@@ -574,10 +580,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería aceptar el campo horario y guardarlo", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-1" },
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce(null)
+      // El código usa findFirst (no findUnique) para verificar nombre único por tenant
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce(null)
       prismaMock.instalacion.create.mockResolvedValueOnce({
         id: "new-id",
         nombre: "Pádel 5",
@@ -605,10 +612,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería usar el valor por defecto de horario si no se envía", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-1" },
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce(null)
+      // El código usa findFirst (no findUnique) para verificar nombre único por tenant
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce(null)
       prismaMock.instalacion.create.mockResolvedValueOnce({
         id: "new-id",
         nombre: "Pádel 6",
@@ -638,10 +646,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
   describe("PATCH /api/admin/pistas/[id]", () => {
     it("debería actualizar el campo horario", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce({
         id: "inst-1",
         nombre: "Pádel 1",
         tipo: "PADEL",
@@ -696,10 +705,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 404 si el bloqueo no existe", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.bloqueo.findUnique.mockResolvedValueOnce(null)
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.bloqueo.findFirst.mockResolvedValueOnce(null)
 
       const request = new NextRequest(
         "http://localhost:3000/api/admin/bloqueos/no-existe"
@@ -711,10 +721,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 200 al eliminar un bloqueo válido", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.bloqueo.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.bloqueo.findFirst.mockResolvedValueOnce({
         id: "bloqueo-id",
         instalacionId: "pista-1",
         fechaInicio: new Date(),
@@ -836,10 +847,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 404 si el usuario no existe", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.usuario.findUnique.mockResolvedValueOnce(null)
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.usuario.findFirst.mockResolvedValueOnce(null)
 
       const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
         method: "POST",
@@ -859,17 +871,18 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 404 si la instalación no existe", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.usuario.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.usuario.findFirst.mockResolvedValueOnce({
         id: "user-1",
         activo: true,
         email: "user@test.com",
         nombre: "Usuario",
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce(null)
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce(null)
 
       const request = new NextRequest("http://localhost:3000/api/admin/reservas", {
         method: "POST",
@@ -889,17 +902,18 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 409 si el slot ya está ocupado", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.usuario.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.usuario.findFirst.mockResolvedValueOnce({
         id: "user-1",
         activo: true,
         email: "user@test.com",
         nombre: "Usuario",
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce({
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce({
         id: "inst-1",
         activa: true,
         nombre: "Pádel 1",
@@ -928,17 +942,18 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 201 con la reserva creada si los datos son correctos", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.usuario.findUnique.mockResolvedValueOnce({
+      // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
+      prismaMock.usuario.findFirst.mockResolvedValueOnce({
         id: "user-1",
         activo: true,
         email: "user@test.com",
         nombre: "Usuario 1",
       })
 
-      prismaMock.instalacion.findUnique.mockResolvedValueOnce({
+      prismaMock.instalacion.findFirst.mockResolvedValueOnce({
         id: "inst-1",
         activa: true,
         nombre: "Pádel 1",

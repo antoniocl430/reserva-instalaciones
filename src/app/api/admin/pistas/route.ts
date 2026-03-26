@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const instalaciones = await prisma.instalacion.findMany({
+      where: { tenantId: sesion.user.tenantId },
       orderBy: { nombre: "asc" },
     })
 
@@ -59,9 +60,9 @@ export async function POST(request: NextRequest) {
 
     const { nombre, tipo, descripcion, horario } = resultado.data
 
-    // Verificar que el nombre no exista ya
-    const existente = await prisma.instalacion.findUnique({
-      where: { nombre: nombre.trim() },
+    // Verificar que el nombre no exista ya dentro del mismo tenant
+    const existente = await prisma.instalacion.findFirst({
+      where: { nombre: nombre.trim(), tenantId: sesion.user.tenantId },
     })
 
     if (existente) {
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
 
     const instalacion = await prisma.instalacion.create({
       data: {
+        tenantId: sesion.user.tenantId,
         nombre: nombre.trim(),
         tipo,
         descripcion: descripcion?.trim() || null,

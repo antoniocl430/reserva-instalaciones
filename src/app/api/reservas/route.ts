@@ -89,17 +89,18 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Verificar instalación activa (fuera de transacción está bien: es solo lectura)
-  const instalacion = await prisma.instalacion.findUnique({
-    where: { id: instalacionId },
+  // Verificar que la instalación existe, está activa Y pertenece al tenant del usuario
+  const instalacion = await prisma.instalacion.findFirst({
+    where: { id: instalacionId, tenantId: sesion.user.tenantId },
   })
   if (!instalacion || !instalacion.activa) {
     return NextResponse.json({ error: "Instalación no disponible" }, { status: 404 })
   }
 
-  // Verificar bloqueo activo que cubra este slot (fuera de transacción: solo lectura)
+  // Verificar bloqueo activo del tenant que cubra este slot (fuera de transacción: solo lectura)
   const bloqueo = await prisma.bloqueo.findFirst({
     where: {
+      tenantId: sesion.user.tenantId,
       instalacionId,
       activo: true,
       fechaInicio: { lte: horaFinDate },
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
   // Crear reserva en transacción.
   // El conteo de reservas activas del ciudadano se realiza DENTRO de la transacción
   // para evitar que dos peticiones simultáneas superen el límite de 2 reservas (BUG-03).
-  let reserva
+  let reserva: Awaited<ReturnType<typeof prisma.reserva.create>> & { instalacion: { nombre: string } }
   try {
     reserva = await prisma.$transaction(async (tx) => {
       // Verificar límite de 2 reservas activas dentro de la transacción (solo ciudadanos)
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
       // Re-verificar disponibilidad dentro de la transacción (evita race conditions)
       const reservaExistente = await tx.reserva.findFirst({
         where: {
+          tenantId: sesion.user.tenantId,
           instalacionId,
           estado: "ACTIVA",
           horaInicio: horaInicioDate,
@@ -147,6 +149,7 @@ export async function POST(request: NextRequest) {
 
       return tx.reserva.create({
         data: {
+          tenantId: sesion.user.tenantId,
           usuarioId: sesion.user.id,
           instalacionId,
           fecha: crearHoraEnMadrid(fecha, 0),

@@ -23,16 +23,28 @@ export default function PaginaAdminLogin() {
       redirect: false,
     })
 
-    if (result?.error) {
+    console.log("[admin/login] resultado signIn:", result)
+
+    if (!result) {
+      setError("Error al conectar con el servidor")
+      setCargando(false)
+      return
+    }
+
+    if (result.error) {
       setError("Credenciales incorrectas")
       setCargando(false)
       return
     }
 
-    if (result?.ok) {
-      // Forzar recarga completa para que el layout server-side valide el rol
+    if (result.ok) {
       window.location.href = "/admin"
+      return
     }
+
+    // Caso inesperado
+    setError(`Error inesperado (status: ${result.status})`)
+    setCargando(false)
   }
 
   return (

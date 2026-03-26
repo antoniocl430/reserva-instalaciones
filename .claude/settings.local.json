@@ -8,7 +8,8 @@
       "Bash(npx shadcn@latest add button --yes)",
       "Bash(npx shadcn@latest add badge --yes)",
       "Bash(npx shadcn@latest add dialog --yes)",
-      "Bash(npx shadcn@latest add tabs --yes)"
+      "Bash(npx shadcn@latest add tabs --yes)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

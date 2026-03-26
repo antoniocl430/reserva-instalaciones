@@ -89,3 +89,43 @@ Revisar este archivo al inicio de cada sesión.
 **Error:** ReferenceError: NextRequest is not defined durante la ejecución de tests.
 **Corrección:** Añadir `import { NextRequest } from "next/server"` al inicio del fichero de test.
 **Regla:** Siempre importar las clases de Next.js (NextRequest, NextResponse) explícitamente cuando se usan en tests.
+### LESSON-013: El mock de Select de shadcn/ui renderiza un div que no es labellable
+**Contexto:** Al testear `FormularioAviso`, el mock de `SelectTrigger` renderiza un `<div>` con el mismo `id` que la label (`aviso-tipo`). La label apunta al div con `for="aviso-tipo"`.
+**Error:** `getByLabelText(/tipo/i)` falla porque el elemento asociado es un `<div>`, que no es un elemento labellable según la especificación HTML.
+**Corrección:** En el test, buscar la label por texto con `getByText('Tipo', { selector: 'label' })` y verificar las opciones del select con `getByTestId('select-item-INFO')`.
+**Regla:** Cuando se mockea Select de shadcn/ui para tests, usar `getByText(..., { selector: 'label' })` para la label del campo, y `getByTestId('select-item-*')` para verificar las opciones. No usar `getByLabelText` para selects mockeados con divs.
+
+### LESSON-014: El vitest.config.ts debe incluir explícitamente todas las carpetas de tests
+**Contexto:** Al crear tests en `src/__tests__/components/` (carpeta nueva), vitest no los encontraba porque el `include` solo cubría `src/__tests__/frontend/**`.
+**Error:** `No test files found` cuando se ejecuta vitest apuntando a la carpeta `components`.
+**Corrección:** Añadir `'src/__tests__/components/**/*.test.{ts,tsx}'` al array `include` de `vitest.config.ts`.
+**Regla:** Al crear una nueva carpeta de tests bajo `src/__tests__/`, actualizar `vitest.config.ts` para incluirla en el array `include`.
+
+### LESSON-016: Cambiar findUnique a findFirst en rutas invalida mocks de tests existentes
+**Contexto:** Al migrar a multi-tenant, se cambia `findUnique({ where: { nombre } })` a `findFirst({ where: { nombre, tenantId } })` en rutas como `admin/pistas`.
+**Error:** Los tests existentes que mockeaban `prismaMock.instalacion.findUnique.mockResolvedValueOnce(null)` dejan sus mocks sin consumir. Los tests siguientes que legítimamente usan `findUnique` (ej: PATCH que busca por `id`) reciben esos mocks `null` acumulados y fallan con 404 inesperado.
+**Corrección:** Actualizar los tests afectados para que mockeen `findFirst` en lugar de `findUnique` cuando el código de producción cambió de uno al otro.
+**Regla:** Cada vez que se cambia un `findUnique` a `findFirst` (o viceversa) en una ruta, buscar en los tests todos los `mockResolvedValueOnce` para ese método y actualizarlos. Los mocks acumulados sin consumir entre tests son silenciosos y difíciles de detectar.
+
+### LESSON-017: En migraciones multi-tenant, usar default temporal para columnas NOT NULL en tablas con datos
+**Contexto:** Al añadir `tenantId NOT NULL` a tablas que ya tienen filas (Instalacion, Usuario, Reserva), Prisma rechaza la migración automática.
+**Error:** `npx prisma migrate dev` falla con "Added the required column tenantId without a default value — there are N rows in this table".
+**Corrección:** Crear la migración manualmente con `--create-only`, usar `ADD COLUMN tenantId TEXT NOT NULL DEFAULT 'tenant-id-fijo'` para asignar el tenant inicial a todos los registros, luego `ALTER COLUMN tenantId DROP DEFAULT` para quitar el default temporal.
+**Regla:** Para migraciones que añaden columnas NOT NULL a tablas con datos existentes: (1) crear tenant inicial con ID fijo conocido, (2) usar ese ID como default temporal en la migración SQL, (3) eliminar el default tras la asignación.
+
+### LESSON-018: Las rutas públicas también necesitan tenantId desde el header, no solo las autenticadas
+**Contexto:** En la Fase 4 de multi-tenancy, las rutas públicas (`GET /api/instalaciones`, `GET /api/avisos`, `GET /api/disponibilidad`) no tienen sesión de NextAuth donde leer el tenantId.
+**Error:** Si se intenta leer `sesion.user.tenantId` en rutas públicas, la sesión es null y hay un crash. Si no se filtra por tenantId, se devuelven datos de todos los tenants.
+**Corrección:** Las rutas públicas leen el tenantId del header `x-tenant-id` inyectado por el middleware: `const tenantId = request.headers.get("x-tenant-id")`. La firma de la función debe recibir `request: NextRequest`.
+**Regla:** Para rutas públicas, el tenantId siempre viene del header `x-tenant-id`. Para rutas autenticadas, viene de `sesion.user.tenantId`. Nunca mezclar ambas fuentes.
+
+### LESSON-019: Al añadir tenantId a rutas públicas, los tests que llamaban sin parámetros necesitan actualización
+**Contexto:** `GET /api/instalaciones` tenía firma `GET()` sin parámetros. Al añadir `request: NextRequest` para leer el header, todos los tests que hacían `await GET()` fallan con `Cannot read properties of undefined (reading 'headers')`.
+**Corrección:** Actualizar los tests para pasar un `NextRequest` con el header `x-tenant-id`: `new NextRequest(url, { headers: { 'x-tenant-id': TENANT_ID } })`.
+**Regla:** Cuando se cambia la firma de una ruta para añadir parámetros, buscar en todos los tests las llamadas sin argumentos y actualizarlas en el mismo commit.
+
+### LESSON-015: El parámetro `errorMap` de Zod v4 se renombró a `error`
+**Contexto:** Los schemas de Zod para avisos usaban `errorMap: () => (...)` en `z.enum()`.
+**Error:** TypeScript reporta `TS2769: No overload matches this call` porque en Zod v4 la propiedad se renombró de `errorMap` a `error`.
+**Corrección:** Cambiar `errorMap: () => ({ message: "..." })` por `error: () => ({ message: "..." })` en todas las llamadas a `z.enum()`.
+**Regla:** En Zod v4, el parámetro de mapeo de errores en `z.enum()` se llama `error`, no `errorMap`. Verificar esto al actualizar versiones de Zod o al crear nuevos schemas.

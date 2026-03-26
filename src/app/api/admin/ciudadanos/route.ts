@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const ciudadanos = await prisma.usuario.findMany({
       where: {
+        tenantId: sesion.user.tenantId,
         rol: "CIUDADANO",
         activo: true,
       },

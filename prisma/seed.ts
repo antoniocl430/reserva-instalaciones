@@ -1,11 +1,29 @@
-// Script de seed — crea las 3 pistas de pádel y un admin por defecto
+// Script de seed — crea el tenant inicial, las 3 pistas de pádel y un admin por defecto
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
 
+// ID fijo para el tenant de desarrollo — debe coincidir con la migración
+const TENANT_DESARROLLO_ID = "tenant-desarrollo-0000-0000-000000000001"
+
 async function main() {
   console.log("Sembrando base de datos...")
+
+  // ─── Tenant de desarrollo ──────────────────────────────────────────────────
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: "desarrollo" },
+    update: {},
+    create: {
+      id: TENANT_DESARROLLO_ID,
+      slug: "desarrollo",
+      nombre: "Ayuntamiento de Desarrollo",
+      municipio: "Desarrollo",
+      estado: "ACTIVO",
+    },
+  })
+
+  console.log(`✓ Tenant creado/encontrado: ${tenant.slug} (${tenant.id})`)
 
   // ─── Pistas de pádel ──────────────────────────────────────────────────────
   const instalaciones = [
@@ -15,30 +33,46 @@ async function main() {
   ]
 
   for (const inst of instalaciones) {
-    await prisma.instalacion.upsert({
-      where: { nombre: inst.nombre },
-      update: {},
-      create: inst,
+    // Buscar por nombre dentro del tenant de desarrollo
+    const existente = await prisma.instalacion.findFirst({
+      where: { nombre: inst.nombre, tenantId: tenant.id },
     })
+
+    if (existente) {
+      // Ya existe en el tenant correcto — no hacer nada
+      console.log(`  ~ Instalación ya existe: ${inst.nombre}`)
+    } else {
+      await prisma.instalacion.create({
+        data: { ...inst, tenantId: tenant.id },
+      })
+      console.log(`  + Instalación creada: ${inst.nombre}`)
+    }
   }
 
-  console.log(`✓ ${instalaciones.length} pistas de pádel creadas`)
+  console.log(`✓ ${instalaciones.length} pistas de pádel verificadas`)
 
   // ─── Admin por defecto ────────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash("admin123", 12)
 
-  const admin = await prisma.usuario.upsert({
-    where: { email: "admin@ayuntamiento.es" },
-    update: {},
-    create: {
-      email: "admin@ayuntamiento.es",
-      nombre: "Administrador",
-      passwordHash,
-      rol: "ADMIN",
-    },
+  const adminExistente = await prisma.usuario.findFirst({
+    where: { email: "admin@ayuntamiento.es", tenantId: tenant.id },
   })
 
-  console.log(`✓ Admin creado: ${admin.email} (contraseña: admin123)`)
+  if (adminExistente) {
+    console.log(`✓ Admin ya existe: ${adminExistente.email}`)
+  } else {
+    const admin = await prisma.usuario.create({
+      data: {
+        email: "admin@ayuntamiento.es",
+        nombre: "Administrador",
+        passwordHash,
+        rol: "ADMIN",
+        tenantId: tenant.id,
+      },
+    })
+    console.log(`✓ Admin creado: ${admin.email} (contraseña: admin123)`)
+  }
+
   console.log("\nBase de datos lista.")
 }
 

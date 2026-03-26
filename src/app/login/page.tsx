@@ -100,6 +100,11 @@ export default function PaginaLogin() {
         {/* Pie */}
         <div className="space-y-2 text-center text-sm text-gray-500">
           <p>
+            <Link href="/recuperar-password" className="font-medium text-blue-600 hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
+          <p>
             ¿No tienes cuenta?{" "}
             <Link href="/registro" className="font-medium text-blue-600 hover:underline">
               Regístrate

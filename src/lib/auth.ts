@@ -45,8 +45,17 @@ export const opcionesAuth: NextAuthOptions = {
         // Limitar longitud para evitar DoS con contraseñas enormes (bcrypt procesa 72 bytes)
         if (credentials.password.length > 72) return null
 
-        const usuario = await prisma.usuario.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
+        // Extraer el tenantId inyectado por el middleware en los headers
+        // En desarrollo (localhost), el middleware inyecta siempre el tenant "desarrollo"
+        const tenantId = req.headers?.["x-tenant-id"] as string | undefined
+
+        // Buscar el usuario filtrando por email Y tenantId simultáneamente
+        // Un email puede existir en múltiples tenants — solo autenticamos dentro del tenant correcto
+        const usuario = await prisma.usuario.findFirst({
+          where: {
+            email: credentials.email.toLowerCase().trim(),
+            ...(tenantId ? { tenantId } : {}),
+          },
         })
 
         // Siempre ejecutar bcrypt.compare para igualar el tiempo de respuesta
@@ -64,16 +73,18 @@ export const opcionesAuth: NextAuthOptions = {
           email: usuario.email,
           name: usuario.nombre,
           rol: usuario.rol,
+          tenantId: usuario.tenantId,
         }
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Primer login: poblar el token con los datos del usuario
+      // Primer login: poblar el token con los datos del usuario (incluyendo tenantId)
       if (user) {
         token.id = user.id
         token.rol = (user as unknown as { rol: string }).rol
+        token.tenantId = (user as unknown as { tenantId: string }).tenantId
         return token
       }
 
@@ -95,6 +106,7 @@ export const opcionesAuth: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.rol = token.rol as string
+        session.user.tenantId = token.tenantId as string
       }
       // Propagar el error de sesión invalidada para que el cliente lo detecte
       if (token.error === "SessionInvalidada") {

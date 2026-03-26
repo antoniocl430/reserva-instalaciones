@@ -109,3 +109,74 @@ export const schemaCrearReservaAdmin = z.object({
 })
 
 export type CrearReservaAdminInput = z.infer<typeof schemaCrearReservaAdmin>
+
+/**
+ * Schema para solicitar recuperación de contraseña
+ */
+export const schemaSolicitarRecuperacion = z.object({
+  email: z.string().email("Email no válido"),
+})
+
+export type SolicitarRecuperacionInput = z.infer<typeof schemaSolicitarRecuperacion>
+
+/**
+ * Schema para resetear contraseña con token
+ */
+export const schemaResetearPassword = z.object({
+  token: z.string().min(1, "El token es obligatorio"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+})
+
+export type ResetearPasswordInput = z.infer<typeof schemaResetearPassword>
+
+// Tipos válidos para los avisos del tablón
+const TIPOS_AVISO_VALIDOS = ["INFO", "AVISO", "CIERRE"] as const
+
+/**
+ * Schema para crear un aviso del tablón de anuncios
+ */
+export const schemaCrearAviso = z.object({
+  titulo: z
+    .string()
+    .min(1, "El título es obligatorio")
+    .max(100, "El título no puede superar 100 caracteres"),
+  descripcion: z
+    .string()
+    .min(1, "La descripción es obligatoria")
+    .max(500, "La descripción no puede superar 500 caracteres"),
+  tipo: z.enum(TIPOS_AVISO_VALIDOS, {
+    error: () => ({ message: "El tipo debe ser INFO, AVISO o CIERRE" }),
+  }),
+  fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+})
+
+export type CrearAvisoInput = z.infer<typeof schemaCrearAviso>
+
+/**
+ * Schema para actualizar un aviso (todos los campos son opcionales)
+ */
+export const schemaActualizarAviso = z
+  .object({
+    titulo: z
+      .string()
+      .min(1, "El título no puede estar vacío")
+      .max(100, "El título no puede superar 100 caracteres")
+      .optional(),
+    descripcion: z
+      .string()
+      .min(1, "La descripción no puede estar vacía")
+      .max(500, "La descripción no puede superar 500 caracteres")
+      .optional(),
+    tipo: z
+      .enum(TIPOS_AVISO_VALIDOS, {
+        error: () => ({ message: "El tipo debe ser INFO, AVISO o CIERRE" }),
+      })
+      .optional(),
+    fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)").optional(),
+    activo: z.boolean().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "Se debe proporcionar al menos un campo para actualizar",
+  })
+
+export type ActualizarAvisoInput = z.infer<typeof schemaActualizarAviso>

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/admin/metricas — devuelve métricas del día actual
+// GET /api/admin/metricas — devuelve métricas del día actual filtradas por tenant
 export async function GET(request: NextRequest) {
   const sesion = await getServerSession(opcionesAuth)
   if (!sesion) {
@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // El tenantId del admin viene de la sesión (inyectado por NextAuth desde la BD)
+  const { tenantId } = sesion.user
+
   try {
     // Obtener hoy a las 00:00:00 UTC
     const hoy = new Date()
@@ -24,30 +27,34 @@ export async function GET(request: NextRequest) {
     const mañana = new Date(hoy)
     mañana.setUTCDate(mañana.getUTCDate() + 1)
 
-    // Reservas creadas hoy
+    // Reservas creadas hoy en este tenant
     const reservasHoy = await prisma.reserva.count({
       where: {
+        tenantId,
         creadoEn: { gte: hoy, lt: mañana },
       },
     })
 
-    // Reservas con estado ACTIVA
+    // Reservas con estado ACTIVA en este tenant
     const reservasActivas = await prisma.reserva.count({
       where: {
+        tenantId,
         estado: "ACTIVA",
       },
     })
 
-    // Instalaciones con activa = true
+    // Instalaciones activas en este tenant
     const pistasActivas = await prisma.instalacion.count({
       where: {
+        tenantId,
         activa: true,
       },
     })
 
-    // Cancelaciones hoy
+    // Cancelaciones hoy en este tenant
     const cancelacionesHoy = await prisma.reserva.count({
       where: {
+        tenantId,
         estado: "CANCELADA",
         canceladoEn: { gte: hoy, lt: mañana },
       },

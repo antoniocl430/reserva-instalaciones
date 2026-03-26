@@ -37,7 +37,7 @@ function crearHoraEnMadrid(fechaStr: string, hora: number, minutos: number = 0):
   return new Date(base.getTime() - diff * 60 * 60 * 1000)
 }
 
-// GET /api/admin/reservas — lista todas las reservas con filtros opcionales
+// GET /api/admin/reservas — lista todas las reservas del tenant con filtros opcionales
 export async function GET(request: NextRequest) {
   const sesion = await getServerSession(opcionesAuth)
   if (!sesion) {
@@ -67,14 +67,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Construir objeto where dinámicamente
+    // Construir objeto where con tenantId siempre presente
     type WhereInput = {
+      tenantId: string
       estado?: string
       instalacionId?: string
       fecha?: { gte: Date; lt: Date }
     }
 
-    const where: WhereInput = {}
+    const where: WhereInput = { tenantId: sesion.user.tenantId }
 
     if (estado && (estado === "ACTIVA" || estado === "CANCELADA")) {
       where.estado = estado
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/reservas — crea una reserva manualmente a nombre de un ciudadano
+// POST /api/admin/reservas — crea una reserva manualmente a nombre de un ciudadano del tenant
 export async function POST(request: NextRequest) {
   const sesion = await getServerSession(opcionesAuth)
   if (!sesion) {
@@ -152,9 +153,9 @@ export async function POST(request: NextRequest) {
     const horaInicioDate = crearHoraEnMadrid(fecha, horas, minutos)
     const horaFinDate = crearHoraEnMadrid(fecha, horasFin, minutosFin)
 
-    // Verificar que el usuario existe y está activo
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId },
+    // Verificar que el usuario existe, está activo y pertenece al tenant del admin
+    const usuario = await prisma.usuario.findFirst({
+      where: { id: usuarioId, tenantId: sesion.user.tenantId },
       select: { activo: true, email: true, nombre: true },
     })
     if (!usuario || !usuario.activo) {
@@ -164,17 +165,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar instalación activa
-    const instalacion = await prisma.instalacion.findUnique({
-      where: { id: instalacionId },
+    // Verificar que la instalación existe, está activa y pertenece al tenant del admin
+    const instalacion = await prisma.instalacion.findFirst({
+      where: { id: instalacionId, tenantId: sesion.user.tenantId },
     })
     if (!instalacion || !instalacion.activa) {
       return NextResponse.json({ error: "Instalación no disponible" }, { status: 404 })
     }
 
-    // Verificar bloqueo activo que cubra este slot
+    // Verificar bloqueo activo que cubra este slot (del mismo tenant)
     const bloqueo = await prisma.bloqueo.findFirst({
       where: {
+        tenantId: sesion.user.tenantId,
         instalacionId,
         activo: true,
         fechaInicio: { lte: horaFinDate },
@@ -196,6 +198,7 @@ export async function POST(request: NextRequest) {
         // Re-verificar disponibilidad dentro de la transacción (evita race conditions)
         const reservaExistente = await tx.reserva.findFirst({
           where: {
+            tenantId: sesion.user.tenantId,
             instalacionId,
             estado: "ACTIVA",
             horaInicio: horaInicioDate,
@@ -207,6 +210,7 @@ export async function POST(request: NextRequest) {
 
         return tx.reserva.create({
           data: {
+            tenantId: sesion.user.tenantId,
             usuarioId,
             instalacionId,
             fecha: crearHoraEnMadrid(fecha, 0),

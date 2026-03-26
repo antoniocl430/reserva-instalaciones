@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { schemaRegistro } from "@/lib/validaciones"
+import { obtenerTenantIdPorSlug } from "@/lib/tenant"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,9 +20,19 @@ export async function POST(request: NextRequest) {
 
     const { nombre, email, password } = resultado.data
 
-    // Comprobar si el email ya está registrado
-    const usuarioExistente = await prisma.usuario.findUnique({
-      where: { email: email.toLowerCase() },
+    // Resolver el tenant desde el header inyectado por el middleware
+    const slugTenant = request.headers.get("x-tenant-slug") ?? "desarrollo"
+    const tenantId = await obtenerTenantIdPorSlug(slugTenant)
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: "Servicio no disponible" },
+        { status: 503 }
+      )
+    }
+
+    // Comprobar si el email ya está registrado en este tenant
+    const usuarioExistente = await prisma.usuario.findFirst({
+      where: { email: email.toLowerCase(), tenantId },
     })
 
     if (usuarioExistente) {
@@ -34,9 +45,10 @@ export async function POST(request: NextRequest) {
     // Hashear contraseña con coste 12
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // Crear el usuario con rol CIUDADANO por defecto
+    // Crear el usuario con rol CIUDADANO por defecto en el tenant actual
     const usuario = await prisma.usuario.create({
       data: {
+        tenantId,
         nombre: nombre.trim(),
         email: email.toLowerCase(),
         passwordHash,

@@ -1,6 +1,6 @@
 /**
  * Tests para GET /api/instalaciones
- * Ruta pública — no requiere autenticación
+ * Ruta pública — no requiere autenticación pero sí el header x-tenant-id (inyectado por middleware)
  */
 
 // Usamos var para evitar la Temporal Dead Zone con el hoisting de jest.mock
@@ -16,6 +16,17 @@ jest.mock('@/lib/prisma', () => {
 jest.mock('next-auth', () => ({ default: jest.fn() }))
 
 import { GET } from '@/app/api/instalaciones/route'
+import { NextRequest } from 'next/server'
+
+// ID de tenant de prueba (el middleware lo inyecta en producción)
+const TENANT_ID = 'tenant-test'
+
+// Helper para crear request con el header de tenant inyectado
+function crearRequest(url = 'http://localhost/api/instalaciones') {
+  return new NextRequest(url, {
+    headers: { 'x-tenant-id': TENANT_ID },
+  })
+}
 
 describe('GET /api/instalaciones', () => {
   beforeEach(() => {
@@ -29,7 +40,7 @@ describe('GET /api/instalaciones', () => {
     ]
     prismaMock.instalacion.findMany.mockResolvedValue(instalacionesFake)
 
-    const res = await GET()
+    const res = await GET(crearRequest())
     const body = await res.json()
 
     expect(res.status).toBe(200)
@@ -44,7 +55,7 @@ describe('GET /api/instalaciones', () => {
     ]
     prismaMock.instalacion.findMany.mockResolvedValue(instalacionesFake)
 
-    const res = await GET()
+    const res = await GET(crearRequest())
     const body = await res.json()
 
     expect(res.status).toBe(200)
@@ -55,22 +66,32 @@ describe('GET /api/instalaciones', () => {
   it('debería devolver un array vacío cuando no hay instalaciones activas', async () => {
     prismaMock.instalacion.findMany.mockResolvedValue([])
 
-    const res = await GET()
+    const res = await GET(crearRequest())
     const body = await res.json()
 
     expect(res.status).toBe(200)
     expect(body.instalaciones).toHaveLength(0)
   })
 
-  it('debería llamar a findMany filtrando solo instalaciones activas', async () => {
+  it('debería llamar a findMany filtrando por instalaciones activas y tenantId', async () => {
     prismaMock.instalacion.findMany.mockResolvedValue([])
 
-    await GET()
+    await GET(crearRequest())
 
     expect(prismaMock.instalacion.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { activa: true },
+        where: { tenantId: TENANT_ID, activa: true },
       })
     )
+  })
+
+  it('debería devolver 400 si falta el header x-tenant-id', async () => {
+    // Request sin header de tenant (no debería llegar en producción, pero se protege igual)
+    const requestSinTenant = new NextRequest('http://localhost/api/instalaciones')
+    const res = await GET(requestSinTenant)
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toContain('Tenant')
   })
 })
