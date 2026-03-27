@@ -13,10 +13,19 @@ import React from 'react'
 // --- Mocks ---
 
 const mockPush = vi.fn()
+const mockBack = vi.fn()
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, back: mockBack }),
   useParams: () => ({ id: 'pista-1' }),
+}))
+
+// Mock de next-auth/react para que useSession no requiera SessionProvider
+vi.mock('next-auth/react', () => ({
+  useSession: vi.fn(() => ({
+    data: { user: { id: 'usuario-123', name: 'Ana García', rol: 'CIUDADANO' } },
+    status: 'authenticated',
+  })),
 }))
 
 // Mock de shadcn Dialog: renderiza el contenido directamente sin portal
@@ -358,7 +367,7 @@ describe('PaginaDetallePista', () => {
       })
       .mockResolvedValueOnce({
         ok: false,
-        json: async () => ({ error: 'Ya tienes 2 reservas activas' }),
+        json: async () => ({ error: 'Ya tienes una reserva activa de este tipo. Cancélala antes de hacer otra del mismo tipo' }),
       })
 
     render(React.createElement(PaginaDetallePista, { params: { id: 'pista-1' } }))
@@ -379,7 +388,7 @@ describe('PaginaDetallePista', () => {
     fireEvent.click(botonConfirmar)
 
     await waitFor(() => {
-      expect(screen.getByText(/Ya tienes 2 reservas activas/i)).toBeInTheDocument()
+      expect(screen.getByText(/Ya tienes una reserva activa de este tipo/i)).toBeInTheDocument()
     })
   })
 })

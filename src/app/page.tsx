@@ -1,4 +1,6 @@
 import { headers } from "next/headers"
+import { getServerSession } from "next-auth"
+import { opcionesAuth } from "@/lib/auth"
 import Tablon, { Aviso } from "@/components/Tablon"
 import { extraerSlugDelHost, obtenerTenantPorSlug } from "@/lib/tenant"
 
@@ -45,7 +47,7 @@ async function obtenerPistas(): Promise<Instalacion[]> {
   try {
     // URL absoluta necesaria en Server Components
     const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.APP_URL ??
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
 
     const respuesta = await fetch(`${baseUrl}/api/instalaciones`, {
@@ -71,7 +73,7 @@ async function obtenerPistas(): Promise<Instalacion[]> {
 async function obtenerAvisos(): Promise<Aviso[]> {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.APP_URL ??
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
 
     const respuesta = await fetch(`${baseUrl}/api/avisos`, {
@@ -104,15 +106,16 @@ async function obtenerMunicipioTenant(): Promise<string | undefined> {
 
 // Server Component — no lleva "use client"
 export default async function Inicio() {
-  const [pistas, avisos, municipio] = await Promise.all([
+  const [pistas, avisos, municipio, sesion] = await Promise.all([
     obtenerPistas(),
     obtenerAvisos(),
     obtenerMunicipioTenant(),
+    getServerSession(opcionesAuth),
   ])
 
   return (
-    <main>
-      <Tablon pistas={pistas} avisos={avisos} municipio={municipio} />
+    <main id="contenido-principal">
+      <Tablon pistas={pistas} avisos={avisos} municipio={municipio} sesionActiva={!!sesion} />
     </main>
   )
 }

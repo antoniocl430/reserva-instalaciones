@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nombre, email, password } = resultado.data
+    // aceptaPrivacidad solo se valida, no se persiste en BD
+    const { nombre, email, password, aceptaPrivacidad: _aceptaPrivacidad } = resultado.data
 
     // Resolver el tenant desde el header inyectado por el middleware
     const slugTenant = request.headers.get("x-tenant-slug") ?? "desarrollo"

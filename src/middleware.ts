@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server"
 import { extraerSlugDelHost } from "@/lib/tenant"
 
 // Rutas que requieren estar autenticado
-const RUTAS_PROTEGIDAS = ["/dashboard", "/pistas", "/mis-reservas"]
+const RUTAS_PROTEGIDAS = ["/dashboard", "/mis-reservas", "/perfil"]
 // Rutas que requieren estar autenticado Y tener rol ADMIN
 const RUTAS_ADMIN = ["/admin"]
 // Rutas que requieren estar autenticado Y tener rol SUPERADMIN
@@ -129,11 +129,18 @@ export const config = {
     "/dashboard/:path*",
     "/pistas/:path*",
     "/mis-reservas/:path*",
+    "/perfil",
+    "/perfil/:path*",
     "/login",
     "/registro",
     "/recuperar-password",
     "/nueva-password",
     "/api/disponibilidad/:path*",
     "/api/superadmin/:path*",
+    // Las rutas de API de admin y reservas pasan por el middleware para inyectar x-tenant-slug
+    "/api/admin/:path*",
+    "/api/reservas/:path*",
+    "/api/instalaciones/:path*",
+    "/api/avisos/:path*",
   ],
 }

@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hashear password del admin
-    const passwordHash = await bcrypt.hash(passwordAdmin, 10)
+    // Hashear password del admin con coste 12 (recomendado para producción)
+    const passwordHash = await bcrypt.hash(passwordAdmin, 12)
 
     // Crear todo en una transaccion: tenant + instalacion seed + admin
     const resultado = await prisma.$transaction(async (tx) => {

@@ -73,14 +73,15 @@ export async function POST(request: NextRequest) {
     // Hashear nueva contraseña
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // Actualizar contraseña y marcar token como usado en transacción
+    // Actualizar contraseña e invalidar TODOS los tokens del usuario en transacción.
+    // Usar updateMany para revocar cualquier token pendiente, no solo el usado ahora.
     await prisma.$transaction([
       prisma.usuario.update({
         where: { id: tokenRecuperacion.usuario.id },
         data: { passwordHash },
       }),
-      prisma.tokenRecuperacion.update({
-        where: { id: tokenRecuperacion.id },
+      prisma.tokenRecuperacion.updateMany({
+        where: { usuarioId: tokenRecuperacion.usuario.id, tenantId },
         data: { usado: true },
       }),
     ])

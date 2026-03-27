@@ -4,6 +4,7 @@ import Link from "next/link"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { formatearFechaCorta, formatearHora } from "@/lib/formato"
+import BotonesRGPD from "@/components/BotonesRGPD"
 
 export default async function PaginaDashboard() {
   // Proteccion de ruta: si no hay sesion, redirige al login
@@ -22,31 +23,30 @@ export default async function PaginaDashboard() {
     },
     include: { instalacion: { select: { id: true, nombre: true } } },
     orderBy: { horaInicio: "asc" },
-    take: 2, // maximo 2 reservas activas por las reglas de negocio
   })
 
   const totalActivas = reservasActivas.length
-  const limitePistas = totalActivas >= 2
 
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Saludo de bienvenida */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            Bienvenido/a, {sesion.user.name ?? "usuario"}
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Gestiona tus reservas de instalaciones deportivas
-          </p>
-        </div>
-
-        {/* Aviso cuando el usuario ha alcanzado el limite de reservas */}
-        {limitePistas && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-yellow-800">
-            Has alcanzado el limite de 2 reservas activas. Cancela una antes de realizar otra reserva.
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Bienvenido/a, {sesion.user.name ?? "usuario"}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Gestiona tus reservas de instalaciones deportivas
+            </p>
           </div>
-        )}
+          <Link
+            href="/perfil"
+            className="text-sm text-blue-600 hover:text-blue-800 underline underline-offset-2 shrink-0 mt-1"
+          >
+            Mi perfil
+          </Link>
+        </div>
 
         {/* Accesos rapidos */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -78,7 +78,7 @@ export default async function PaginaDashboard() {
             <h2 className="font-semibold text-gray-800">Reservas activas</h2>
             {totalActivas > 0 && (
               <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                {totalActivas} / 2
+                {totalActivas}
               </span>
             )}
           </div>
@@ -112,6 +112,15 @@ export default async function PaginaDashboard() {
               ))}
             </ul>
           )}
+        </section>
+
+        {/* Sección: Mis datos (RGPD) */}
+        <section aria-labelledby="titulo-mis-datos" className="mt-8 border border-gray-200 rounded-lg p-6 bg-white">
+          <h2 id="titulo-mis-datos" className="text-lg font-semibold text-gray-900 mb-1">Mis datos</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Conforme al RGPD, puedes exportar o eliminar tu cuenta desde tu perfil.
+          </p>
+          <BotonesRGPD />
         </section>
       </div>
     </main>

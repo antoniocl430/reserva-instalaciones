@@ -22,16 +22,23 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
+// El middleware inyecta x-tenant-slug (no x-tenant-id). Mockeamos el helper de tenant
+// para que resuelva el slug al TENANT_ID de prueba sin consultar la BD real.
+jest.mock('@/lib/tenant', () => ({
+  obtenerTenantIdPorSlug: jest.fn().mockResolvedValue('tenant-test'),
+  extraerSlugDelHost: jest.fn().mockReturnValue('test'),
+}))
+
 import { GET } from '@/app/api/disponibilidad/route'
 import { NextRequest } from 'next/server'
 
-// ID de tenant de prueba
+// ID de tenant de prueba (el middleware lo inyecta como x-tenant-slug)
 const TENANT_ID = 'tenant-test'
 
-// Helper: crea un NextRequest con el header de tenant inyectado
+// Helper: crea un NextRequest con el header de tenant inyectado por el middleware
 function crearRequest(url: string) {
   return new NextRequest(url, {
-    headers: { 'x-tenant-id': TENANT_ID },
+    headers: { 'x-tenant-slug': 'test' },
   })
 }
 

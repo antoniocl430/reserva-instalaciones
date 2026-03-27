@@ -29,6 +29,16 @@ jest.mock("@/lib/email", () => ({
   enviarEmailRecuperacion: jest.fn().mockResolvedValue(undefined),
 }))
 
+// El middleware inyecta x-tenant-slug (no x-tenant-id). Mapeamos dos slugs a dos tenants distintos.
+jest.mock("@/lib/tenant", () => ({
+  obtenerTenantIdPorSlug: jest.fn().mockImplementation((slug: string) => {
+    if (slug === "slug-a") return Promise.resolve("tenant-ayto-a")
+    if (slug === "slug-b") return Promise.resolve("tenant-ayto-b")
+    return Promise.resolve(null)
+  }),
+  extraerSlugDelHost: jest.fn().mockReturnValue("slug-a"),
+}))
+
 import { getServerSession } from "next-auth"
 import { NextRequest } from "next/server"
 
@@ -152,12 +162,12 @@ describe("Aislamiento entre tenants", () => {
   // ── 1. GET /api/instalaciones ───────────────────────────────────────────────
 
   describe("GET /api/instalaciones", () => {
-    it("solo devuelve instalaciones del tenant del request (x-tenant-id header)", async () => {
-      // Solo instalaciones del tenant A deben devolverse cuando el header apunta a A
+    it("solo devuelve instalaciones del tenant del request (x-tenant-slug header)", async () => {
+      // Solo instalaciones del tenant A deben devolverse cuando el slug apunta a A
       prismaMock.instalacion.findMany.mockResolvedValueOnce([instalacionTenantA])
 
       const request = new NextRequest("http://localhost:3000/api/instalaciones", {
-        headers: { "x-tenant-id": TENANT_A_ID },
+        headers: { "x-tenant-slug": "slug-a" },
       })
       const response = await instalaciones_GET(request)
       const body = await response.json()
@@ -179,7 +189,7 @@ describe("Aislamiento entre tenants", () => {
       prismaMock.instalacion.findMany.mockResolvedValueOnce([])
 
       const request = new NextRequest("http://localhost:3000/api/instalaciones", {
-        headers: { "x-tenant-id": TENANT_A_ID },
+        headers: { "x-tenant-slug": "slug-a" },
       })
       const response = await instalaciones_GET(request)
       const body = await response.json()
@@ -199,7 +209,7 @@ describe("Aislamiento entre tenants", () => {
       prismaMock.aviso.findMany.mockResolvedValueOnce([avisoTenantA])
 
       const request = new NextRequest("http://localhost:3000/api/avisos", {
-        headers: { "x-tenant-id": TENANT_A_ID },
+        headers: { "x-tenant-slug": "slug-a" },
       })
       const response = await avisos_GET(request)
       const body = await response.json()
@@ -218,7 +228,7 @@ describe("Aislamiento entre tenants", () => {
       prismaMock.aviso.findMany.mockResolvedValueOnce([avisoTenantA])
 
       const request = new NextRequest("http://localhost:3000/api/avisos", {
-        headers: { "x-tenant-id": TENANT_A_ID },
+        headers: { "x-tenant-slug": "slug-a" },
       })
       const response = await avisos_GET(request)
       const body = await response.json()

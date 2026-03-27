@@ -1,8 +1,9 @@
 /**
  * Tests del componente PaginaPistas (Server Component)
  *
- * Estrategia: mockeamos getServerSession, redirect y prisma antes de importar
+ * Estrategia: mockeamos getServerSession, prisma, next/headers y tenant antes de importar
  * el componente. Renderizamos con `render(await PaginaPistas())`.
+ * La página es pública — no redirige si no hay sesión.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -28,6 +29,17 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/lib/auth', () => ({
   opcionesAuth: {},
+}))
+
+// next/headers: mock para que no falle fuera de contexto de petición HTTP
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() => ({ get: vi.fn(() => 'desarrollo') })),
+}))
+
+// tenant: resuelve siempre el tenant de desarrollo
+vi.mock('@/lib/tenant', () => ({
+  obtenerTenantPorSlug: vi.fn().mockResolvedValue({ id: 'tenant-desarrollo-0001', slug: 'desarrollo' }),
+  extraerSlugDelHost: vi.fn(() => 'desarrollo'),
 }))
 
 // Mock de shadcn Card: renderiza divs simples para evitar dependencias de Radix
@@ -60,12 +72,11 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import PaginaPistas from '@/app/pistas/page'
 
 const sesionFicticia = {
-  user: { id: 'usuario-123', name: 'Ana García', email: 'ana@example.com', rol: 'CIUDADANO' },
+  user: { id: 'usuario-123', name: 'Ana García', email: 'ana@example.com', rol: 'CIUDADANO', tenantId: 'tenant-desarrollo-0001' },
   expires: '2099-01-01',
 }
 
@@ -80,21 +91,34 @@ describe('PaginaPistas', () => {
     vi.clearAllMocks()
   })
 
-  it('debería redirigir a /login si no hay sesión', async () => {
+  it('debería mostrar el título Instalaciones deportivas con o sin sesión', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-
-    await expect(PaginaPistas()).rejects.toThrow('NEXT_REDIRECT:/login')
-    expect(redirect).toHaveBeenCalledWith('/login')
-  })
-
-  it('debería mostrar el título Instalaciones deportivas', async () => {
-    ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
     ;(prisma.instalacion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(pistasFicticias)
 
     const elemento = await PaginaPistas()
     render(elemento)
 
     expect(screen.getByText('Instalaciones deportivas')).toBeInTheDocument()
+  })
+
+  it('debería mostrar subtítulo de reserva cuando hay sesión', async () => {
+    ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
+    ;(prisma.instalacion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(pistasFicticias)
+
+    const elemento = await PaginaPistas()
+    render(elemento)
+
+    expect(screen.getByText(/Selecciona una instalación para ver su disponibilidad y reservar/i)).toBeInTheDocument()
+  })
+
+  it('debería mostrar subtítulo de solo consulta cuando no hay sesión', async () => {
+    ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    ;(prisma.instalacion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(pistasFicticias)
+
+    const elemento = await PaginaPistas()
+    render(elemento)
+
+    expect(screen.getByText(/Consulta la disponibilidad/i)).toBeInTheDocument()
   })
 
   it('debería mostrar las pistas disponibles con sus nombres', async () => {
@@ -135,14 +159,14 @@ describe('PaginaPistas', () => {
     expect(hrefs).toContain('/pistas/p3')
   })
 
-  it('debería mostrar la etiqueta Padel para pistas de tipo PADEL', async () => {
+  it('debería mostrar la etiqueta Pádel para pistas de tipo PADEL', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
     ;(prisma.instalacion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([pistasFicticias[0]])
 
     const elemento = await PaginaPistas()
     render(elemento)
 
-    expect(screen.getByText('Padel')).toBeInTheDocument()
+    expect(screen.getByText('Pádel')).toBeInTheDocument()
   })
 
   it('debería mostrar la descripción de la pista cuando existe', async () => {
@@ -155,14 +179,14 @@ describe('PaginaPistas', () => {
     expect(screen.getByText('Pista techada')).toBeInTheDocument()
   })
 
-  it('debería mostrar "Sin descripcion" cuando la pista no tiene descripción', async () => {
+  it('debería mostrar "Sin descripción" cuando la pista no tiene descripción', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
     ;(prisma.instalacion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([pistasFicticias[1]])
 
     const elemento = await PaginaPistas()
     render(elemento)
 
-    expect(screen.getByText('Sin descripcion')).toBeInTheDocument()
+    expect(screen.getByText('Sin descripción')).toBeInTheDocument()
   })
 
   it('debería mostrar el horario de cada pista en la tarjeta', async () => {

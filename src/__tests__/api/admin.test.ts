@@ -437,17 +437,13 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
       expect(body.error).toContain("propia")
     })
 
-    it("debería devolver 404 si el usuario no existe (código Prisma P2025)", async () => {
+    it("debería devolver 404 si el usuario no existe en el tenant", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-id", rol: "ADMIN" },
+        user: { id: "admin-id", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      const { Prisma } = require("@prisma/client")
-      const error = new Prisma.PrismaClientKnownRequestError("Not found", {
-        code: "P2025",
-        clientVersion: "5.9.1",
-      })
-      prismaMock.usuario.delete.mockRejectedValueOnce(error)
+      // deleteMany devuelve { count: 0 } cuando no encuentra el registro
+      prismaMock.usuario.deleteMany.mockResolvedValueOnce({ count: 0 })
 
       const request = new NextRequest(
         "http://localhost:3000/api/admin/usuarios/no-existe",
@@ -464,15 +460,11 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
 
     it("debería devolver 200 si el usuario existe y no es el actual", async () => {
       ;(getServerSession as jest.Mock).mockResolvedValueOnce({
-        user: { id: "admin-1", rol: "ADMIN" },
+        user: { id: "admin-1", rol: "ADMIN", tenantId: "tenant-test" },
       })
 
-      prismaMock.usuario.delete.mockResolvedValueOnce({
-        id: "admin-2",
-        nombre: "Admin 2",
-        email: "admin2@ayuntamiento.es",
-        rol: "ADMIN",
-      })
+      // deleteMany devuelve { count: 1 } cuando elimina un registro
+      prismaMock.usuario.deleteMany.mockResolvedValueOnce({ count: 1 })
 
       const request = new NextRequest(
         "http://localhost:3000/api/admin/usuarios/admin-2",

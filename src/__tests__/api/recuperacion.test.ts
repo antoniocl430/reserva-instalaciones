@@ -34,7 +34,7 @@ describe("Schemas de recuperación de contraseña", () => {
     it("debe validar token y password válidos", () => {
       const resultado = schemaResetearPassword.safeParse({
         token: "550e8400-e29b-41d4-a716-446655440000",
-        password: "nuevacontraseña123",
+        password: "NuevaContraseña1",
       })
       expect(resultado.success).toBe(true)
     })
@@ -57,7 +57,7 @@ describe("Schemas de recuperación de contraseña", () => {
       })
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
-        expect(resultado.error.issues[0].message).toContain("al menos 6")
+        expect(resultado.error.issues[0].message).toContain("al menos 8")
       }
     })
 

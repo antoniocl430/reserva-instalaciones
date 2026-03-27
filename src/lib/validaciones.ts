@@ -8,11 +8,20 @@ const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Schema para registro de usuarios ciudadanos
+ * Incluye aceptaPrivacidad: debe ser literal `true` para cumplir con RGPD.
+ * El campo NO se guarda en BD — solo se valida antes de crear el usuario.
  */
 export const schemaRegistro = z.object({
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   email: z.string().email("Email no válido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres")
+    .regex(/[A-Z]/, "La contraseña debe contener al menos una letra mayúscula")
+    .regex(/[0-9]/, "La contraseña debe contener al menos un número"),
+  aceptaPrivacidad: z.literal(true, {
+    error: () => ({ message: "Debes aceptar la política de privacidad" }),
+  }),
 })
 
 export type RegistroInput = z.infer<typeof schemaRegistro>
@@ -90,7 +99,11 @@ export type CrearBloqueoInput = z.infer<typeof schemaCrearBloqueo>
 export const schemaCrearUsuarioAdmin = z.object({
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   email: z.string().email("Email no válido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres")
+    .regex(/[A-Z]/, "La contraseña debe contener al menos una letra mayúscula")
+    .regex(/[0-9]/, "La contraseña debe contener al menos un número"),
 })
 
 export type CrearUsuarioAdminInput = z.infer<typeof schemaCrearUsuarioAdmin>
@@ -124,7 +137,11 @@ export type SolicitarRecuperacionInput = z.infer<typeof schemaSolicitarRecuperac
  */
 export const schemaResetearPassword = z.object({
   token: z.string().min(1, "El token es obligatorio"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres")
+    .regex(/[A-Z]/, "La contraseña debe contener al menos una letra mayúscula")
+    .regex(/[0-9]/, "La contraseña debe contener al menos un número"),
 })
 
 export type ResetearPasswordInput = z.infer<typeof schemaResetearPassword>
@@ -244,7 +261,11 @@ export const schemaCrearTenant = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio").max(200),
   municipio: z.string().min(1, "El municipio es obligatorio").max(200),
   emailAdmin: z.string().email("Email del admin no valido"),
-  passwordAdmin: z.string().min(6, "La contrasena debe tener al menos 6 caracteres"),
+  passwordAdmin: z
+    .string()
+    .min(8, "La contrasena debe tener al menos 8 caracteres")
+    .regex(/[A-Z]/, "La contrasena debe contener al menos una letra mayuscula")
+    .regex(/[0-9]/, "La contrasena debe contener al menos un numero"),
   nombreAdmin: z.string().min(2).max(200).optional(),
 })
 
@@ -261,3 +282,17 @@ export const schemaActualizarTenantSuperadmin = z.object({
     error: () => ({ message: "El estado debe ser ACTIVO o SUSPENDIDO" }),
   }).optional(),
 })
+
+/**
+ * Schema para actualizar el perfil del usuario autenticado
+ * Todos los campos son opcionales — se permite actualizar solo lo que se envía
+ */
+export const schemaActualizarPerfil = z.object({
+  nombre: z
+    .string()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede superar 100 caracteres")
+    .optional(),
+})
+
+export type ActualizarPerfilInput = z.infer<typeof schemaActualizarPerfil>

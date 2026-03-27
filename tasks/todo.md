@@ -1,5 +1,63 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
+## Bloque 9 — Página de perfil de usuario (COMPLETADO 2026-03-27)
+
+### Plan TDD
+
+#### Tareas implementadas
+- [x] TAREA 1: Crear `src/app/perfil/page.tsx` (Client Component) con:
+  - Sección avatar: muestra DiceBear con iniciales si no hay avatarUrl; preview inmediata al seleccionar; POST /api/cuenta/avatar
+  - Sección datos: formulario nombre + email deshabilitado; PATCH /api/cuenta al guardar; estado de carga en botón
+  - Zona de peligro: dialog de confirmación; DELETE /api/cuenta + signOut al confirmar
+  - Skeleton de carga mientras status === "loading"
+  - Redirección a /login si status === "unauthenticated"
+- [x] TAREA 2: Añadir "/perfil" a RUTAS_PROTEGIDAS en `src/middleware.ts` + matcher
+- [x] TAREA 3: Enlace "Mi perfil" en `src/components/header.tsx` (desktop + menú móvil) con avatar DiceBear
+- [x] TAREA 4: Enlace "Mi perfil" en `src/app/dashboard/page.tsx` junto al saludo de bienvenida
+- [x] TAREA 5: Tests TDD en `src/__tests__/frontend/perfil.test.tsx` (7 tests — todos pasan)
+
+### Resultado final
+
+| Metrica | Valor |
+|---------|-------|
+| Tests nuevos (vitest) | 7 |
+| Tests totales (vitest) | 103 |
+| Tests fallados | 0 |
+| Archivos creados | 2 (`perfil/page.tsx`, `perfil.test.tsx`) |
+| Archivos modificados | 3 (`middleware.ts`, `header.tsx`, `dashboard/page.tsx`) |
+
+---
+
+## Bloque 8 — Accesibilidad WCAG 2.1 AA, páginas legales y RGPD (COMPLETADO 2026-03-27)
+
+### Plan TDD
+
+#### Tareas implementadas
+- [x] TAREA 1: Skip-to-content en layout.tsx + id="contenido-principal" en page.tsx
+- [x] TAREA 2: Fixes WCAG en Header (aria-label logo, nav principal, nav móvil)
+- [x] TAREA 3: Fixes WCAG en Tablon.tsx (emojis con aria-hidden)
+- [x] TAREA 4: Fixes WCAG en login (role="alert") y registro (role="alert", placeholder 8 chars, checkbox privacidad)
+- [x] TAREA 5: Fixes WCAG en pistas/[id]/page.tsx (aria-label slots, role="alert" error)
+- [x] TAREA 6: Componente Footer con enlaces legales + añadido a layout.tsx
+- [x] TAREA 7: Páginas legales (/legal, /privacidad, /accesibilidad) con datos del tenant
+- [x] TAREA 8: BannerCookies informativo + añadido a layout.tsx
+- [x] TAREA 9: Sección "Mis datos" RGPD en dashboard + componente BotonesRGPD
+- [x] TAREA 10: Tests TDD (RED → GREEN → REFACTOR)
+  - [x] BotonesRGPD.test.tsx — 5 tests
+  - [x] registro.test.tsx — 6 tests
+
+### Resultado final
+
+| Metrica | Valor |
+|---------|-------|
+| Tests nuevos (vitest) | 11 |
+| Tests totales (vitest) | 96 |
+| Tests fallados | 0 |
+| Archivos creados | 8 (Footer, BannerCookies, BotonesRGPD, /legal, /privacidad, /accesibilidad, BotonesRGPD.test.tsx, registro.test.tsx) |
+| Archivos modificados | 6 (layout.tsx, page.tsx, header.tsx, Tablon.tsx, login/page.tsx, registro/page.tsx, pistas/[id]/page.tsx, dashboard/page.tsx) |
+
+---
+
 ## Informe de calidad — POST BLOQUE 7 (2026-03-26)
 
 ### Resumen de tests — ejecucion verificada

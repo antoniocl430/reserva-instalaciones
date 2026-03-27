@@ -4,6 +4,9 @@ import { headers } from "next/headers"
 import "./globals.css"
 import { Proveedores } from "@/components/proveedores"
 import { Header } from "@/components/header"
+import { TransicionPagina } from "@/components/TransicionPagina"
+import Footer from "@/components/Footer"
+import BannerCookies from "@/components/BannerCookies"
 import { extraerSlugDelHost, obtenerTenantPorSlug } from "@/lib/tenant"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -150,10 +153,19 @@ export default async function LayoutRaiz({
         } as React.CSSProperties
       }
     >
-      <body className={inter.className}>
+      <body className={`${inter.className} flex flex-col min-h-screen`}>
+        {/* Enlace de salto al contenido principal — accesibilidad WCAG 2.1 */}
+        <a
+          href="#contenido-principal"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-blue-700 focus:border focus:border-blue-700 focus:rounded focus:font-medium"
+        >
+          Saltar al contenido principal
+        </a>
         <Proveedores>
           <Header nombreServicio={nombreServicio} />
-          {children}
+          <TransicionPagina>{children}</TransicionPagina>
+          <Footer />
+          <BannerCookies />
         </Proveedores>
       </body>
     </html>

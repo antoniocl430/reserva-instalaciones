@@ -20,7 +20,8 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: 'Juan García',
         email: 'juan@test.com',
-        password: 'password123',
+        password: 'Password123',
+        aceptaPrivacidad: true,
       }
       const resultado = schemaRegistro.safeParse(data)
       expect(resultado.success).toBe(true)
@@ -30,7 +31,8 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: 'Juan García',
         email: 'no-es-email',
-        password: 'password123',
+        password: 'Password123',
+        aceptaPrivacidad: true,
       }
       const resultado = schemaRegistro.safeParse(data)
       expect(resultado.success).toBe(false)
@@ -39,11 +41,12 @@ describe('Validación con Zod', () => {
       }
     })
 
-    it('debería rechazar password corta (menos de 6 caracteres)', () => {
+    it('debería rechazar password corta (menos de 8 caracteres)', () => {
       const data = {
         nombre: 'Juan García',
         email: 'juan@test.com',
-        password: 'pass',
+        password: 'Pass1',
+        aceptaPrivacidad: true,
       }
       const resultado = schemaRegistro.safeParse(data)
       expect(resultado.success).toBe(false)
@@ -56,12 +59,37 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: '',
         email: 'juan@test.com',
-        password: 'password123',
+        password: 'Password123',
+        aceptaPrivacidad: true,
       }
       const resultado = schemaRegistro.safeParse(data)
       expect(resultado.success).toBe(false)
       if (!resultado.success) {
         expect(resultado.error.issues[0].message).toContain('nombre')
+      }
+    })
+
+    it('debería rechazar si falta aceptaPrivacidad', () => {
+      const data = {
+        nombre: 'Juan García',
+        email: 'juan@test.com',
+        password: 'Password123',
+      }
+      const resultado = schemaRegistro.safeParse(data)
+      expect(resultado.success).toBe(false)
+    })
+
+    it('debería rechazar si aceptaPrivacidad es false', () => {
+      const data = {
+        nombre: 'Juan García',
+        email: 'juan@test.com',
+        password: 'Password123',
+        aceptaPrivacidad: false,
+      }
+      const resultado = schemaRegistro.safeParse(data)
+      expect(resultado.success).toBe(false)
+      if (!resultado.success) {
+        expect(resultado.error.issues[0].message).toContain('privacidad')
       }
     })
   })
@@ -237,7 +265,7 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: 'Admin García',
         email: 'admin@ayuntamiento.es',
-        password: 'admin123',
+        password: 'Admin123',
       }
       const resultado = schemaCrearUsuarioAdmin.safeParse(data)
       expect(resultado.success).toBe(true)
@@ -247,7 +275,7 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: 'Admin García',
         email: 'no-es-email',
-        password: 'admin123',
+        password: 'Admin123',
       }
       const resultado = schemaCrearUsuarioAdmin.safeParse(data)
       expect(resultado.success).toBe(false)
@@ -256,11 +284,11 @@ describe('Validación con Zod', () => {
       }
     })
 
-    it('debería rechazar password corta (menos de 6 caracteres)', () => {
+    it('debería rechazar password corta (menos de 8 caracteres)', () => {
       const data = {
         nombre: 'Admin García',
         email: 'admin@ayuntamiento.es',
-        password: 'adm',
+        password: 'Adm1',
       }
       const resultado = schemaCrearUsuarioAdmin.safeParse(data)
       expect(resultado.success).toBe(false)
@@ -273,7 +301,7 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: 'A',
         email: 'admin@ayuntamiento.es',
-        password: 'admin123',
+        password: 'Admin123',
       }
       const resultado = schemaCrearUsuarioAdmin.safeParse(data)
       expect(resultado.success).toBe(false)
@@ -286,7 +314,7 @@ describe('Validación con Zod', () => {
       const data = {
         nombre: '',
         email: 'admin@ayuntamiento.es',
-        password: 'admin123',
+        password: 'Admin123',
       }
       const resultado = schemaCrearUsuarioAdmin.safeParse(data)
       expect(resultado.success).toBe(false)

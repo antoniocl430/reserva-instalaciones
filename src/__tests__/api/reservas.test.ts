@@ -228,16 +228,16 @@ describe('POST /api/reservas', () => {
     expect(body).toHaveProperty('error')
   })
 
-  it('debería devolver 409 cuando el ciudadano ya tiene 2 reservas activas', async () => {
+  it('debería devolver 409 cuando el ciudadano ya tiene 1 reserva activa del mismo tipo', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
     // La ruta usa findFirst con { id, tenantId } desde Fase 4 (LESSON-016)
     prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
     prismaMock.bloqueo.findFirst.mockResolvedValue(null)
-    // El conteo de reservas activas ocurre DENTRO de prisma.$transaction (BUG-03).
+    // El conteo filtra por tipo de instalación dentro de la transacción.
     // Para que tx.reserva.count sea interceptado, hacemos que $transaction ejecute
     // el callback pasándole el propio prismaMock como cliente de transacción (tx).
     prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
-    prismaMock.reserva.count.mockResolvedValue(2)
+    prismaMock.reserva.count.mockResolvedValue(1)
 
     const req = new Request('http://localhost/api/reservas', {
       method: 'POST',
@@ -248,7 +248,7 @@ describe('POST /api/reservas', () => {
     const body = await res.json()
 
     expect(res.status).toBe(409)
-    expect(body.error).toMatch(/2 reservas activas/i)
+    expect(body.error).toMatch(/reserva activa de este tipo/i)
   })
 
   it('debería devolver 409 cuando el slot ya está ocupado (detectado en la transacción)', async () => {

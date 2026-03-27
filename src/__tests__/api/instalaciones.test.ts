@@ -15,16 +15,23 @@ jest.mock('@/lib/prisma', () => {
 
 jest.mock('next-auth', () => ({ default: jest.fn() }))
 
+// El middleware inyecta x-tenant-slug (no x-tenant-id). Mockeamos el helper de tenant
+// para que resuelva el slug al TENANT_ID de prueba sin consultar la BD real.
+jest.mock('@/lib/tenant', () => ({
+  obtenerTenantIdPorSlug: jest.fn().mockResolvedValue('tenant-test'),
+  extraerSlugDelHost: jest.fn().mockReturnValue('test'),
+}))
+
 import { GET } from '@/app/api/instalaciones/route'
 import { NextRequest } from 'next/server'
 
-// ID de tenant de prueba (el middleware lo inyecta en producción)
+// ID de tenant de prueba (el middleware lo inyecta en producción como x-tenant-slug)
 const TENANT_ID = 'tenant-test'
 
-// Helper para crear request con el header de tenant inyectado
+// Helper para crear request con el header de tenant inyectado por el middleware
 function crearRequest(url = 'http://localhost/api/instalaciones') {
   return new NextRequest(url, {
-    headers: { 'x-tenant-id': TENANT_ID },
+    headers: { 'x-tenant-slug': 'test' },
   })
 }
 
@@ -85,8 +92,11 @@ describe('GET /api/instalaciones', () => {
     )
   })
 
-  it('debería devolver 400 si falta el header x-tenant-id', async () => {
-    // Request sin header de tenant (no debería llegar en producción, pero se protege igual)
+  it('debería devolver 400 si no se puede resolver el tenant', async () => {
+    // Simulamos que el slug no corresponde a ningún tenant en BD
+    const { obtenerTenantIdPorSlug } = require('@/lib/tenant')
+    obtenerTenantIdPorSlug.mockResolvedValueOnce(null)
+
     const requestSinTenant = new NextRequest('http://localhost/api/instalaciones')
     const res = await GET(requestSinTenant)
 

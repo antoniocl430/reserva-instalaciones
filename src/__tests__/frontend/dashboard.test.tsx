@@ -132,31 +132,15 @@ describe('PaginaDashboard', () => {
     expect(screen.getByText('Activa')).toBeInTheDocument()
   })
 
-  it('debería mostrar banner de límite cuando el usuario tiene 2 reservas activas', async () => {
+  it('debería mostrar el contador de reservas activas cuando hay al menos una', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
     ;(prisma.reserva.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
       crearReservaFicticia('r1', 'Pista de Pádel 1'),
-      crearReservaFicticia('r2', 'Pista de Pádel 2'),
     ])
 
     const elemento = await PaginaDashboard()
     render(elemento)
 
-    expect(
-      screen.getByText(/Has alcanzado el limite de 2 reservas activas/i)
-    ).toBeInTheDocument()
-  })
-
-  it('debería mostrar el contador 2 / 2 cuando hay 2 reservas activas', async () => {
-    ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
-    ;(prisma.reserva.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-      crearReservaFicticia('r1', 'Pista de Pádel 1'),
-      crearReservaFicticia('r2', 'Pista de Pádel 2'),
-    ])
-
-    const elemento = await PaginaDashboard()
-    render(elemento)
-
-    expect(screen.getByText('2 / 2')).toBeInTheDocument()
+    expect(screen.getByText('1')).toBeInTheDocument()
   })
 })

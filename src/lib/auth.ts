@@ -13,11 +13,14 @@ const HASH_DUMMY = "$2a$12$dummy.hash.para.evitar.timing.attack.en.login.form"
  * Intenta primero x-forwarded-for (proxy), luego x-real-ip, finalmente "unknown".
  */
 function extraerIP(req: any): string {
+  // En Vercel, x-vercel-forwarded-for es la IP real del cliente y no puede ser falsificada
+  // por el cliente (la inyecta el proxy de Vercel). x-forwarded-for es manipulable.
+  const vercelIp = req.headers?.["x-vercel-forwarded-for"]
+  if (vercelIp) return vercelIp.split(",")[0].trim()
+
   const forwarded = req.headers?.["x-forwarded-for"]
-  if (forwarded) {
-    // x-forwarded-for puede tener múltiples IPs separadas por comas
-    return forwarded.split(",")[0].trim()
-  }
+  if (forwarded) return forwarded.split(",")[0].trim()
+
   return req.headers?.["x-real-ip"] ?? "unknown"
 }
 
@@ -74,17 +77,19 @@ export const opcionesAuth: NextAuthOptions = {
           name: usuario.nombre,
           rol: usuario.rol,
           tenantId: usuario.tenantId,
+          avatarUrl: usuario.avatarUrl ?? null,
         }
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Primer login: poblar el token con los datos del usuario (incluyendo tenantId)
+      // Primer login: poblar el token con los datos del usuario (incluyendo tenantId y avatarUrl)
       if (user) {
         token.id = user.id
         token.rol = (user as unknown as { rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN" }).rol
         token.tenantId = (user as unknown as { tenantId: string }).tenantId
+        token.avatarUrl = (user as any).avatarUrl ?? null
         return token
       }
 
@@ -92,12 +97,18 @@ export const opcionesAuth: NextAuthOptions = {
       // Esto invalida sesiones de usuarios desactivados sin esperar la expiración del JWT.
       const usuarioActivo = await prisma.usuario.findUnique({
         where: { id: token.id },
-        select: { activo: true },
+        select: { activo: true, nombre: true, avatarUrl: true },
       })
 
       if (!usuarioActivo || !usuarioActivo.activo) {
         // Marcar el token como inválido; el callback session lo propagará al cliente
         return { ...token, error: "SessionInvalidada" as const }
+      }
+
+      // Reflejar en el token cualquier cambio de nombre o avatar desde la BD
+      token.name = usuarioActivo.nombre
+      if (usuarioActivo.avatarUrl !== undefined) {
+        token.avatarUrl = usuarioActivo.avatarUrl
       }
 
       return token
@@ -107,6 +118,7 @@ export const opcionesAuth: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.rol = token.rol as "CIUDADANO" | "ADMIN" | "SUPERADMIN"
         session.user.tenantId = token.tenantId as string
+        session.user.avatarUrl = token.avatarUrl as string | null | undefined
       }
       // Propagar el error de sesión invalidada para que el cliente lo detecte
       if (token.error === "SessionInvalidada") {

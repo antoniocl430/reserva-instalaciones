@@ -1,8 +1,9 @@
+import { headers } from "next/headers"
 import { getServerSession } from "next-auth"
-import { redirect } from "next/navigation"
 import Link from "next/link"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { obtenerTenantPorSlug } from "@/lib/tenant"
 import {
   Card,
   CardContent,
@@ -26,22 +27,29 @@ interface Instalacion {
 // Devuelve la etiqueta legible del tipo de instalacion
 function etiquetaTipo(tipo: string): string {
   switch (tipo) {
-    case "PADEL": return "Padel"
+    case "PADEL": return "Pádel"
+    case "TENIS": return "Tenis"
+    case "FUTBOL": return "Fútbol"
     case "PISCINA": return "Piscina"
+    case "BASQUETBOL": return "Baloncesto"
     default: return tipo
   }
 }
 
 export default async function PaginaPistas() {
-  // Proteccion de ruta: si no hay sesion, redirige al login
   const sesion = await getServerSession(opcionesAuth)
-  if (!sesion) {
-    redirect("/login")
+
+  // Obtener tenantId: si hay sesión lo tomamos de ella; si no, del header del middleware
+  let tenantId: string | undefined = sesion?.user?.tenantId ?? undefined
+  if (!tenantId) {
+    const headersList = await headers()
+    const slug = headersList.get("x-tenant-slug") ?? "desarrollo"
+    const tenant = await obtenerTenantPorSlug(slug)
+    tenantId = tenant?.id
   }
 
-  // Fetch de instalaciones directamente en el servidor con Prisma
   const instalaciones: Instalacion[] = await prisma.instalacion.findMany({
-    where: { activa: true },
+    where: { activa: true, ...(tenantId ? { tenantId } : {}) },
     select: { id: true, nombre: true, tipo: true, descripcion: true, horario: true, activa: true },
     orderBy: { nombre: "asc" },
   })
@@ -53,7 +61,9 @@ export default async function PaginaPistas() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Instalaciones deportivas</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Selecciona una instalación para ver su disponibilidad y reservar
+            {sesion
+              ? "Selecciona una instalación para ver su disponibilidad y reservar"
+              : "Consulta la disponibilidad de cada instalación. Inicia sesión para reservar."}
           </p>
         </div>
 
@@ -81,7 +91,7 @@ export default async function PaginaPistas() {
                         pista.tipo === "PADEL" ? "text-blue-600" : "text-cyan-600"
                       }`}
                     >
-                      {pista.tipo === "PADEL" ? "P" : "N"}
+                      {pista.tipo === "PADEL" ? "P" : pista.tipo[0]}
                     </span>
                   </div>
                   <CardTitle className="text-base leading-tight">{pista.nombre}</CardTitle>
@@ -99,7 +109,7 @@ export default async function PaginaPistas() {
                   {pista.descripcion ? (
                     <p className="text-sm text-gray-600">{pista.descripcion}</p>
                   ) : (
-                    <p className="text-sm text-gray-400 italic">Sin descripcion</p>
+                    <p className="text-sm text-gray-400 italic">Sin descripción</p>
                   )}
                   <div className="text-xs text-gray-600 border-t border-gray-200 pt-2 mt-2">
                     <p className="font-medium">Horario:</p>

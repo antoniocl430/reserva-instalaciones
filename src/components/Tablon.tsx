@@ -29,6 +29,8 @@ interface TablonProps {
   avisos: Aviso[]
   /** Municipio del tenant actual. Si se pasa, el título muestra "Instalaciones — {municipio}". */
   municipio?: string
+  /** Si el usuario ya tiene sesión activa, oculta el banner de "Inicia sesión". */
+  sesionActiva?: boolean
 }
 
 const TIPO_COLORES: Record<string, { badge: string; icono: string }> = {
@@ -38,14 +40,20 @@ const TIPO_COLORES: Record<string, { badge: string; icono: string }> = {
   BASQUETBOL: { badge: "bg-orange-100 text-orange-700", icono: "🏀" },
 }
 
+// Renderiza el icono de tipo de instalación con aria-hidden para que los lectores de
+// pantalla no lean el emoji — el tipo ya está indicado en texto por el Badge
+function IconoTipo({ icono }: { icono: string }) {
+  return <span aria-hidden="true">{icono}</span>
+}
+
 function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
   const config =
     TIPO_COLORES[instalacion.tipo] || { badge: "bg-gray-100 text-gray-700", icono: "📍" }
 
-  return (
+  const contenido = (
     <Card className={`flex flex-col gap-3 p-4 border border-gray-200 transition-all duration-200 ${
       instalacion.activa
-        ? "hover:border-gray-300 hover:shadow-md"
+        ? "hover:border-blue-300 hover:shadow-md cursor-pointer"
         : "opacity-60 grayscale cursor-not-allowed bg-gray-50"
     }`}>
       {/* Encabezado con nombre y tipo */}
@@ -87,6 +95,13 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
       </div>
     </Card>
   )
+
+  if (!instalacion.activa) return contenido
+  return (
+    <Link href={`/pistas/${instalacion.id}`} className="block">
+      {contenido}
+    </Link>
+  )
 }
 
 // Formatea una fecha ISO a texto legible en español
@@ -123,7 +138,7 @@ function TarjetaAviso({ aviso }: { aviso: Aviso }) {
   )
 }
 
-export default function Tablon({ pistas, avisos, municipio }: TablonProps) {
+export default function Tablon({ pistas, avisos, municipio, sesionActiva }: TablonProps) {
   if (pistas.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-96 bg-gray-50">
@@ -148,16 +163,18 @@ export default function Tablon({ pistas, avisos, municipio }: TablonProps) {
               </p>
             </div>
 
-            {/* Aviso de acceso */}
-            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5 text-sm text-blue-800">
-              <LogIn className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-              <span>
-                <Link href="/login" className="font-semibold underline underline-offset-2 hover:text-blue-600">
-                  Inicia sesión
-                </Link>{" "}
-                para realizar una reserva.
-              </span>
-            </div>
+            {/* Aviso de acceso — solo visible si no hay sesión activa */}
+            {!sesionActiva && (
+              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5 text-sm text-blue-800">
+                <LogIn className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                <span>
+                  <Link href="/login" className="font-semibold underline underline-offset-2 hover:text-blue-600">
+                    Inicia sesión
+                  </Link>{" "}
+                  para realizar una reserva.
+                </span>
+              </div>
+            )}
 
             {/* Grid de tarjetas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

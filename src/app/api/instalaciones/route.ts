@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { extraerSlugDelHost, obtenerTenantIdPorSlug } from "@/lib/tenant"
 
-// Resuelve el tenantId desde x-tenant-id, x-tenant-slug o el host
+// Resuelve el tenantId desde x-tenant-slug (inyectado por el middleware) o el host.
+// NO se acepta x-tenant-id desde el cliente — podría usarse para acceder a datos de otro tenant.
 async function resolverTenantId(request: NextRequest): Promise<string | null> {
-  const tenantId = request.headers.get("x-tenant-id")
-  if (tenantId) return tenantId
   const slug =
     request.headers.get("x-tenant-slug") ??
     extraerSlugDelHost(request.headers.get("host") ?? "")

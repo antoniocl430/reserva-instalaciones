@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { Prisma } from "@prisma/client"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -30,25 +29,18 @@ export async function DELETE(
       )
     }
 
-    // Eliminar el usuario
-    await prisma.usuario.delete({
-      where: { id: params.id },
+    // Eliminar el usuario — el filtro por tenantId previene IDOR entre tenants
+    const usuarioEliminado = await prisma.usuario.deleteMany({
+      where: { id: params.id, tenantId: sesion.user.tenantId },
     })
+
+    if (usuarioEliminado.count === 0) {
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+    }
 
     return NextResponse.json({ mensaje: "Usuario eliminado correctamente" })
   } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === "P2025") {
-        return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-      }
-      if (err.code === "P2003") {
-        return NextResponse.json(
-          { error: "No se puede eliminar este usuario porque tiene datos asociados" },
-          { status: 409 }
-        )
-      }
-    }
     console.error("Error al eliminar usuario:", err)
-    throw err
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

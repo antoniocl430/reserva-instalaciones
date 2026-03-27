@@ -4,8 +4,7 @@
 
 Todas las entidades principales tienen una columna `tenantId` que las vincula a un
 ayuntamiento concreto. Esto garantiza el aislamiento completo de datos entre tenants
-a nivel de aplicación (filtro obligatorio en todas las queries) y a nivel de base de
-datos (PostgreSQL RLS en producción).
+a nivel de aplicación (filtro obligatorio en todas las queries).
 
 ---
 
@@ -13,7 +12,7 @@ datos (PostgreSQL RLS en producción).
 
 ---
 
-### Tenant *(nuevo — en desarrollo)*
+### Tenant
 Representa un ayuntamiento. Cada tenant tiene su subdominio, configuración y datos propios.
 
 | Campo | Tipo | Descripción |
@@ -29,14 +28,13 @@ Representa un ayuntamiento. Cada tenant tiene su subdominio, configuración y da
 | actualizadoEn | DateTime | Última modificación |
 
 **Configuración personalizable por tenant (JSON):**
-- `maxReservasSimultaneas` — límite de reservas activas por ciudadano (default: 2)
 - `cancelacionHorasAntes` — antelación mínima para cancelar (default: 2)
 - `horariosApertura` — franjas horarias y slots
 - `duracionSlotMinutos` — duración de cada slot (default: 75)
 - `nombreServicio` — nombre del servicio en la UI
-- `colores` — colores corporativos en hex
+- `colores` — colores corporativos en hex (`{ primario, secundario }`)
 - `zonaHoraria` — zona horaria (default: `"Europe/Madrid"`)
-- `metadata` — título y descripción para SEO
+- `metadata` — título y descripción para SEO (`{ titulo, descripcion }`)
 
 ---
 
@@ -46,17 +44,20 @@ Representa tanto a ciudadanos como a administradores. Único por email **dentro 
 | Campo | Tipo | Descripción |
 |---|---|---|
 | id | String (uuid) | Identificador único |
-| tenantId | String | FK → Tenant |
+| tenantId | String? | FK → Tenant (null solo para SUPERADMIN) |
 | email | String | Email — único por tenant (`@@unique([tenantId, email])`) |
 | nombre | String | Nombre completo |
 | passwordHash | String | Contraseña encriptada con bcrypt |
-| rol | String | `"CIUDADANO"` \| `"ADMIN"` |
+| rol | String | `"CIUDADANO"` \| `"ADMIN"` \| `"SUPERADMIN"` |
 | activo | Boolean | Si la cuenta está activa (default: true) |
 | creadoEn | DateTime | Fecha de registro |
 | actualizadoEn | DateTime | Última modificación |
 
 > El email es único **por tenant**, no globalmente. Un mismo email puede existir en dos
 > ayuntamientos distintos sin conflicto.
+>
+> El rol `SUPERADMIN` no pertenece a ningún tenant (`tenantId` = null) y tiene acceso
+> al panel `/superadmin` con visibilidad global.
 
 ---
 
@@ -68,7 +69,7 @@ Cada pista, campo o instalación del complejo deportivo de un ayuntamiento.
 | id | String (uuid) | Identificador único |
 | tenantId | String | FK → Tenant |
 | nombre | String | Ej: `"Pádel 1"` — único por tenant |
-| tipo | String | `"PADEL"` \| `"TENIS"` \| `"PISCINA"` \| ... |
+| tipo | String | `"PADEL"` \| `"TENIS"` \| `"FUTBOL"` \| `"BASQUETBOL"` \| ... |
 | descripcion | String? | Descripción opcional |
 | horario | String | Horario de apertura visible |
 | activa | Boolean | Si aparece en el sistema (default: true) |
@@ -167,11 +168,12 @@ Usuario         1 ──── N    TokenRecuperacion
 
 - No pueden existir dos reservas ACTIVAS para la misma instalación en el mismo slot
 - Un slot bloqueado no puede tener reservas ACTIVAS
-- Un usuario CIUDADANO no puede superar el límite de reservas activas de su tenant (default: 2)
+- Un usuario CIUDADANO no puede tener más de **1 reserva activa por tipo de instalación** (puede tener pádel + tenis, pero no dos pádel)
 - La horaFin siempre es horaInicio + duración del slot del tenant
 - Solo usuarios con rol ADMIN pueden crear o modificar Bloqueos y Avisos
 - Solo usuarios con rol ADMIN pueden cancelar reservas de otros usuarios
 - Todas las queries deben filtrar por `tenantId` — un tenant nunca accede a datos de otro
+- El rol SUPERADMIN opera sin `tenantId` y tiene visibilidad global de solo lectura sobre los tenants
 
 ---
 

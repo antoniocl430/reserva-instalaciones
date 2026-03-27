@@ -1,6 +1,6 @@
 # Roadmap — Sistema de Reservas Deportivas Municipales
 
-## Fase 1 — Web app (completada)
+## Fase 1 — Web app ✅
 
 ### Bloque 1: Base del proyecto ✅
 - [x] Estructura Next.js 14 + TypeScript + Tailwind + shadcn/ui
@@ -28,7 +28,7 @@
 - [x] Diseño profesional (sidebar oscuro, header dinámico)
 
 ### Bloque 4: Calidad ✅
-- [x] Tests unitarios con Vitest (componentes) y Jest (API routes)
+- [x] Tests unitarios con Vitest (componentes/páginas) y Jest (API routes)
 - [x] TDD aplicado en frontend y backend
 - [x] Validación con Zod en todas las API Routes
 - [x] Deploy en producción (Vercel + Supabase)
@@ -36,49 +36,67 @@
 
 ---
 
-## Fase 2 — Multi-tenancy (en curso)
+## Fase 2 — Multi-tenancy ✅
 
-### Bloque 5: Arquitectura multi-tenant
-- [ ] Tabla `Tenant` en Prisma + columna `tenantId` en todas las tablas
-- [ ] Migración de datos existentes a tenant inicial
-- [ ] Middleware: detectar tenant por subdominio, inyectar en headers
-- [ ] NextAuth: incluir `tenantId` en JWT y sesión
-- [ ] Todas las API Routes filtran por `tenantId`
-- [ ] Tests de aislamiento: un tenant no accede a datos de otro
+### Bloque 5: Arquitectura multi-tenant ✅
+- [x] Tabla `Tenant` en Prisma + columna `tenantId` en todas las tablas
+- [x] Migración de datos existentes a tenant inicial
+- [x] Middleware: detectar tenant por subdominio, inyectar en headers
+- [x] NextAuth: incluir `tenantId` en JWT y sesión
+- [x] Todas las API Routes filtran por `tenantId`
+- [x] Tests de aislamiento: un tenant no accede a datos de otro
 
-### Bloque 6: Personalización por tenant
-- [ ] Logo y favicon por tenant (metadata dinámica en `layout.tsx`)
-- [ ] Colores corporativos mediante CSS variables
-- [ ] Nombre del servicio y textos personalizados
-- [ ] Horarios y slots configurables por tenant
-- [ ] Límite de reservas configurable por tenant
+### Bloque 6: Personalización por tenant ✅
+- [x] Nombre del servicio y municipio dinámicos en la UI
+- [x] Colores corporativos mediante CSS variables (`--color-primario`, `--color-secundario`)
+- [x] Configuración visual desde el panel admin (`/admin/configuracion`)
+- [x] Metadata SEO dinámica por tenant en `layout.tsx`
 
-### Bloque 7: Panel superadmin
-- [ ] Ruta `/superadmin` protegida por rol SUPERADMIN
-- [ ] Crear nuevo tenant (slug, nombre, municipio)
-- [ ] Seed automático al crear tenant (pistas, admin inicial)
-- [ ] Configurar tenant (logo, colores, reglas de negocio)
-- [ ] Suspender / reactivar tenant
-- [ ] Vista de métricas agregadas de todos los tenants
-
----
-
-## Fase 3 — App móvil (futura)
-
-- [ ] Evaluación de Capacitor para conversión web → móvil
-- [ ] Ajustes de UI para experiencia nativa
-- [ ] Publicación en App Store (iOS) y Google Play (Android)
-- [ ] Notificaciones push (recordatorio 1h antes de la reserva)
+### Bloque 7: Panel superadmin ✅
+- [x] Ruta `/superadmin` protegida por rol SUPERADMIN
+- [x] Dashboard con métricas agregadas de todos los tenants
+- [x] Listado de tenants con estado y badges
+- [x] Crear nuevo tenant con seed automático (pistas + admin inicial)
+- [x] Editar tenant (nombre, municipio, estado)
+- [x] Suspender / reactivar tenant
 
 ---
 
-## Fase 4 — Mejoras futuras (backlog)
+## Fase 3 — Experiencia móvil (en curso)
+
+El objetivo es que la aplicación funcione de forma excelente en cualquier dispositivo
+móvil desde el navegador, sin necesidad de app nativa. PWA, gestos táctiles y UX
+optimizada para pantallas pequeñas.
+
+### Bloque 8: Mejoras de UX y flujos de usuario
+- [ ] Revisar y pulir todos los flujos ciudadano en mobile (reserva, mis reservas, cancelación)
+- [ ] Mejorar navegación entre páginas (breadcrumbs, botones de volver)
+- [ ] Feedback visual claro en acciones (toasts, estados de carga, confirmaciones)
+- [ ] Formularios optimizados para teclado móvil (tipos de input correctos, autocomplete)
+
+### Bloque 9: PWA — instalable desde el navegador
+- [ ] Configurar `manifest.json` con nombre, iconos y colores por tenant
+- [ ] Service worker para carga offline básica (páginas visitadas)
+- [ ] Botón "Añadir a pantalla de inicio" en iOS y Android
+- [ ] Icono y splash screen personalizados
+
+### Bloque 10: Notificaciones web push
+- [ ] Integración con Web Push API (sin app nativa)
+- [ ] Recordatorio 1h antes de cada reserva
+- [ ] Notificación al cancelar una reserva (propia o por el admin)
+- [ ] Gestión de preferencias de notificación por usuario
+
+---
+
+## Fase 4 — Funcionalidades avanzadas (backlog)
 
 - [ ] Reservas recurrentes (ej: todos los martes a las 10h)
 - [ ] Sistema de penalizaciones por no presentarse
-- [ ] Integración con sede electrónica del ayuntamiento
 - [ ] Festivos predefinidos por calendario oficial
 - [ ] Estadísticas avanzadas de uso por instalación
 - [ ] Exportación de reservas a CSV
+- [ ] Horarios y slots configurables por tenant desde el panel
+- [ ] Límite de reservas configurable por tenant
+- [ ] Integración con sede electrónica del ayuntamiento
 - [ ] Base de datos dedicada por tenant (para ayuntamientos grandes)
 - [ ] Facturación por uso (SaaS pricing)

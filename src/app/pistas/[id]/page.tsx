@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
@@ -38,6 +39,7 @@ interface Props {
 
 export default function PaginaDetallePista({ params }: Props) {
   const router = useRouter()
+  const { data: sesion } = useSession()
   const { id } = params
 
   // Fecha seleccionada: por defecto hoy en formato YYYY-MM-DD
@@ -103,6 +105,10 @@ export default function PaginaDetallePista({ params }: Props) {
   // Maneja el click en un slot libre
   function seleccionarSlot(slot: Slot) {
     if (slot.estado !== "libre") return
+    if (!sesion) {
+      router.push("/login")
+      return
+    }
     setSlotSeleccionado(slot)
     setErrorConfirmacion("")
     setDialogAbierto(true)
@@ -190,7 +196,7 @@ export default function PaginaDetallePista({ params }: Props) {
         {/* Cabecera con botón volver */}
         <div>
           <button
-            onClick={() => router.push("/pistas")}
+            onClick={() => router.back()}
             className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2"
           >
             ← Volver
@@ -239,7 +245,9 @@ export default function PaginaDetallePista({ params }: Props) {
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Disponibilidad</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Haz click en un slot verde para reservar
+              {sesion
+                ? "Haz click en un slot verde para reservar"
+                : "Inicia sesión para poder reservar un slot"}
             </p>
           </div>
 
@@ -264,7 +272,7 @@ export default function PaginaDetallePista({ params }: Props) {
                 ))}
               </div>
             ) : errorSlots ? (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {errorSlots}
               </div>
             ) : slots.length === 0 ? (
@@ -280,6 +288,16 @@ export default function PaginaDetallePista({ params }: Props) {
                     onClick={() => seleccionarSlot(slot)}
                     role={slot.estado === "libre" ? "button" : undefined}
                     tabIndex={slot.estado === "libre" ? 0 : undefined}
+                    aria-label={
+                      slot.estado === "libre"
+                        ? `Reservar de ${slot.horaInicio} a ${slot.horaFin}`
+                        : slot.estado === "ocupado"
+                        ? `Ocupado de ${slot.horaInicio} a ${slot.horaFin}`
+                        : slot.estado === "pasado"
+                        ? `Pasado — ${slot.horaInicio} a ${slot.horaFin}`
+                        : `Bloqueado — ${slot.horaInicio} a ${slot.horaFin}`
+                    }
+                    aria-disabled={slot.estado !== "libre"}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") seleccionarSlot(slot)
                     }}

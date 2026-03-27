@@ -121,16 +121,19 @@ export async function POST(request: NextRequest) {
   let reserva: any
   try {
     reserva = await prisma.$transaction(async (tx) => {
-      // Verificar límite de 2 reservas activas dentro de la transacción (solo ciudadanos)
+      // Verificar límite de 1 reserva activa por tipo de instalación (solo ciudadanos).
+      // Un ciudadano puede tener una reserva de pádel Y una de tenis simultáneamente,
+      // pero no puede tener dos reservas del mismo tipo a la vez.
       if (sesion.user.rol === "CIUDADANO") {
-        const reservasActivas = await tx.reserva.count({
+        const reservasActivasMismoTipo = await tx.reserva.count({
           where: {
             usuarioId: sesion.user.id,
             estado: "ACTIVA",
             horaInicio: { gte: new Date() },
+            instalacion: { tipo: instalacion.tipo },
           },
         })
-        if (reservasActivas >= 2) {
+        if (reservasActivasMismoTipo >= 1) {
           throw new Error("LIMITE_RESERVAS")
         }
       }
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (err instanceof Error && err.message === "LIMITE_RESERVAS") {
       return NextResponse.json(
-        { error: "Ya tienes 2 reservas activas. Cancela una antes de hacer una nueva" },
+        { error: "Ya tienes una reserva activa de este tipo. Cancélala antes de hacer otra del mismo tipo" },
         { status: 409 }
       )
     }

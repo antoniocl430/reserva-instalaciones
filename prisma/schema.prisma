@@ -48,6 +48,7 @@ model Usuario {
   passwordHash  String
   rol           String   @default("CIUDADANO") // "CIUDADANO" | "ADMIN" | "SUPERADMIN"
   activo        Boolean  @default(true)
+  avatarUrl     String?  // URL de la foto de perfil del usuario (opcional)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 

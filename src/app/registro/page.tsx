@@ -13,14 +13,15 @@ export default function PaginaRegistro() {
   const [confirmar, setConfirmar] = useState("")
   const [error, setError] = useState("")
   const [cargando, setCargando] = useState(false)
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
 
     // Validaciones client-side
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres")
       return
     }
     if (password !== confirmar) {
@@ -34,7 +35,7 @@ export default function PaginaRegistro() {
     const respuesta = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, email, password }),
+      body: JSON.stringify({ nombre, email, password, aceptaPrivacidad }),
     })
 
     const data = await respuesta.json()
@@ -67,7 +68,7 @@ export default function PaginaRegistro() {
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div role="alert" aria-live="assertive" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -116,7 +117,7 @@ export default function PaginaRegistro() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres"
             />
           </div>
 
@@ -134,6 +135,36 @@ export default function PaginaRegistro() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="••••••••"
             />
+          </div>
+
+          {/* Aceptación de política de privacidad — obligatorio según RGPD */}
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="aceptaPrivacidad"
+              checked={aceptaPrivacidad}
+              onChange={(e) => setAceptaPrivacidad(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              required
+            />
+            <label htmlFor="aceptaPrivacidad" className="text-sm text-gray-700">
+              He leído y acepto la{" "}
+              <Link
+                href="/privacidad"
+                className="text-blue-600 underline hover:text-blue-800"
+                target="_blank"
+              >
+                política de privacidad
+              </Link>
+              {" "}y el{" "}
+              <Link
+                href="/legal"
+                className="text-blue-600 underline hover:text-blue-800"
+                target="_blank"
+              >
+                aviso legal
+              </Link>
+            </label>
           </div>
 
           <button

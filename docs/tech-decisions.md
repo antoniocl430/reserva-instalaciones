@@ -20,7 +20,6 @@
 ## Estrategia de base de datos
 
 PostgreSQL (Supabase) se usa en todos los entornos, tanto en desarrollo local como en producción.
-No se usa SQLite en ningún entorno.
 
 | Entorno | Base de datos | Dónde corre |
 |---|---|---|
@@ -31,12 +30,16 @@ No se usa SQLite en ningún entorno.
 
 ## Estrategia de testing
 
-| Tipo de test | Herramienta | Qué cubre |
-|---|---|---|
-| Tests de API (backend) | Jest | API Routes: lógica, validaciones Zod, rate limiting, reglas de negocio |
-| Tests de frontend | Vitest + Testing Library | Componentes React: renderizado, interacciones, formularios |
+| Tipo de test | Herramienta | Qué cubre | Ubicación |
+|---|---|---|---|
+| Tests de API (backend) | Jest | API Routes: lógica, validaciones Zod, rate limiting, reglas de negocio | `src/__tests__/api/` |
+| Tests de páginas | Vitest + Testing Library | Páginas React: renderizado, interacciones, flujos | `src/__tests__/frontend/` |
+| Tests de componentes | Vitest + Testing Library | Componentes UI: renderizado, props, eventos | `src/__tests__/components/` |
 
-Los tests de API se ubican en `src/__tests__/api/` y los de frontend en `src/__tests__/components/`.
+**Metodología:** TDD estricto. Tests se escriben antes del código (RED → GREEN → REFACTOR).
+Los agentes de frontend y backend no dan una tarea por finalizada hasta que `npx vitest run` o `npx jest` pasan.
+
+**Estado actual:** 288 tests (203 Jest + 85 Vitest), 0 fallos.
 
 ---
 
@@ -80,16 +83,34 @@ construir objetos `Date` correctos independientemente del servidor donde corra l
 Alternativa más moderna a Nodemailer. API REST simple, buen plan gratuito (3.000 emails/mes),
 no requiere configurar un servidor SMTP propio.
 
+### Multi-tenancy: Row-Level Isolation
+Se eligió row-level isolation (una BD compartida con `tenantId` en todas las tablas) sobre
+bases de datos separadas por tenant porque:
+- Más sencillo de gestionar en Supabase (plan gratuito)
+- El aislamiento se garantiza a nivel de aplicación (filtro obligatorio en todas las queries)
+- Suficiente para municipios pequeños/medianos con pocos usuarios simultáneos
+
+Si en el futuro algún ayuntamiento requiere mayor aislamiento o mayor escala, se puede migrar
+a una base de datos dedicada por tenant sin cambiar la interfaz de la aplicación.
+
+### Regla de reservas: 1 por tipo de instalación
+Un ciudadano puede tener como máximo **1 reserva activa por tipo de instalación**. Esto significa:
+- Puede tener una reserva de pádel Y una de tenis simultáneamente
+- No puede tener dos reservas de pádel a la vez
+
+La validación se realiza dentro de una transacción Prisma para evitar race conditions,
+filtrando por `instalacion: { tipo }` en el conteo de reservas activas.
+
 ---
 
-## Preparación para móvil (Fase 2)
+## Preparación para móvil (Fase 3)
 
 El proyecto se construye con móvil en mente desde el principio:
 - Diseño mobile-first con Tailwind
 - Sin dependencias que impidan la conversión a Capacitor
 - Las API Routes de Next.js seguirán siendo el backend cuando la app sea móvil
 
-Para convertir a app móvil en Fase 2:
+Para convertir a app móvil en Fase 3:
 1. Instalar Capacitor en el proyecto Next.js existente
 2. Exportar la app como web estática
 3. Compilar para iOS (Xcode) y Android (Android Studio)

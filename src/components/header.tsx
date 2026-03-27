@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { AvatarUsuario } from "@/components/AvatarUsuario"
 
 interface HeaderProps {
   /** Nombre del servicio a mostrar en el logo. Si no se pasa, usa el valor por defecto. */
@@ -28,14 +29,14 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
       <div className="w-full px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 font-bold text-blue-700 text-lg shrink-0">
-            <span className="text-xl">🏓</span>
+          <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center gap-2 font-bold text-blue-700 text-lg shrink-0">
+            <span className="text-xl" aria-hidden="true">🏓</span>
             <span className="hidden sm:inline">{nombreServicio}</span>
             <span className="sm:hidden">Reservas</span>
           </Link>
 
           {/* Navegación desktop */}
-          <nav className="hidden md:flex items-center gap-4">
+          <nav aria-label="Navegación principal" className="hidden md:flex items-center gap-4">
               {/* Sin sesión o cargando: mostrar login y registro */}
               {!sesion && (
                 <>
@@ -69,9 +70,20 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                   >
                     Mis reservas
                   </Link>
-                  <span className="text-sm text-gray-500 border-l border-gray-200 pl-4">
-                    {sesion.user?.name}
-                  </span>
+                  <Link
+                    href="/perfil"
+                    className="flex items-center gap-2 border-l border-gray-200 pl-4 hover:opacity-80 transition-opacity"
+                    aria-label="Mi perfil"
+                  >
+                    <AvatarUsuario
+                      nombre={sesion.user?.name ?? "U"}
+                      avatarUrl={(sesion.user as { avatarUrl?: string | null }).avatarUrl}
+                      className="w-8 h-8 text-xs"
+                    />
+                    <span className="text-sm font-medium hidden sm:block text-gray-700">
+                      {sesion.user?.name}
+                    </span>
+                  </Link>
                   <button
                     onClick={cerrarSesion}
                     className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
@@ -129,7 +141,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
       {/* Menú móvil desplegable */}
       {!cargandoSesion && menuAbierto && (
         <div className="md:hidden border-t border-gray-200 bg-white">
-          <nav className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-1">
+          <nav aria-label="Menú de navegación" className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-1">
             {/* Sin sesión: solo login y registro */}
             {!sesion && (
               <>
@@ -169,6 +181,13 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mis reservas
+                </Link>
+                <Link
+                  href="/perfil"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Mi perfil
                 </Link>
                 <button
                   onClick={() => { setMenuAbierto(false); cerrarSesion() }}

@@ -8,6 +8,7 @@ declare module "next-auth" {
       id: string
       rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN"
       tenantId?: string
+      avatarUrl?: string | null
     } & DefaultSession["user"]
     // Presente cuando la sesión ha sido invalidada (usuario desactivado)
     error?: "SessionInvalidada"
@@ -19,6 +20,7 @@ declare module "next-auth/jwt" {
     id: string
     rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN"
     tenantId?: string
+    avatarUrl?: string | null
     // Presente cuando la sesión ha sido invalidada (usuario desactivado)
     error?: "SessionInvalidada"
   }

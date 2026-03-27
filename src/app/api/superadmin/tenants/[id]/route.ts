@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { schemaActualizarTenantSuperadmin } from "@/lib/validaciones"
 
 // PATCH /api/superadmin/tenants/[id] — actualiza nombre, municipio, estado de un tenant
 export async function PATCH(
@@ -24,20 +25,20 @@ export async function PATCH(
 
     const body = await request.json()
 
-    // Construir datos de actualizacion — slug es inmutable, se ignora
-    const datosActualizacion: Record<string, string> = {}
-    if (body.nombre !== undefined) datosActualizacion.nombre = body.nombre
-    if (body.municipio !== undefined) datosActualizacion.municipio = body.municipio
-    if (body.estado !== undefined) {
-      if (body.estado !== "ACTIVO" && body.estado !== "SUSPENDIDO") {
-        return NextResponse.json(
-          { error: "El estado debe ser ACTIVO o SUSPENDIDO" },
-          { status: 400 }
-        )
-      }
-      datosActualizacion.estado = body.estado
+    // Validar con Zod — slug es inmutable, no se acepta
+    const validacion = schemaActualizarTenantSuperadmin.safeParse(body)
+    if (!validacion.success) {
+      return NextResponse.json(
+        { error: "Datos inválidos", detalles: validacion.error.flatten().fieldErrors },
+        { status: 400 }
+      )
     }
-    // slug se ignora intencionalmente (inmutable)
+
+    const { nombre, municipio, estado } = validacion.data
+    const datosActualizacion: Record<string, string> = {}
+    if (nombre !== undefined) datosActualizacion.nombre = nombre
+    if (municipio !== undefined) datosActualizacion.municipio = municipio
+    if (estado !== undefined) datosActualizacion.estado = estado
 
     const tenantActualizado = await prisma.tenant.update({
       where: { id },

@@ -125,7 +125,13 @@ Revisar este archivo al inicio de cada sesión.
 **Regla:** Cuando se cambia la firma de una ruta para añadir parámetros, buscar en todos los tests las llamadas sin argumentos y actualizarlas en el mismo commit.
 
 ### LESSON-015: El parámetro `errorMap` de Zod v4 se renombró a `error`
-**Contexto:** Los schemas de Zod para avisos usaban `errorMap: () => (...)` en `z.enum()`.
-**Error:** TypeScript reporta `TS2769: No overload matches this call` porque en Zod v4 la propiedad se renombró de `errorMap` a `error`.
-**Corrección:** Cambiar `errorMap: () => ({ message: "..." })` por `error: () => ({ message: "..." })` en todas las llamadas a `z.enum()`.
-**Regla:** En Zod v4, el parámetro de mapeo de errores en `z.enum()` se llama `error`, no `errorMap`. Verificar esto al actualizar versiones de Zod o al crear nuevos schemas.
+**Contexto:** Los schemas de Zod para avisos usaban `errorMap: () => (...)` en `z.enum()`. Al implementar `z.literal(true, { errorMap: ... })` para RGPD, el test fallaba con "Invalid input: expected true" en lugar del mensaje personalizado.
+**Error:** TypeScript lo acepta en `z.literal()` pero en Zod v4 el parámetro `errorMap` ya no funciona; el mensaje personalizado no se aplica.
+**Corrección:** Cambiar `errorMap: () => ({ message: "..." })` por `error: () => ({ message: "..." })` en todas las llamadas a `z.enum()` y `z.literal()`.
+**Regla:** En Zod v4, el parámetro de mapeo de errores en `z.enum()` y `z.literal()` se llama `error`, no `errorMap`. Aplica a cualquier constructor de Zod que acepte opciones de mensaje personalizado.
+
+### LESSON-020: getByText falla cuando el texto aparece en múltiples elementos del DOM
+**Contexto:** En el test del formulario de registro, "Crear cuenta" aparece tanto en el h1 como en el botón submit.
+**Error:** `screen.getByText('Crear cuenta')` lanza "Found multiple elements with the text" porque hay dos nodos que contienen ese texto.
+**Corrección:** Usar `screen.getByRole('heading', { name: /Crear cuenta/i })` para apuntar al h1, o `screen.getByRole('button', { name: /Crear cuenta/i })` para el botón.
+**Regla:** Cuando un texto puede aparecer en múltiples elementos (heading + button, label + badge, etc.), usar `getByRole` con el rol específico en lugar de `getByText` genérico.

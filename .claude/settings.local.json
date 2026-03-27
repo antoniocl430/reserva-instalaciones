@@ -9,7 +9,8 @@
       "Bash(npx shadcn@latest add badge --yes)",
       "Bash(npx shadcn@latest add dialog --yes)",
       "Bash(npx shadcn@latest add tabs --yes)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "WebSearch"
     ]
   }
 }

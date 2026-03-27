@@ -28,6 +28,12 @@ jest.mock("next-auth", () => ({
   getServerSession: jest.fn(),
 }))
 
+// El middleware inyecta x-tenant-slug (no x-tenant-id). Mockeamos el helper de tenant.
+jest.mock("@/lib/tenant", () => ({
+  obtenerTenantIdPorSlug: jest.fn().mockResolvedValue("tenant-test"),
+  extraerSlugDelHost: jest.fn().mockReturnValue("test"),
+}))
+
 import { getServerSession } from "next-auth"
 import { NextRequest } from "next/server"
 
@@ -85,7 +91,7 @@ function crearRequest(url: string, method: string, body?: object): NextRequest {
     method,
     headers: {
       "Content-Type": "application/json",
-      "x-tenant-id": TENANT_ID, // El middleware inyecta este header en producción
+      "x-tenant-slug": "test", // El middleware inyecta este header en producción
     },
     body: body ? JSON.stringify(body) : undefined,
   })
