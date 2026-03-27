@@ -6,8 +6,8 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string
-      rol: string
-      tenantId: string
+      rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+      tenantId?: string
     } & DefaultSession["user"]
     // Presente cuando la sesión ha sido invalidada (usuario desactivado)
     error?: "SessionInvalidada"
@@ -17,8 +17,8 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string
-    rol: string
-    tenantId: string
+    rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+    tenantId?: string
     // Presente cuando la sesión ha sido invalidada (usuario desactivado)
     error?: "SessionInvalidada"
   }

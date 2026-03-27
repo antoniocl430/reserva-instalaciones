@@ -13,7 +13,7 @@ datasource db {
 
 // ─── Modelos ─────────────────────────────────────────────────────────────────
 // Nota: Los campos de tipo enum se almacenan como String con valores controlados por la app:
-//   rol           → "CIUDADANO" | "ADMIN"
+//   rol           → "CIUDADANO" | "ADMIN" | "SUPERADMIN"
 //   tipo          → "PADEL" | "PISCINA" (extensible)
 //   estado        → "ACTIVA" | "CANCELADA" (Reserva) | "ACTIVO" | "SUSPENDIDO" | "ELIMINADO" (Tenant)
 
@@ -42,23 +42,24 @@ model Tenant {
 // El email es único POR TENANT, no globalmente (un ciudadano puede estar en dos ayuntamientos)
 model Usuario {
   id            String   @id @default(uuid())
-  tenantId      String
+  tenantId      String?
   email         String
   nombre        String
   passwordHash  String
-  rol           String   @default("CIUDADANO") // "CIUDADANO" | "ADMIN"
+  rol           String   @default("CIUDADANO") // "CIUDADANO" | "ADMIN" | "SUPERADMIN"
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
   // Relaciones
-  tenant               Tenant              @relation(fields: [tenantId], references: [id])
+  tenant               Tenant?             @relation(fields: [tenantId], references: [id])
   reservas             Reserva[]           @relation("UsuarioReservas")
   reservasCanceladas   Reserva[]           @relation("CanceladorReservas")
   bloqueosCreados      Bloqueo[]           @relation("AdminBloqueos")
   tokensRecuperacion   TokenRecuperacion[]
 
   // Email único dentro del mismo tenant (no globalmente)
+  // NOTA: tenantId es opcional para superadmins (sin tenant)
   @@unique([tenantId, email])
   @@index([tenantId])
 }

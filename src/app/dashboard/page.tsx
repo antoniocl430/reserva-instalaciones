@@ -44,7 +44,7 @@ export default async function PaginaDashboard() {
         {/* Aviso cuando el usuario ha alcanzado el limite de reservas */}
         {limitePistas && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-yellow-800">
-            Has alcanzado el limite de 2 reservas activas. Cancela una antes de reservar otra pista.
+            Has alcanzado el limite de 2 reservas activas. Cancela una antes de realizar otra reserva.
           </div>
         )}
 
@@ -54,7 +54,7 @@ export default async function PaginaDashboard() {
             href="/pistas"
             className="flex flex-col items-start gap-1 bg-blue-600 text-white font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-blue-700 transition-colors"
           >
-            <span className="text-sm sm:text-base font-semibold">Reservar pista</span>
+            <span className="text-sm sm:text-base font-semibold">Reservar instalación</span>
             <span className="text-xs sm:text-sm text-blue-100">Ver disponibilidad y reservar</span>
           </Link>
           <Link
@@ -90,7 +90,7 @@ export default async function PaginaDashboard() {
                 href="/pistas"
                 className="inline-block text-sm text-blue-600 hover:underline font-medium"
               >
-                Reserva una pista ahora
+                Reserva una instalación ahora
               </Link>
             </div>
           ) : (

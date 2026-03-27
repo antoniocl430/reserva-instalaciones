@@ -10,6 +10,7 @@ import {
   Lock,
   Users,
   Bell,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -46,6 +47,11 @@ const navItems = [
     label: "Avisos",
     href: "/admin/avisos",
     icon: Bell,
+  },
+  {
+    label: "Configuración",
+    href: "/admin/configuracion",
+    icon: Settings,
   },
 ]
 

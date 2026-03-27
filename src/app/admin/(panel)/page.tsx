@@ -133,7 +133,7 @@ export default function AdminDashboard() {
             className="block p-5 sm:p-6 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
           >
             <h3 className="font-semibold text-sm sm:text-base text-gray-900">Gestionar instalaciones</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">Crear, editar y desactivar pistas</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">Crear, editar y desactivar instalaciones</p>
           </Link>
 
           <Link

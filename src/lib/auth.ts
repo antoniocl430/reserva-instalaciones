@@ -83,7 +83,7 @@ export const opcionesAuth: NextAuthOptions = {
       // Primer login: poblar el token con los datos del usuario (incluyendo tenantId)
       if (user) {
         token.id = user.id
-        token.rol = (user as unknown as { rol: string }).rol
+        token.rol = (user as unknown as { rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN" }).rol
         token.tenantId = (user as unknown as { tenantId: string }).tenantId
         return token
       }
@@ -105,7 +105,7 @@ export const opcionesAuth: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        session.user.rol = token.rol as string
+        session.user.rol = token.rol as "CIUDADANO" | "ADMIN" | "SUPERADMIN"
         session.user.tenantId = token.tenantId as string
       }
       // Propagar el error de sesión invalidada para que el cliente lo detecte

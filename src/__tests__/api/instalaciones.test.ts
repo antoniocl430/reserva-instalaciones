@@ -73,14 +73,14 @@ describe('GET /api/instalaciones', () => {
     expect(body.instalaciones).toHaveLength(0)
   })
 
-  it('debería llamar a findMany filtrando por instalaciones activas y tenantId', async () => {
+  it('debería llamar a findMany filtrando solo por tenantId (incluye activas e inactivas)', async () => {
     prismaMock.instalacion.findMany.mockResolvedValue([])
 
     await GET(crearRequest())
 
     expect(prismaMock.instalacion.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { tenantId: TENANT_ID, activa: true },
+        where: { tenantId: TENANT_ID },
       })
     )
   })

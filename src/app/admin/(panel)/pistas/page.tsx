@@ -50,7 +50,7 @@ export default function PaginaPistasAdmin() {
       setCargando(true)
       const res = await fetch("/api/admin/pistas")
       if (!res.ok) {
-        throw new Error("Error al cargar pistas")
+        throw new Error("Error al cargar instalaciones")
       }
       const data = await res.json()
       setPistas(data.instalaciones || [])
@@ -69,7 +69,7 @@ export default function PaginaPistasAdmin() {
   // Crear nueva pista
   async function handleCrearPista() {
     if (!formNueva.nombre.trim()) {
-      setError("El nombre de la pista es obligatorio")
+      setError("El nombre de la instalación es obligatorio")
       return
     }
 
@@ -88,7 +88,7 @@ export default function PaginaPistasAdmin() {
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || "Error al crear pista")
+        throw new Error(data.error || "Error al crear instalación")
       }
 
       setDialogNueva(false)
@@ -111,7 +111,7 @@ export default function PaginaPistasAdmin() {
   // Guardar cambios de la pista
   async function handleGuardarEdicion() {
     if (!formEditar.nombre.trim()) {
-      setError("El nombre de la pista es obligatorio")
+      setError("El nombre de la instalación es obligatorio")
       return
     }
 
@@ -131,7 +131,7 @@ export default function PaginaPistasAdmin() {
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || "Error al actualizar pista")
+        throw new Error(data.error || "Error al actualizar instalación")
       }
 
       setDialogEditar(false)
@@ -155,7 +155,7 @@ export default function PaginaPistasAdmin() {
       })
 
       if (!res.ok) {
-        throw new Error("Error al actualizar pista")
+        throw new Error("Error al actualizar instalación")
       }
 
       cargarPistas()
@@ -170,7 +170,7 @@ export default function PaginaPistasAdmin() {
         {/* Cabecera */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Pistas</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Instalaciones</h1>
             <p className="text-sm sm:text-base text-gray-500 mt-1">
               Crea, edita y gestiona las instalaciones deportivas disponibles
             </p>
@@ -179,7 +179,7 @@ export default function PaginaPistasAdmin() {
             onClick={() => setDialogNueva(true)}
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
           >
-            Nueva pista
+            Nueva instalación
           </Button>
         </div>
 
@@ -202,7 +202,7 @@ export default function PaginaPistasAdmin() {
             </div>
           ) : pistas.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No hay pistas creadas. Crea la primera pista.
+              No hay instalaciones creadas todavía.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -282,7 +282,7 @@ export default function PaginaPistasAdmin() {
       <Dialog open={dialogNueva} onOpenChange={setDialogNueva}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Crear nueva pista</DialogTitle>
+            <DialogTitle>Crear nueva instalación</DialogTitle>
             <DialogDescription>
               Añade una nueva instalación al sistema
             </DialogDescription>
@@ -290,7 +290,7 @@ export default function PaginaPistasAdmin() {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="nombre">Nombre de la pista</Label>
+              <Label htmlFor="nombre">Nombre de la instalación</Label>
               <Input
                 id="nombre"
                 value={formNueva.nombre}
@@ -342,7 +342,7 @@ export default function PaginaPistasAdmin() {
               disabled={guardando}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {guardando ? "Creando..." : "Crear pista"}
+              {guardando ? "Creando..." : "Crear instalación"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -352,7 +352,7 @@ export default function PaginaPistasAdmin() {
       <Dialog open={dialogEditar} onOpenChange={setDialogEditar}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Editar pista</DialogTitle>
+            <DialogTitle>Editar instalación</DialogTitle>
             <DialogDescription>
               Actualiza los datos de la instalación
             </DialogDescription>
@@ -360,7 +360,7 @@ export default function PaginaPistasAdmin() {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="editar-nombre">Nombre de la pista</Label>
+              <Label htmlFor="editar-nombre">Nombre de la instalación</Label>
               <Input
                 id="editar-nombre"
                 value={formEditar.nombre}

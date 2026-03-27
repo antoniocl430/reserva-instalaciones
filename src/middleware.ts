@@ -7,6 +7,8 @@ import { extraerSlugDelHost } from "@/lib/tenant"
 const RUTAS_PROTEGIDAS = ["/dashboard", "/pistas", "/mis-reservas"]
 // Rutas que requieren estar autenticado Y tener rol ADMIN
 const RUTAS_ADMIN = ["/admin"]
+// Rutas que requieren estar autenticado Y tener rol SUPERADMIN
+const RUTAS_SUPERADMIN = ["/superadmin"]
 // Rutas que solo tienen sentido sin sesión activa
 const RUTAS_PUBLICAS_AUTH = ["/login", "/registro", "/recuperar-password", "/nueva-password"]
 // Login exclusivo para administradores (ruta pública especial)
@@ -68,6 +70,19 @@ export async function middleware(request: NextRequest) {
     return requestConTenant
   }
 
+  // ─── Rutas SUPERADMIN ──────────────────────────────────────────────────────
+  const esRutaSuperadmin = RUTAS_SUPERADMIN.some((ruta) => pathname.startsWith(ruta))
+  if (esRutaSuperadmin && !estaAutenticado) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/login"
+    return NextResponse.redirect(url)
+  }
+  if (esRutaSuperadmin && rol !== "SUPERADMIN") {
+    const url = request.nextUrl.clone()
+    url.pathname = "/dashboard"
+    return NextResponse.redirect(url)
+  }
+
   // Si intenta acceder a ruta admin sin sesión → /admin/login
   const esRutaAdmin = RUTAS_ADMIN.some((ruta) => pathname.startsWith(ruta))
   if (esRutaAdmin && !estaAutenticado) {
@@ -110,6 +125,7 @@ export const config = {
   matcher: [
     "/admin/login",
     "/admin/:path*",
+    "/superadmin/:path*",
     "/dashboard/:path*",
     "/pistas/:path*",
     "/mis-reservas/:path*",
@@ -118,5 +134,6 @@ export const config = {
     "/recuperar-password",
     "/nueva-password",
     "/api/disponibilidad/:path*",
+    "/api/superadmin/:path*",
   ],
 }

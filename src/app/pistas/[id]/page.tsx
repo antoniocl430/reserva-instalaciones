@@ -182,7 +182,7 @@ export default function PaginaDetallePista({ params }: Props) {
     }
   }
 
-  const nombrePista = pista?.nombre ?? "Pista de pádel"
+  const nombrePista = pista?.nombre ?? "Instalación"
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -211,7 +211,7 @@ export default function PaginaDetallePista({ params }: Props) {
         {/* Mensaje de éxito al reservar */}
         {exito && (
           <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
-            Reserva creada con exito. Tu pista queda reservada.
+            Reserva creada con éxito. Tu instalación queda reservada.
           </div>
         )}
 
@@ -308,7 +308,7 @@ export default function PaginaDetallePista({ params }: Props) {
           {slotSeleccionado && (
             <div className="space-y-2 py-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Pista</span>
+                <span className="text-gray-500">Instalación</span>
                 <span className="font-medium text-gray-800">{nombrePista}</span>
               </div>
               <div className="flex justify-between text-sm">

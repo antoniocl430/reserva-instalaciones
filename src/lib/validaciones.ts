@@ -180,3 +180,84 @@ export const schemaActualizarAviso = z
   })
 
 export type ActualizarAvisoInput = z.infer<typeof schemaActualizarAviso>
+
+/**
+ * Schema para validar colores corporativos en formato hex (#rrggbb)
+ */
+export const schemaColores = z.object({
+  primario: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color hex inválido")
+    .optional(),
+  secundario: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color hex inválido")
+    .optional(),
+})
+
+export type ColoresInput = z.infer<typeof schemaColores>
+
+/**
+ * Schema para la configuración personalizable de un tenant
+ */
+export const schemaConfiguracionTenant = z.object({
+  nombreServicio: z.string().min(1).max(100).optional(),
+  colores: schemaColores.optional(),
+  metadata: z
+    .object({
+      title: z.string().max(100).optional(),
+      description: z.string().max(300).optional(),
+    })
+    .optional(),
+})
+
+export type ConfiguracionTenantInput = z.infer<typeof schemaConfiguracionTenant>
+
+/**
+ * Schema para actualizar datos del tenant (usado en PATCH /api/admin/configuracion)
+ * Todos los campos son opcionales — se hace merge profundo en la lógica del endpoint
+ */
+export const schemaActualizarTenant = z.object({
+  nombre: z.string().min(1).max(200).optional(),
+  municipio: z.string().min(1).max(200).optional(),
+  logoUrl: z.string().url("URL inválida").optional().nullable(),
+  configuracion: schemaConfiguracionTenant.optional(),
+})
+
+export type ActualizarTenantInput = z.infer<typeof schemaActualizarTenant>
+
+// ─── Superadmin: crear tenant ─────────────────────────────────────────────────
+
+/**
+ * Schema para crear un nuevo tenant (solo SUPERADMIN)
+ * El slug solo permite letras minusculas, numeros y guiones
+ */
+export const schemaCrearTenant = z.object({
+  slug: z
+    .string()
+    .min(2, "El slug debe tener al menos 2 caracteres")
+    .max(50, "El slug no puede superar 50 caracteres")
+    .regex(
+      /^[a-z0-9]+(-[a-z0-9]+)*$/,
+      "El slug solo puede contener letras minusculas, numeros y guiones (sin espacios ni mayusculas)"
+    ),
+  nombre: z.string().min(1, "El nombre es obligatorio").max(200),
+  municipio: z.string().min(1, "El municipio es obligatorio").max(200),
+  emailAdmin: z.string().email("Email del admin no valido"),
+  passwordAdmin: z.string().min(6, "La contrasena debe tener al menos 6 caracteres"),
+  nombreAdmin: z.string().min(2).max(200).optional(),
+})
+
+export type CrearTenantInput = z.infer<typeof schemaCrearTenant>
+
+/**
+ * Schema para actualizar un tenant existente (solo SUPERADMIN)
+ * El slug NO se puede cambiar (inmutable)
+ */
+export const schemaActualizarTenantSuperadmin = z.object({
+  nombre: z.string().min(1).max(200).optional(),
+  municipio: z.string().min(1).max(200).optional(),
+  estado: z.enum(["ACTIVO", "SUSPENDIDO"] as [string, ...string[]], {
+    error: () => ({ message: "El estado debe ser ACTIVO o SUSPENDIDO" }),
+  }).optional(),
+})

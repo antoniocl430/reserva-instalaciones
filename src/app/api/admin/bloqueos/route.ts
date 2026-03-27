@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     // Crear el bloqueo
     const bloqueo = await prisma.bloqueo.create({
       data: {
-        tenantId: sesion.user.tenantId,
+        tenantId: sesion.user.tenantId!,
         instalacionId,
         fechaInicio: fechaInicioDate,
         fechaFin: fechaFinDate,

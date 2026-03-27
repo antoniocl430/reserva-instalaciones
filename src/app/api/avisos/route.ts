@@ -10,6 +10,16 @@ import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { schemaCrearAviso } from "@/lib/validaciones"
+import { extraerSlugDelHost, obtenerTenantIdPorSlug } from "@/lib/tenant"
+
+async function resolverTenantId(request: NextRequest): Promise<string | null> {
+  const tenantId = request.headers.get("x-tenant-id")
+  if (tenantId) return tenantId
+  const slug =
+    request.headers.get("x-tenant-slug") ??
+    extraerSlugDelHost(request.headers.get("host") ?? "")
+  return obtenerTenantIdPorSlug(slug)
+}
 
 // ─── GET /api/avisos ─────────────────────────────────────────────────────────
 // Ruta pública — no requiere autenticación.
@@ -17,8 +27,7 @@ import { schemaCrearAviso } from "@/lib/validaciones"
 // Parámetro opcional: ?todos=true — solo accesible por ADMIN, devuelve todos (activos e inactivos).
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Obtener el tenantId inyectado por el middleware
-  const tenantId = request.headers.get("x-tenant-id")
+  const tenantId = await resolverTenantId(request)
 
   if (!tenantId) {
     return NextResponse.json({ error: "Tenant no identificado" }, { status: 400 })
@@ -90,7 +99,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 4. Crear el aviso en el tenant del admin autenticado
     const aviso = await prisma.aviso.create({
       data: {
-        tenantId: sesion.user.tenantId,
+        tenantId: sesion.user.tenantId!,
         titulo,
         descripcion,
         tipo,

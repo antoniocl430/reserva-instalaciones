@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
   })
   if (bloqueo) {
     return NextResponse.json(
-      { error: `Esta pista está bloqueada: ${bloqueo.motivo}` },
+      { error: `Esta instalación está bloqueada: ${bloqueo.motivo}` },
       { status: 409 }
     )
   }
@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
   // Crear reserva en transacción.
   // El conteo de reservas activas del ciudadano se realiza DENTRO de la transacción
   // para evitar que dos peticiones simultáneas superen el límite de 2 reservas (BUG-03).
-  let reserva: Awaited<ReturnType<typeof prisma.reserva.create>> & { instalacion: { nombre: string } }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let reserva: any
   try {
     reserva = await prisma.$transaction(async (tx) => {
       // Verificar límite de 2 reservas activas dentro de la transacción (solo ciudadanos)
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
 
       return tx.reserva.create({
         data: {
-          tenantId: sesion.user.tenantId,
+          tenantId: sesion.user.tenantId!,
           usuarioId: sesion.user.id,
           instalacionId,
           fecha: crearHoraEnMadrid(fecha, 0),

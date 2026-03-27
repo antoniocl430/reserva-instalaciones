@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Variables de personalización por tenant */
+:root {
+  --color-primario: #2563eb;
+  --color-secundario: #16a34a;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

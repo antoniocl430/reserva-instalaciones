@@ -87,14 +87,14 @@ describe('PaginaPistas', () => {
     expect(redirect).toHaveBeenCalledWith('/login')
   })
 
-  it('debería mostrar el título Pistas deportivas', async () => {
+  it('debería mostrar el título Instalaciones deportivas', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
     ;(prisma.instalacion.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(pistasFicticias)
 
     const elemento = await PaginaPistas()
     render(elemento)
 
-    expect(screen.getByText('Pistas deportivas')).toBeInTheDocument()
+    expect(screen.getByText('Instalaciones deportivas')).toBeInTheDocument()
   })
 
   it('debería mostrar las pistas disponibles con sus nombres', async () => {
@@ -183,6 +183,6 @@ describe('PaginaPistas', () => {
     const elemento = await PaginaPistas()
     render(elemento)
 
-    expect(screen.getByText(/No hay pistas disponibles en este momento/i)).toBeInTheDocument()
+    expect(screen.getByText(/No hay instalaciones disponibles en este momento/i)).toBeInTheDocument()
   })
 })

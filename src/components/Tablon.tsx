@@ -43,7 +43,11 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
     TIPO_COLORES[instalacion.tipo] || { badge: "bg-gray-100 text-gray-700", icono: "📍" }
 
   return (
-    <Card className="flex flex-col gap-3 p-4 border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200">
+    <Card className={`flex flex-col gap-3 p-4 border border-gray-200 transition-all duration-200 ${
+      instalacion.activa
+        ? "hover:border-gray-300 hover:shadow-md"
+        : "opacity-60 grayscale cursor-not-allowed bg-gray-50"
+    }`}>
       {/* Encabezado con nombre y tipo */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
@@ -76,8 +80,8 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
           </>
         ) : (
           <>
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs font-medium text-red-600">Cerrada</span>
+            <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+            <span className="text-xs font-medium text-gray-400">No disponible</span>
           </>
         )}
       </div>

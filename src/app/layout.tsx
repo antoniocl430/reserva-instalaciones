@@ -11,6 +11,10 @@ const inter = Inter({ subsets: ["latin"] })
 // Interfaz de la configuración almacenada en el campo JSON del tenant
 interface ConfiguracionTenant {
   nombreServicio?: string
+  colores?: {
+    primario?: string
+    secundario?: string
+  }
   metadata?: {
     title?: string
     description?: string
@@ -63,6 +67,43 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
+// Interfaz de los colores del tenant con sus valores por defecto
+interface ColoresTenant {
+  primario: string
+  secundario: string
+}
+
+// Obtiene los colores personalizados del tenant actual
+async function obtenerColoresTenant(): Promise<ColoresTenant> {
+  try {
+    const headersList = await headers()
+    const host = headersList.get("host") ?? ""
+    const slug = extraerSlugDelHost(host)
+    const tenant = await obtenerTenantPorSlug(slug)
+
+    if (!tenant) return { primario: "#2563eb", secundario: "#16a34a" }
+
+    let configuracion: ConfiguracionTenant | null = null
+    if (tenant.configuracion) {
+      try {
+        configuracion =
+          typeof tenant.configuracion === "string"
+            ? JSON.parse(tenant.configuracion)
+            : (tenant.configuracion as ConfiguracionTenant)
+      } catch {
+        // JSON malformado — ignorar
+      }
+    }
+
+    return {
+      primario: configuracion?.colores?.primario ?? "#2563eb",
+      secundario: configuracion?.colores?.secundario ?? "#16a34a",
+    }
+  } catch {
+    return { primario: "#2563eb", secundario: "#16a34a" }
+  }
+}
+
 // Obtiene el nombre del servicio para el Header a partir del tenant actual
 async function obtenerNombreServicio(): Promise<string> {
   try {
@@ -97,9 +138,18 @@ export default async function LayoutRaiz({
   children: React.ReactNode
 }) {
   const nombreServicio = await obtenerNombreServicio()
+  const colores = await obtenerColoresTenant()
 
   return (
-    <html lang="es">
+    <html
+      lang="es"
+      style={
+        {
+          "--color-primario": colores.primario,
+          "--color-secundario": colores.secundario,
+        } as React.CSSProperties
+      }
+    >
       <body className={inter.className}>
         <Proveedores>
           <Header nombreServicio={nombreServicio} />

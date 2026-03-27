@@ -51,16 +51,16 @@ export default async function PaginaPistas() {
       <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Cabecera */}
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pistas deportivas</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Instalaciones deportivas</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Selecciona una pista para ver su disponibilidad y reservar
+            Selecciona una instalación para ver su disponibilidad y reservar
           </p>
         </div>
 
         {/* Sin instalaciones disponibles */}
         {instalaciones.length === 0 && (
           <div className="bg-white rounded-xl border border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
-            No hay pistas disponibles en este momento
+            No hay instalaciones disponibles en este momento
           </div>
         )}
 

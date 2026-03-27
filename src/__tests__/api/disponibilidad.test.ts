@@ -94,7 +94,7 @@ describe('GET /api/disponibilidad', () => {
     expect(body).toHaveProperty('error')
   })
 
-  it('debería devolver 404 cuando la instalación existe pero está inactiva', async () => {
+  it('debería devolver 200 con todos los slots bloqueados cuando la instalación está inactiva', async () => {
     prismaMock.instalacion.findFirst.mockResolvedValue({
       ...instalacionActiva,
       activa: false,
@@ -102,8 +102,11 @@ describe('GET /api/disponibilidad', () => {
 
     const req = crearRequest('http://localhost/api/disponibilidad?instalacionId=inst-1&fecha=2026-06-01')
     const res = await GET(req)
+    const body = await res.json()
 
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
+    expect(body.slots).toHaveLength(7)
+    expect(body.slots.every((s: { estado: string }) => s.estado === 'bloqueado')).toBe(true)
   })
 
   it('debería devolver 200 con exactamente 7 slots para una fecha futura', async () => {

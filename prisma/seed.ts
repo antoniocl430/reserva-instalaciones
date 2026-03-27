@@ -73,7 +73,34 @@ async function main() {
     console.log(`✓ Admin creado: ${admin.email} (contraseña: admin123)`)
   }
 
+  // ─── Superadmin global ───────────────────────────────────────────────────
+  const superadminEmail = "superadmin@reservas.dev"
+  const superadminPassword = "SuperAdmin123!"
+  const superadminHash = await bcrypt.hash(superadminPassword, 12)
+
+  const superadminExistente = await prisma.usuario.findFirst({
+    where: { email: superadminEmail, rol: "SUPERADMIN" },
+  })
+
+  if (superadminExistente) {
+    console.log(`✓ Superadmin ya existe: ${superadminExistente.email}`)
+  } else {
+    const superadmin = await prisma.usuario.create({
+      data: {
+        email: superadminEmail,
+        nombre: "Super Administrador",
+        passwordHash: superadminHash,
+        rol: "SUPERADMIN",
+        tenantId: tenant.id, // Asignado al tenant de desarrollo
+      },
+    })
+    console.log(`✓ Superadmin creado: ${superadmin.email} (contraseña: ${superadminPassword})`)
+  }
+
   console.log("\nBase de datos lista.")
+  console.log("\n── Credenciales ──")
+  console.log(`Admin:      admin@ayuntamiento.es / admin123`)
+  console.log(`Superadmin: ${superadminEmail} / ${superadminPassword}`)
 }
 
 main()

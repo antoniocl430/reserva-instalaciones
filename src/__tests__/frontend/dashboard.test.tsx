@@ -86,15 +86,15 @@ describe('PaginaDashboard', () => {
     expect(screen.getByText(/Ana García/i)).toBeInTheDocument()
   })
 
-  it('debería mostrar el acceso rápido Reservar pista con enlace a /pistas', async () => {
+  it('debería mostrar el acceso rápido Reservar instalación con enlace a /pistas', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(sesionFicticia)
     ;(prisma.reserva.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
 
     const elemento = await PaginaDashboard()
     render(elemento)
 
-    expect(screen.getByText('Reservar pista')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Reservar pista/i })).toHaveAttribute('href', '/pistas')
+    expect(screen.getByText('Reservar instalación')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Reservar instalación/i })).toHaveAttribute('href', '/pistas')
   })
 
   it('debería mostrar el acceso rápido Mis reservas con enlace a /mis-reservas', async () => {

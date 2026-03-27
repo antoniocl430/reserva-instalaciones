@@ -61,7 +61,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                     href="/pistas"
                     className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
                   >
-                    Pistas
+                    Instalaciones
                   </Link>
                   <Link
                     href="/mis-reservas"
@@ -161,7 +161,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                   className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
-                  Pistas
+                  Instalaciones
                 </Link>
                 <Link
                   href="/mis-reservas"

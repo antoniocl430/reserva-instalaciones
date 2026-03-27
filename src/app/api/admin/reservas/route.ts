@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       fecha?: { gte: Date; lt: Date }
     }
 
-    const where: WhereInput = { tenantId: sesion.user.tenantId }
+    const where: WhereInput = { tenantId: sesion.user.tenantId! }
 
     if (estado && (estado === "ACTIVA" || estado === "CANCELADA")) {
       where.estado = estado
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     })
     if (bloqueo) {
       return NextResponse.json(
-        { error: `Esta pista está bloqueada: ${bloqueo.motivo}` },
+        { error: `Esta instalación está bloqueada: ${bloqueo.motivo}` },
         { status: 409 }
       )
     }
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
 
         return tx.reserva.create({
           data: {
-            tenantId: sesion.user.tenantId,
+            tenantId: sesion.user.tenantId!,
             usuarioId,
             instalacionId,
             fecha: crearHoraEnMadrid(fecha, 0),

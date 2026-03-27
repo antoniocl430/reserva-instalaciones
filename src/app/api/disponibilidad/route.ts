@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { extraerSlugDelHost, obtenerTenantIdPorSlug } from "@/lib/tenant"
+
+async function resolverTenantId(request: NextRequest): Promise<string | null> {
+  const tenantId = request.headers.get("x-tenant-id")
+  if (tenantId) return tenantId
+  const slug =
+    request.headers.get("x-tenant-slug") ??
+    extraerSlugDelHost(request.headers.get("host") ?? "")
+  return obtenerTenantIdPorSlug(slug)
+}
 
 // Slots disponibles: horarios fijos con duraciones variables
 const SLOTS_DISPONIBLES = [
@@ -52,8 +62,7 @@ export async function GET(request: NextRequest) {
   const instalacionId = searchParams.get("instalacionId")
   const fecha = searchParams.get("fecha") // formato esperado: "YYYY-MM-DD"
 
-  // Obtener el tenantId inyectado por el middleware
-  const tenantId = request.headers.get("x-tenant-id")
+  const tenantId = await resolverTenantId(request)
 
   if (!tenantId) {
     return NextResponse.json({ error: "Tenant no identificado" }, { status: 400 })
@@ -75,12 +84,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Verificar que la instalación existe, está activa Y pertenece al tenant del request
+    // Verificar que la instalación existe y pertenece al tenant del request
     const instalacion = await prisma.instalacion.findFirst({
       where: { id: instalacionId, tenantId },
     })
-    if (!instalacion || !instalacion.activa) {
+    if (!instalacion) {
       return NextResponse.json({ error: "Instalación no encontrada" }, { status: 404 })
+    }
+
+    // Si la instalación está desactivada, devolver todos los slots como bloqueados
+    if (!instalacion.activa) {
+      const slots = SLOTS_DISPONIBLES.map((slot) => ({
+        horaInicio: slot.horaInicio,
+        horaFin: slot.horaFin,
+        estado: "bloqueado" as const,
+      }))
+      return NextResponse.json({ slots })
     }
 
     // Obtener reservas activas de esa instalación en esa fecha.

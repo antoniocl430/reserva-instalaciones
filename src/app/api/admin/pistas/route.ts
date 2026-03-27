@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const instalacion = await prisma.instalacion.create({
       data: {
-        tenantId: sesion.user.tenantId,
+        tenantId: sesion.user.tenantId!,
         nombre: nombre.trim(),
         tipo,
         descripcion: descripcion?.trim() || null,

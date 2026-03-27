@@ -59,9 +59,8 @@ async function obtenerPistas(): Promise<Instalacion[]> {
     const datos = await respuesta.json()
     const pistas: Instalacion[] = datos.instalaciones ?? []
 
-    // Filtrar solo las pistas activas; si no hay ninguna, usar fallback
-    const pistasActivas = pistas.filter((p) => p.activa)
-    return pistasActivas.length > 0 ? pistasActivas : PISTAS_FALLBACK
+    // Devolver todas las pistas (activas e inactivas); usar fallback solo si no hay ninguna
+    return pistas.length > 0 ? pistas : PISTAS_FALLBACK
   } catch {
     // Error de red u otro fallo: usar pistas ficticias
     return PISTAS_FALLBACK
