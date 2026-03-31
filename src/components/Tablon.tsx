@@ -104,12 +104,15 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
   )
 }
 
-// Formatea una fecha ISO a texto legible en español
+// Formatea una fecha ISO a texto legible en español con hora
 function formatearFechaAviso(fechaIso: string): string {
   try {
-    return new Date(fechaIso).toLocaleDateString("es-ES", {
+    const fecha = new Date(fechaIso)
+    return fecha.toLocaleString("es-ES", {
       day: "numeric",
       month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
     })
   } catch {
     return fechaIso

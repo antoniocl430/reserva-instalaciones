@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
@@ -40,6 +41,7 @@ interface Props {
 export default function PaginaDetallePista({ params }: Props) {
   const router = useRouter()
   const { data: sesion } = useSession()
+  const { toast } = useToast()
   const { id } = params
 
   // Fecha seleccionada: por defecto hoy en formato YYYY-MM-DD
@@ -60,7 +62,6 @@ export default function PaginaDetallePista({ params }: Props) {
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [errorConfirmacion, setErrorConfirmacion] = useState("")
-  const [exito, setExito] = useState(false)
 
   // Carga info de la pista desde /api/instalaciones
   useEffect(() => {
@@ -83,7 +84,6 @@ export default function PaginaDetallePista({ params }: Props) {
   const cargarDisponibilidad = useCallback(async () => {
     setCargandoSlots(true)
     setErrorSlots("")
-    setExito(false)
 
     try {
       const res = await fetch(`/api/disponibilidad?instalacionId=${id}&fecha=${fecha}`)
@@ -154,7 +154,10 @@ export default function PaginaDetallePista({ params }: Props) {
       // Reserva creada con éxito
       setDialogAbierto(false)
       setSlotSeleccionado(null)
-      setExito(true)
+      toast({
+        title: "Reserva creada con éxito",
+        description: "Tu instalación queda reservada.",
+      })
       await cargarDisponibilidad()
     } catch {
       setErrorConfirmacion("Error de conexión. Inténtalo de nuevo.")
@@ -165,7 +168,7 @@ export default function PaginaDetallePista({ params }: Props) {
 
   // Devuelve las clases CSS del slot según su estado
   function clasesSlot(estado: Slot["estado"]): string {
-    const base = "rounded-lg border px-3 py-2 text-sm font-medium text-center transition-colors"
+    const base = "rounded-lg border px-3 py-2.5 text-sm font-medium text-center transition-colors min-h-[44px] flex items-center justify-center"
     switch (estado) {
       case "libre":
         return cn(base, "bg-green-50 border-green-200 text-green-800 cursor-pointer hover:bg-green-100")
@@ -214,13 +217,6 @@ export default function PaginaDetallePista({ params }: Props) {
           </div>
         </div>
 
-        {/* Mensaje de éxito al reservar */}
-        {exito && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
-            Reserva creada con éxito. Tu instalación queda reservada.
-          </div>
-        )}
-
         {/* Selector de fecha */}
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -266,7 +262,7 @@ export default function PaginaDetallePista({ params }: Props) {
 
           <div className="p-4">
             {cargandoSlots ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {Array.from({ length: 7 }).map((_, i) => (
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}

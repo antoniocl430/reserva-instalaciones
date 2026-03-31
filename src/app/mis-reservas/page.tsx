@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { formatearFecha, formatearHora } from "@/lib/formato"
+import { useToast } from "@/hooks/use-toast"
 
 // Tipos de la API
 interface Reserva {
@@ -36,6 +38,7 @@ interface DatosReservas {
 
 export default function PaginaMisReservas() {
   const router = useRouter()
+  const { toast } = useToast()
   const [datos, setDatos] = useState<DatosReservas | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
@@ -101,9 +104,13 @@ export default function PaginaMisReservas() {
         return
       }
 
-      // Cancelación exitosa: cerrar dialog y recargar reservas
+      // Cancelación exitosa: cerrar dialog, mostrar confirmación y recargar reservas
       setDialogAbierto(false)
       setReservaACancelar(null)
+      toast({
+        title: "Reserva cancelada",
+        description: "La reserva ha sido cancelada correctamente.",
+      })
       setCargando(true)
       await cargarReservas()
     } catch {
@@ -131,6 +138,12 @@ export default function PaginaMisReservas() {
       <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Cabecera */}
         <div>
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4"
+          >
+            ← Volver al inicio
+          </Link>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mis reservas</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Gestiona tus reservas de pistas de pádel
@@ -255,7 +268,7 @@ export default function PaginaMisReservas() {
           <DialogHeader>
             <DialogTitle>Cancelar reserva</DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer. Solo puedes cancelar con más de 2 horas de antelación.
+              Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
 

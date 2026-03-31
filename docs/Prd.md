@@ -74,8 +74,10 @@ crea 3 pistas de pádel. Los tipos disponibles son extensibles por configuració
 - [x] Realizar una reserva (pista + fecha + hora)
 - [x] Ver mis reservas activas e historial
 - [x] Cancelar una reserva propia (hasta 2h antes)
-- [x] Recibir email de confirmación al reservar y cancelar
+- [x] Recibir email de confirmación al reservar
+- [x] Recibir email de confirmación al cancelar (propia)
 - [x] Página principal con tablón de instalaciones y avisos (sin banner de login si hay sesión activa)
+- [ ] Recibir email cuando el administrador cancela su reserva (con mensaje diferenciado)
 
 ### Administrador
 - [x] Login al panel de administración
@@ -87,6 +89,8 @@ crea 3 pistas de pádel. Los tipos disponibles son extensibles por configuració
 - [x] Gestión de cuentas de administrador (crear, desactivar)
 - [x] Gestión de avisos del tablón de anuncios (crear, editar, eliminar)
 - [x] Configuración visual del tenant (nombre, colores, SEO)
+- [ ] Recibir email cuando un ciudadano realiza una nueva reserva
+- [ ] Recibir email cuando un ciudadano cancela una reserva
 
 ### Multi-tenant
 - [x] Subdominio propio por ayuntamiento

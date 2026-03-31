@@ -68,19 +68,27 @@ El objetivo es que la aplicación funcione de forma excelente en cualquier dispo
 móvil desde el navegador, sin necesidad de app nativa. PWA, gestos táctiles y UX
 optimizada para pantallas pequeñas.
 
-### Bloque 8: Mejoras de UX y flujos de usuario
+### Bloque 8: Sistema de notificaciones por email
+- [ ] Email al ciudadano cuando el admin cancela su reserva (plantilla diferenciada, con motivo)
+- [ ] Email a todos los admins activos del tenant cuando un ciudadano hace una nueva reserva
+- [ ] Email a todos los admins activos del tenant cuando un ciudadano cancela una reserva
+- [ ] Refactorizar `email.ts`: añadir parámetro `canceladoPorAdmin` en `enviarEmailCancelacion` para adaptar el copy
+- [ ] Añadir función `enviarEmailNotificacionAdmins` que consulta los admins activos del tenant y les envía el aviso
+- [ ] Tests unitarios de las nuevas plantillas y funciones
+
+### Bloque 9: Mejoras de UX y flujos de usuario
 - [ ] Revisar y pulir todos los flujos ciudadano en mobile (reserva, mis reservas, cancelación)
 - [ ] Mejorar navegación entre páginas (breadcrumbs, botones de volver)
 - [ ] Feedback visual claro en acciones (toasts, estados de carga, confirmaciones)
 - [ ] Formularios optimizados para teclado móvil (tipos de input correctos, autocomplete)
 
-### Bloque 9: PWA — instalable desde el navegador
+### Bloque 10: PWA — instalable desde el navegador
 - [ ] Configurar `manifest.json` con nombre, iconos y colores por tenant
 - [ ] Service worker para carga offline básica (páginas visitadas)
 - [ ] Botón "Añadir a pantalla de inicio" en iOS y Android
 - [ ] Icono y splash screen personalizados
 
-### Bloque 10: Notificaciones web push
+### Bloque 11: Notificaciones web push
 - [ ] Integración con Web Push API (sin app nativa)
 - [ ] Recordatorio 1h antes de cada reserva
 - [ ] Notificación al cancelar una reserva (propia o por el admin)

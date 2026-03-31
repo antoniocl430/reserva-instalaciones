@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { enviarEmailCancelacion } from "@/lib/email"
+import { enviarEmailCancelacion, enviarEmailCancelacionAdmins } from "@/lib/email"
+import { enviarPushCancelacion } from "@/lib/push"
 
 // PATCH /api/reservas/[id]/cancelar — cancela una reserva del tenant del usuario autenticado
 export async function PATCH(
@@ -14,14 +15,18 @@ export async function PATCH(
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  // datosReserva se usa después del try/catch para enviar el email
+  // datosReserva se usa después del try/catch para enviar el email y el push
   let datosReserva: {
+    usuarioId: string
     horaInicio: Date
     horaFin: Date
     fecha: Date
     instalacion: { nombre: string }
     usuario: { nombre: string; email: string }
   } | null = null
+
+  // esAdminCancela se determina dentro de la transacción y se usa para las notificaciones post-transacción
+  let esAdminCancela = false
 
   try {
     // Toda la lógica de validación y el update se ejecutan dentro de la misma
@@ -55,14 +60,6 @@ export async function PATCH(
         throw new Error("YA_CANCELADA")
       }
 
-      // Si es ciudadano, verificar que faltan más de 2 horas para el inicio
-      if (!esAdmin) {
-        const dosHorasAntes = new Date(reserva.horaInicio.getTime() - 2 * 60 * 60 * 1000)
-        if (new Date() >= dosHorasAntes) {
-          throw new Error("FUERA_DE_PLAZO")
-        }
-      }
-
       await tx.reserva.update({
         where: { id: params.id },
         data: {
@@ -72,8 +69,12 @@ export async function PATCH(
         },
       })
 
-      // Devolver los datos necesarios para el email de cancelación
+      // Registrar si quien cancela es admin para usarlo después de la transacción
+      esAdminCancela = esAdmin
+
+      // Devolver los datos necesarios para email y push — incluye usuarioId para el push
       return {
+        usuarioId: reserva.usuarioId,
         horaInicio: reserva.horaInicio,
         horaFin: reserva.horaFin,
         fecha: reserva.fecha,
@@ -94,18 +95,13 @@ export async function PATCH(
         )
       case "YA_CANCELADA":
         return NextResponse.json({ error: "Esta reserva ya está cancelada" }, { status: 409 })
-      case "FUERA_DE_PLAZO":
-        return NextResponse.json(
-          { error: "Solo puedes cancelar con más de 2 horas de antelación" },
-          { status: 409 }
-        )
-      default:
+default:
         console.error("Error al cancelar reserva:", err)
         return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
     }
   }
 
-  // Enviar email de cancelación de forma asíncrona (el fallo no bloquea la respuesta)
+  // Enviar notificaciones de cancelación de forma asíncrona (el fallo no bloquea la respuesta)
   if (datosReserva) {
     const horaInicioStr = datosReserva.horaInicio.toLocaleString("en-US", {
       timeZone: "Europe/Madrid",
@@ -120,15 +116,48 @@ export async function PATCH(
       hour12: false,
     })
     const fechaStr = datosReserva.fecha.toISOString().split("T")[0]
-
-    enviarEmailCancelacion({
+    const datosEmail = {
       emailUsuario: datosReserva.usuario.email,
       nombreUsuario: datosReserva.usuario.nombre,
       nombreInstalacion: datosReserva.instalacion.nombre,
       fecha: fechaStr,
       horaInicio: horaInicioStr,
       horaFin: horaFinStr,
+    }
+
+    // Email al ciudadano — subject y plantilla diferenciados según quién cancela
+    enviarEmailCancelacion({
+      ...datosEmail,
+      canceladoPorAdmin: esAdminCancela,
     }).catch((err) => console.error("[Email] Error al enviar email de cancelación:", err))
+
+    // Email a admins solo cuando cancela el ciudadano (no cuando el admin cancela)
+    if (!esAdminCancela) {
+      prisma.usuario.findMany({
+        where: { tenantId: sesion.user.tenantId, rol: "ADMIN", activo: true },
+        select: { email: true },
+      }).then((admins) => {
+        const emailsAdmins = admins.map((a) => a.email)
+        return enviarEmailCancelacionAdmins(
+          {
+            ...datosEmail,
+            nombreCiudadano: datosReserva!.usuario.nombre,
+          },
+          emailsAdmins
+        )
+      }).catch((err) => console.error("[Email] Error al notificar admins de cancelación:", err))
+    }
+
+    // Push: notificar al ciudadano si el admin cancela una reserva que no es suya
+    if (esAdminCancela && datosReserva.usuarioId !== sesion.user.id) {
+      enviarPushCancelacion({
+        usuarioId: datosReserva.usuarioId,
+        nombreInstalacion: datosReserva.instalacion.nombre,
+        fecha: fechaStr,
+        horaInicio: horaInicioStr,
+        canceladoPorAdmin: true,
+      }).catch((err) => console.error("[Push] Error al notificar cancelación:", err))
+    }
   }
 
   return NextResponse.json({ ok: true })

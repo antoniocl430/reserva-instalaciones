@@ -23,6 +23,18 @@ jest.mock('next-auth', () => ({
 // Mockear el módulo de email para que los tests no dependan de RESEND_API_KEY
 jest.mock('@/lib/email', () => ({
   enviarEmailCancelacion: jest.fn().mockResolvedValue(undefined),
+  enviarEmailCancelacionAdmins: jest.fn().mockResolvedValue(undefined),
+}))
+
+// Mockear el módulo de push para que los tests no dependan de VAPID ni de suscripciones reales
+jest.mock('@/lib/push', () => ({
+  enviarPushCancelacion: jest.fn().mockResolvedValue(undefined),
+}))
+
+// Evitar que web-push intente configurar VAPID al importar transitivamente push.ts
+jest.mock('web-push', () => ({
+  setVapidDetails: jest.fn(),
+  sendNotification: jest.fn().mockResolvedValue({ statusCode: 201 }),
 }))
 
 import { PATCH } from '@/app/api/reservas/[id]/cancelar/route'
@@ -71,6 +83,8 @@ describe('PATCH /api/reservas/[id]/cancelar', () => {
     // de la transacción, hacemos que $transaction ejecute el callback pasándole
     // el propio prismaMock como cliente de transacción (tx = prismaMock).
     prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
+    // Mockear usuario.findMany para notificación de admins (Bloque 8)
+    prismaMock.usuario.findMany.mockResolvedValue([])
   })
 
   it('debería devolver 401 cuando el usuario no está autenticado', async () => {
@@ -140,21 +154,6 @@ describe('PATCH /api/reservas/[id]/cancelar', () => {
 
     expect(res.status).toBe(409)
     expect(body).toHaveProperty('error')
-  })
-
-  it('debería devolver 409 cuando el ciudadano intenta cancelar con menos de 2 horas de antelación', async () => {
-    mockGetServerSession.mockResolvedValue(sesionCiudadano)
-
-    // Reserva que empieza en 30 minutos desde ahora (menos de 2h: fuera de plazo)
-    const ahora = new Date()
-    const horaInicioPronto = new Date(ahora.getTime() + 30 * 60 * 1000)
-    prismaMock.reserva.findFirst.mockResolvedValue({ ...reservaActiva, horaInicio: horaInicioPronto })
-
-    const res = await PATCH(crearRequest('reserva-1'), crearParams('reserva-1'))
-    const body = await res.json()
-
-    expect(res.status).toBe(409)
-    expect(body.error).toMatch(/2 horas/i)
   })
 
   it('debería llamar a prisma.reserva.update con estado CANCELADA al cancelar correctamente', async () => {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,6 +17,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { AvatarUsuario } from "@/components/AvatarUsuario"
+import { useToast } from "@/hooks/use-toast"
+import {
+  suscribirAPush,
+  desuscribirDePush,
+  obtenerEstadoSuscripcion,
+} from "@/lib/push-client"
 
 // Datos del usuario cargados desde la API
 interface DatosUsuario {
@@ -30,6 +37,7 @@ interface DatosUsuario {
 export default function PaginaPerfil() {
   const { data: sesion, status, update } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
 
   // Estado del formulario de datos
   const [nombre, setNombre] = useState("")
@@ -41,12 +49,9 @@ export default function PaginaPerfil() {
 
   // Estado del formulario al guardar
   const [guardando, setGuardando] = useState(false)
-  const [mensajeGuardado, setMensajeGuardado] = useState<string | null>(null)
-  const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
 
   // Estado del avatar
   const [subiendoAvatar, setSubiendoAvatar] = useState(false)
-  const [errorAvatar, setErrorAvatar] = useState<string | null>(null)
   const inputArchivoRef = useRef<HTMLInputElement>(null)
 
   // Estado de exportación de datos
@@ -55,6 +60,9 @@ export default function PaginaPerfil() {
   // Estado del dialog de confirmación de eliminación
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [eliminando, setEliminando] = useState(false)
+
+  // Estado de las notificaciones push
+  const [estadoPush, setEstadoPush] = useState<'activo' | 'inactivo' | 'no-soportado' | 'denegado'>('inactivo')
 
   // Protección de ruta: si no hay sesión, redirigir a /login
   useEffect(() => {
@@ -73,6 +81,11 @@ export default function PaginaPerfil() {
         setAvatarUrl(data.usuario.avatarUrl)
       })
       .finally(() => setCargandoDatos(false))
+  }, [])
+
+  // Cargar estado actual de las notificaciones push al montar
+  useEffect(() => {
+    obtenerEstadoSuscripcion().then(setEstadoPush)
   }, [])
 
   // Exportar datos personales como JSON
@@ -112,7 +125,6 @@ export default function PaginaPerfil() {
     formData.append("avatar", archivo)
 
     setSubiendoAvatar(true)
-    setErrorAvatar(null)
 
     fetch("/api/cuenta/avatar", {
       method: "POST",
@@ -124,9 +136,14 @@ export default function PaginaPerfil() {
       })
       .then((data: { avatarUrl: string }) => {
         setAvatarUrl(data.avatarUrl)
+        toast({ title: "Avatar actualizado" })
       })
       .catch(() => {
-        setErrorAvatar("No se pudo subir la imagen. Inténtalo de nuevo.")
+        toast({
+          title: "Error al subir imagen",
+          description: "No se pudo subir la imagen. Inténtalo de nuevo.",
+          variant: "destructive",
+        })
         // Restaurar el avatar que había antes del intento fallido
         setAvatarUrl(avatarUrlAnterior)
       })
@@ -137,8 +154,6 @@ export default function PaginaPerfil() {
   async function alGuardarCambios(e: React.FormEvent) {
     e.preventDefault()
     setGuardando(true)
-    setMensajeGuardado(null)
-    setErrorGuardado(null)
 
     try {
       const respuesta = await fetch("/api/cuenta", {
@@ -151,13 +166,54 @@ export default function PaginaPerfil() {
         throw new Error("Error al guardar los cambios")
       }
 
-      setMensajeGuardado("Cambios guardados")
+      toast({
+        title: "Cambios guardados",
+        description: "Tu perfil ha sido actualizado correctamente.",
+      })
       // Actualizar la sesión para que el nombre aparezca reflejado en el navbar
       await update()
     } catch {
-      setErrorGuardado("No se pudieron guardar los cambios. Inténtalo de nuevo.")
+      toast({
+        title: "Error al guardar",
+        description: "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+        variant: "destructive",
+      })
     } finally {
       setGuardando(false)
+    }
+  }
+
+  // Activar o desactivar notificaciones push
+  async function toggleNotificaciones() {
+    if (estadoPush === 'activo') {
+      const exito = await desuscribirDePush()
+      if (exito) {
+        setEstadoPush('inactivo')
+        toast({ title: "Notificaciones desactivadas" })
+      } else {
+        toast({
+          title: "Error al desactivar",
+          description: "No se pudieron desactivar las notificaciones. Inténtalo de nuevo.",
+          variant: "destructive",
+        })
+      }
+    } else {
+      const exito = await suscribirAPush()
+      if (exito) {
+        setEstadoPush('activo')
+        toast({ title: "Notificaciones activadas" })
+      } else {
+        // Volver a consultar el estado real (puede que el permiso haya sido denegado)
+        const nuevoEstado = await obtenerEstadoSuscripcion()
+        setEstadoPush(nuevoEstado)
+        if (nuevoEstado !== 'denegado' && nuevoEstado !== 'no-soportado') {
+          toast({
+            title: "Error al activar",
+            description: "No se pudieron activar las notificaciones. Inténtalo de nuevo.",
+            variant: "destructive",
+          })
+        }
+      }
     }
   }
 
@@ -207,8 +263,14 @@ export default function PaginaPerfil() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Cabecera */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Mi perfil</h1>
+        <div className="mb-6 py-4 sm:py-8">
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4"
+          >
+            ← Volver al inicio
+          </Link>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mi perfil</h1>
           <p className="text-sm text-gray-600 mt-1">Gestiona tu información personal</p>
         </div>
 
@@ -245,9 +307,6 @@ export default function PaginaPerfil() {
               >
                 {subiendoAvatar ? "Subiendo..." : "Cambiar foto"}
               </Button>
-              {errorAvatar && (
-                <p className="text-sm text-red-600" role="alert">{errorAvatar}</p>
-              )}
               <p className="text-xs text-gray-500">
                 Formatos admitidos: JPEG, PNG, WebP. Máximo 5 MB.
               </p>
@@ -270,12 +329,9 @@ export default function PaginaPerfil() {
                   id="nombre"
                   type="text"
                   value={nombre}
-                  onChange={(e) => {
-                    setNombre(e.target.value)
-                    setMensajeGuardado(null)
-                    setErrorGuardado(null)
-                  }}
+                  onChange={(e) => setNombre(e.target.value)}
                   placeholder="Tu nombre completo"
+                  autoComplete="name"
                 />
               )}
             </div>
@@ -299,18 +355,6 @@ export default function PaginaPerfil() {
               </p>
             </div>
 
-            {/* Mensajes de estado */}
-            {mensajeGuardado && (
-              <p className="text-sm text-green-600" role="status">
-                {mensajeGuardado}
-              </p>
-            )}
-            {errorGuardado && (
-              <p className="text-sm text-red-600" role="alert">
-                {errorGuardado}
-              </p>
-            )}
-
             {/* Botón guardar */}
             <Button
               type="submit"
@@ -320,6 +364,36 @@ export default function PaginaPerfil() {
               {guardando ? "Guardando..." : "Guardar cambios"}
             </Button>
           </form>
+        </div>
+
+        {/* Sección notificaciones */}
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Notificaciones</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Notificaciones push</p>
+              <p className="text-sm text-gray-500">
+                Recibe avisos de reservas y cancelaciones en tu dispositivo
+              </p>
+            </div>
+            <Button
+              onClick={toggleNotificaciones}
+              variant={estadoPush === 'activo' ? 'destructive' : 'default'}
+              size="sm"
+            >
+              {estadoPush === 'activo' ? 'Desactivar' : 'Activar'}
+            </Button>
+          </div>
+          {estadoPush === 'denegado' && (
+            <p className="mt-2 text-xs text-red-500">
+              Has bloqueado los permisos. Actívalos desde la configuración de tu navegador.
+            </p>
+          )}
+          {estadoPush === 'no-soportado' && (
+            <p className="mt-2 text-xs text-gray-500">
+              Tu navegador no soporta notificaciones push.
+            </p>
+          )}
         </div>
 
         {/* Tarjeta de exportación de datos (RGPD) */}

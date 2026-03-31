@@ -1,5 +1,189 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
+## Bloque 11 — Sistema de notificaciones Web Push — Backend (COMPLETADO 2026-03-30)
+
+### Plan TDD
+
+#### PASO 1: Migración Prisma
+- [x] Añadir `recordatorioEnviado Boolean @default(false)` al modelo Reserva
+- [x] Añadir modelo `SuscripcionPush` con relaciones a Tenant y Usuario
+- [x] Añadir relaciones inversas en Tenant y Usuario
+- [x] Ejecutar `npx prisma migrate dev --name add-push-subscriptions`
+- [x] Cliente Prisma regenerado con `--no-engine`
+
+#### PASO 2: `src/lib/push.ts` — TDD (7 tests)
+- [x] RED: `src/__tests__/api/push-lib.test.ts` confirmado fallido
+- [x] GREEN: `src/lib/push.ts` con `enviarPushUsuario`, `enviarRecordatorioReserva`, `enviarPushCancelacion`
+- [x] Suscripciones 410 se desactivan en BD
+
+#### PASO 3: `src/app/api/push/suscribir/route.ts` — TDD (6 tests)
+- [x] RED: `src/__tests__/api/push.test.ts` confirmado fallido
+- [x] GREEN: POST (upsert) y DELETE (marcar activa=false), validación Zod, 401 sin sesión
+
+#### PASO 4: `src/app/api/cron/recordatorios/route.ts` — TDD (6 tests)
+- [x] RED: `src/__tests__/api/cron-recordatorios.test.ts` confirmado fallido
+- [x] GREEN: GET protegido con CRON_SECRET, ventana [ahora+55min, ahora+75min], marca recordatorioEnviado=true
+
+#### PASO 5: Integrar push en cancelación
+- [x] `cancelar/route.ts` — añadido `enviarPushCancelacion` cuando admin cancela reserva ajena
+- [x] `cancelar.test.ts` — mocks de `@/lib/push` y `web-push` añadidos
+- [x] `email-notificaciones.test.ts` — mocks de push añadidos
+- [x] Fix: `reservas/route.ts` recupera llamada a `enviarEmailNotificacionAdmins` (bug preexistente)
+
+### Resultado final
+
+| Metrica | Valor |
+|---------|-------|
+| Tests nuevos (Jest) | 19 (push-lib:7 + push:6 + cron:6) |
+| Tests totales (Jest) | 257 |
+| Tests totales (Vitest) | 116 |
+| Tests totales combinados | 373 |
+| Tests fallados | 0 |
+| Migración BD | 20260330192544_add_push_subscriptions |
+
+---
+
+## Bloque 11 — Sistema de notificaciones Web Push — Frontend (COMPLETADO 2026-03-30)
+
+### Plan TDD
+
+#### PASO 1: Service Worker `public/sw.js`
+- [x] Crear `public/sw.js` con handlers para `push`, `notificationclick` y `pushsubscriptionchange`
+
+#### PASO 2: Librería cliente `src/lib/push-client.ts`
+- [x] `registrarServiceWorker()` — registra el SW
+- [x] `urlBase64ToUint8Array()` — convierte clave VAPID a Uint8Array
+- [x] `suscribirAPush()` — solicita permiso, suscribe al PushManager, guarda en BD
+- [x] `desuscribirDePush()` — elimina suscripción de BD y del PushManager
+- [x] `obtenerEstadoSuscripcion()` — devuelve 'activo' | 'inactivo' | 'no-soportado' | 'denegado'
+
+#### PASO 3 (TDD RED): Tests de notificaciones en `perfil.test.tsx`
+- [x] Mock de `@/lib/push-client` con `vi.mock`
+- [x] Test: sección "Notificaciones" visible con botón "Activar" (estado inactivo)
+- [x] Test: botón "Desactivar" cuando estado es activo
+- [x] Test: aviso de permisos bloqueados cuando estado es "denegado"
+- [x] Test: aviso de no soportado cuando estado es "no-soportado"
+- [x] Test: llama a `suscribirAPush` al pulsar "Activar"
+- [x] Test: llama a `desuscribirDePush` al pulsar "Desactivar"
+- [x] Confirmado que los 6 tests fallan (RED)
+
+#### PASO 4 (GREEN): Sección notificaciones en `perfil/page.tsx`
+- [x] Importar funciones push-client
+- [x] Estado `estadoPush` con carga desde `obtenerEstadoSuscripcion` al montar
+- [x] Función `toggleNotificaciones` con lógica activar/desactivar + toasts
+- [x] Sección JSX "Notificaciones" con botón y mensajes condicionales
+
+#### PASO 5: Registro automático del SW en `proveedores.tsx`
+- [x] Añadir `useEffect` que llama a `registrarServiceWorker()` al montar
+
+### Verificación final
+- [x] 17/17 tests en `perfil.test.tsx` pasan (11 existentes + 6 nuevos)
+- [x] 116/116 tests vitest totales pasan (sin regresiones)
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests nuevos (vitest) | 6 |
+| Tests totales (vitest) | 116 |
+| Tests fallados | 0 |
+| Archivos creados | 2 (`public/sw.js`, `src/lib/push-client.ts`) |
+| Archivos modificados | 3 (`perfil/page.tsx`, `perfil.test.tsx`, `proveedores.tsx`) |
+
+---
+
+
+## Bloque 8 (nuevo) — Sistema de notificaciones por email (COMPLETADO 2026-03-29)
+
+### Objetivo
+Extender el sistema de emails existente (Resend) para cubrir tres casos nuevos:
+1. Admin recibe email cuando un ciudadano hace una reserva
+2. Admin recibe email cuando un ciudadano cancela una reserva
+3. Ciudadano recibe email diferenciado cuando el **admin** cancela su reserva (copy distinto al de autocancelación)
+
+### Plan TDD
+
+#### T1: Nuevas funciones en `src/lib/email.ts`
+- [x] Añadir `enviarEmailNotificacionAdmins(datos, emails[])` — aviso a admins al crear reserva
+- [x] Añadir `enviarEmailCancelacionAdmins(datos, emails[])` — aviso a admins al cancelar reserva
+- [x] Añadir parámetro `canceladoPorAdmin?: boolean` a `enviarEmailCancelacion` — plantilla diferenciada para el ciudadano
+
+#### T2: Actualizar `POST /api/reservas/route.ts`
+- [x] Tras crear la reserva, consultar admins activos del tenant (`rol: "ADMIN", activo: true`)
+- [x] Llamar `enviarEmailNotificacionAdmins` con `.catch()` (no bloquea respuesta)
+
+#### T3: Actualizar `PATCH /api/reservas/[id]/cancelar/route.ts`
+- [x] Determinar si quien cancela es admin (`esAdmin`)
+- [x] Pasar `canceladoPorAdmin: esAdmin` a `enviarEmailCancelacion` del ciudadano
+- [x] Consultar admins activos del tenant y llamar `enviarEmailCancelacionAdmins` con `.catch()`
+- [x] La notificación a admins se envía solo cuando cancela el ciudadano (no cuando cancela el propio admin)
+
+#### T4: Tests Jest — `src/__tests__/api/email-notificaciones.test.ts`
+- [x] Mock de `@/lib/email` con todas las funciones (incluidas las nuevas)
+- [x] Test: al crear reserva → se llama `enviarEmailNotificacionAdmins` con los emails de admins activos
+- [x] Test: al cancelar reserva (ciudadano) → se llama `enviarEmailCancelacion` con `canceladoPorAdmin: false`
+- [x] Test: al cancelar reserva (ciudadano) → se llama `enviarEmailCancelacionAdmins`
+- [x] Test: al cancelar reserva (admin) → se llama `enviarEmailCancelacion` con `canceladoPorAdmin: true`
+- [x] Test: al cancelar reserva (admin) → NO se llama `enviarEmailCancelacionAdmins`
+
+#### T5: Actualizar mocks en tests existentes
+- [x] `reservas.test.ts` — añadir `enviarEmailNotificacionAdmins` al mock y `usuario.findMany` en beforeEach
+- [x] `cancelar.test.ts` — añadir `enviarEmailCancelacionAdmins` al mock y `usuario.findMany` en beforeEach
+- [x] `aislamiento-tenant.test.ts` — añadir `usuario.findMany` en beforeEach
+
+### Verificación
+- [x] `npx jest email-notificaciones` pasa (6/6 tests)
+- [x] `npx jest` completo sin regresiones (238/238 tests)
+- [x] `npx vitest run` sin regresiones (110/110 tests)
+
+### Resultado final
+
+| Metrica | Valor |
+|---------|-------|
+| Tests nuevos (Jest) | 6 |
+| Tests totales (Jest) | 238 |
+| Tests totales (Vitest) | 110 |
+| Tests totales combinados | 348 |
+| Tests fallados | 0 |
+| Archivos creados | 1 (`email-notificaciones.test.ts`) |
+| Archivos modificados | 6 (`email.ts`, `reservas/route.ts`, `cancelar/route.ts`, `reservas.test.ts`, `cancelar.test.ts`, `aislamiento-tenant.test.ts`) |
+
+---
+
+## Bloque 10 — Mejoras de UX y flujos móvil (COMPLETADO 2026-03-29)
+
+### Plan TDD
+
+#### Tareas implementadas
+
+- [x] T1: Sistema de toasts shadcn/ui — `src/components/ui/toast.tsx` + `src/hooks/use-toast.ts` + `Toast.test.tsx` (4 tests)
+- [x] T2: Toaster montado en `src/components/proveedores.tsx`
+- [x] T3: Toasts en flujo de reserva (`pistas/[id]/page.tsx`) — elimina banner inline verde, reemplaza por toast
+- [x] T4: Toasts en cancelación de reserva (`mis-reservas/page.tsx`)
+- [x] T5: Toasts en perfil (`perfil/page.tsx`) — elimina states mensajeGuardado/errorGuardado/errorAvatar, reemplaza por toasts
+- [x] T6: Header padding responsive (`px-4 md:px-6`)
+- [x] T7: Botones "Volver al inicio" en `pistas/page.tsx`, `mis-reservas/page.tsx`, `perfil/page.tsx` (2 tests nuevos)
+- [x] T8: Perfil cabecera responsive (`text-xl sm:text-2xl`, `py-4 sm:py-8`) + `autoComplete="name"`
+- [x] T9: Viewport config para iPhones con notch (`viewport-fit=cover`) en `layout.tsx`
+- [x] T10: CSS mobile — `-webkit-tap-highlight-color: transparent` + `safe-area-inset-bottom` en `globals.css`
+- [x] T11: Container padding responsive en `tailwind.config.ts` (1rem mobile, 2rem desktop)
+- [x] T12: Slots de reserva con `min-h-[44px]` y `flex items-center justify-center` para área táctil
+- [x] T13: Fix skeleton grid — eliminado `space-y-2` redundante en `pistas/[id]/page.tsx`
+
+### Resultado final
+
+| Metrica | Valor |
+|---------|-------|
+| Tests nuevos (vitest) | 7 |
+| Tests totales (vitest) | 110 |
+| Tests totales (jest) | 232 |
+| Tests totales combinados | 342 |
+| Tests fallados | 0 |
+| Archivos creados | 3 (`toast.tsx`, `use-toast.ts`, `Toast.test.tsx`) |
+| Archivos modificados | 10 |
+
+---
+
 ## Bloque 9 — Página de perfil de usuario (COMPLETADO 2026-03-27)
 
 ### Plan TDD

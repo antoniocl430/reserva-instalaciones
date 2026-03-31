@@ -28,6 +28,12 @@ vi.mock('next-auth/react', () => ({
   })),
 }))
 
+// Mock del hook useToast para verificar las notificaciones toast
+const mockToast = vi.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}))
+
 // Mock de shadcn Dialog: renderiza el contenido directamente sin portal
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
@@ -83,6 +89,7 @@ import PaginaDetallePista from '@/app/pistas/[id]/page'
 describe('PaginaDetallePista', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockToast.mockClear()
     global.fetch = vi.fn()
   })
 
@@ -353,6 +360,60 @@ describe('PaginaDetallePista', () => {
       expect(cuerpo.instalacionId).toBe('pista-1')
       expect(cuerpo.horaInicio).toBe('09:00')
     })
+  })
+
+  it('debería mostrar un toast de éxito al completar una reserva correctamente', async () => {
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ instalaciones: [pistaFicticia] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ slots: [{ horaInicio: '09:00', horaFin: '10:00', estado: 'libre' }] }),
+      })
+      // Respuesta al POST /api/reservas
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'reserva-nueva-1' }),
+      })
+      // Segunda carga de disponibilidad tras reservar
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ slots: [{ horaInicio: '09:00', horaFin: '10:00', estado: 'ocupado' }] }),
+      })
+
+    render(React.createElement(PaginaDetallePista, { params: { id: 'pista-1' } }))
+
+    await waitFor(() => {
+      expect(document.querySelector('[role="button"]')).toBeTruthy()
+    })
+
+    // Abrir el dialog
+    const slotLibre = document.querySelector('[role="button"]')!
+    fireEvent.click(slotLibre)
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    // Confirmar la reserva
+    const botonesConfirmar = screen.getAllByText('Confirmar reserva')
+    const botonConfirmar = botonesConfirmar.find((el) => el.tagName === 'BUTTON')!
+    fireEvent.click(botonConfirmar)
+
+    // El toast de éxito debe haberse llamado con el título correcto
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: expect.stringContaining('éxito') })
+      )
+    })
+
+    // El banner inline verde NO debe existir en el DOM
+    const bannerVerde = document.querySelector('.bg-green-50.border-green-200')
+    // Puede existir el slot verde, pero no el banner de éxito con el texto de reserva
+    const mensajeExito = screen.queryByText(/Reserva creada con éxito/)
+    expect(mensajeExito).not.toBeInTheDocument()
   })
 
   it('debería mostrar mensaje de error si la API rechaza la reserva', async () => {

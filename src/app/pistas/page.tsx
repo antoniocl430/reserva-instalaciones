@@ -59,6 +59,12 @@ export default async function PaginaPistas() {
       <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Cabecera */}
         <div>
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4"
+          >
+            ← Volver al inicio
+          </Link>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Instalaciones deportivas</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
             {sesion

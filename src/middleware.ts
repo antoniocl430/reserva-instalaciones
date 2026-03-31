@@ -142,5 +142,6 @@ export const config = {
     "/api/reservas/:path*",
     "/api/instalaciones/:path*",
     "/api/avisos/:path*",
+    "/api/push/:path*",
   ],
 }

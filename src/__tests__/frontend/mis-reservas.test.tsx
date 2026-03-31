@@ -16,6 +16,18 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
+// --- Mock de useToast ---
+const mockToast = vi.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}))
+
+// --- Mock de next/link ---
+vi.mock('next/link', () => ({
+  default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) =>
+    React.createElement('a', { href, className }, children),
+}))
+
 // --- Mocks de componentes shadcn/ui ---
 
 // Mock de Tabs: renderiza dos paneles, el primero visible por defecto
@@ -130,6 +142,7 @@ describe('PaginaMisReservas', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockPush.mockReset()
+    mockToast.mockClear()
     global.fetch = vi.fn()
   })
 
@@ -250,6 +263,15 @@ describe('PaginaMisReservas', () => {
       )
       expect(llamadaPatch).toBeDefined()
     })
+
+    // Verificar que el toast de confirmación fue mostrado
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringMatching(/cancelada/i),
+        })
+      )
+    })
   })
 
   it('debería mostrar las reservas del historial en la pestaña Historial', async () => {
@@ -303,6 +325,21 @@ describe('PaginaMisReservas', () => {
       expect(
         screen.getByText(/No se pudieron cargar tus reservas/i)
       ).toBeInTheDocument()
+    })
+  })
+
+  it('debería mostrar enlace para volver al inicio', async () => {
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ activas: [], historial: [] }),
+    })
+
+    render(React.createElement(PaginaMisReservas))
+
+    await waitFor(() => {
+      const enlace = screen.getByRole('link', { name: /Volver/i })
+      expect(enlace).toBeInTheDocument()
+      expect(enlace).toHaveAttribute('href', '/')
     })
   })
 })

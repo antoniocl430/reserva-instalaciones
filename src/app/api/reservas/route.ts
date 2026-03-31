@@ -183,14 +183,18 @@ export async function POST(request: NextRequest) {
   // Enviar email de confirmación de forma asíncrona (el fallo no bloquea la respuesta)
   const horaInicioStr = horaInicio
   const horaFinStr = horaFin
-  enviarEmailReserva({
+  const datosEmail = {
     emailUsuario: sesion.user.email!,
     nombreUsuario: sesion.user.name ?? sesion.user.email!,
     nombreInstalacion: reserva.instalacion.nombre,
     fecha,
     horaInicio: horaInicioStr,
     horaFin: horaFinStr,
-  }).catch((err) => console.error("[Email] Error al enviar confirmación de reserva:", err))
+  }
+  enviarEmailReserva(datosEmail).catch((err) =>
+    console.error("[Email] Error al enviar confirmación de reserva:", err)
+  )
+
 
   return NextResponse.json({ reserva }, { status: 201 })
 }

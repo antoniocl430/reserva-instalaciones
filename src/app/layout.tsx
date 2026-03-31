@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { headers } from "next/headers"
 import "./globals.css"
@@ -68,6 +68,13 @@ export async function generateMetadata(): Promise<Metadata> {
       description: "Sistema de reservas de instalaciones deportivas municipales",
     }
   }
+}
+
+// Configuración del viewport — soporte para iPhones con notch (safe-area)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 }
 
 // Interfaz de los colores del tenant con sus valores por defecto

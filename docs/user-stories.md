@@ -18,6 +18,7 @@
 - **US-11** Como ciudadano, quiero cancelar una reserva activa (si faltan más de 2h) para liberar el slot.
 - **US-12** Como ciudadano, quiero recibir un email al cancelar para confirmar la cancelación.
 - **US-13** Como ciudadano, quiero ver un mensaje claro si ya tengo una reserva activa de ese tipo y no puedo reservar otra del mismo tipo.
+- **US-41** Como ciudadano, quiero recibir un email cuando el administrador cancele una de mis reservas, para enterarme aunque no acceda a la aplicación.
 
 ### Página principal
 - **US-31** Como ciudadano sin sesión, quiero ver un banner que me invite a iniciar sesión para reservar.
@@ -32,6 +33,11 @@
 - **US-15** Como admin, quiero buscar reservas por usuario, instalación o fecha para encontrar lo que necesito.
 - **US-16** Como admin, quiero cancelar cualquier reserva sin restricciones de tiempo.
 - **US-17** Como admin, quiero crear una reserva manualmente a nombre de cualquier usuario registrado.
+
+### Notificaciones por email
+- **US-42** Como admin, quiero recibir un email cuando un ciudadano realice una nueva reserva, para estar informado de la actividad sin tener que entrar al panel.
+- **US-43** Como admin, quiero recibir un email cuando un ciudadano cancele una reserva, para conocer los cambios en tiempo real.
+- **US-44** Como admin, quiero que todos los administradores activos del tenant reciban estas notificaciones, no solo uno.
 
 ### Bloqueos de instalaciones
 - **US-18** Como admin, quiero bloquear una instalación completa durante un período (mantenimiento, cierre, festivo) para que no aparezca como disponible.

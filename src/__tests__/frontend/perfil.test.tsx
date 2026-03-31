@@ -10,6 +10,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import React from 'react'
 
+// --- Mock de useToast ---
+const mockToast = vi.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToast }),
+}))
+
 // --- Mock de next-auth/react ---
 vi.mock('next-auth/react', () => ({
   useSession: vi.fn(() => ({
@@ -73,6 +79,7 @@ vi.mock('@/components/ui/button', () => ({
     variant,
     className,
     type,
+    size,
   }: {
     children: React.ReactNode
     onClick?: () => void
@@ -80,10 +87,11 @@ vi.mock('@/components/ui/button', () => ({
     variant?: string
     className?: string
     type?: string
+    size?: string
   }) =>
     React.createElement(
       'button',
-      { onClick, disabled, 'data-variant': variant, className, type },
+      { onClick, disabled, 'data-variant': variant, 'data-size': size, className, type },
       children
     ),
 }))
@@ -166,6 +174,18 @@ vi.mock('@/components/ui/skeleton', () => ({
     React.createElement('div', { className, 'data-testid': 'skeleton' }),
 }))
 
+// --- Mock de push-client ---
+const mockSuscribirAPush = vi.fn()
+const mockDesuscribirDePush = vi.fn()
+const mockObtenerEstadoSuscripcion = vi.fn()
+
+vi.mock('@/lib/push-client', () => ({
+  registrarServiceWorker: vi.fn().mockResolvedValue(null),
+  suscribirAPush: (...args: unknown[]) => mockSuscribirAPush(...args),
+  desuscribirDePush: (...args: unknown[]) => mockDesuscribirDePush(...args),
+  obtenerEstadoSuscripcion: (...args: unknown[]) => mockObtenerEstadoSuscripcion(...args),
+}))
+
 // --- Importar el componente bajo test (tras mocks) ---
 import PaginaPerfil from '@/app/perfil/page'
 
@@ -183,7 +203,10 @@ describe('PaginaPerfil', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockPush.mockReset()
+    mockToast.mockClear()
     global.fetch = vi.fn()
+    // Estado de push por defecto para que los tests existentes no fallen
+    mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
   })
 
   it('debería renderizar el título "Mi perfil"', async () => {
@@ -303,6 +326,205 @@ describe('PaginaPerfil', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
       expect(screen.getByText(/Esta acción es irreversible/i)).toBeInTheDocument()
+    })
+  })
+
+  it('debería mostrar enlace para volver al inicio', async () => {
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      const enlace = screen.getByRole('link', { name: /Volver/i })
+      expect(enlace).toBeInTheDocument()
+      expect(enlace).toHaveAttribute('href', '/')
+    })
+  })
+
+  it('debería llamar a toast con título de éxito al guardar los cambios correctamente', async () => {
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ usuario: usuarioFicticio }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ usuario: { ...usuarioFicticio, nombre: 'Ana García' } }),
+      })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ana García')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }))
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringMatching(/guardado|éxito/i),
+        })
+      )
+    })
+  })
+
+  it('debería llamar a toast con variante destructive cuando falla el guardado', async () => {
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ usuario: usuarioFicticio }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+      })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ana García')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }))
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'destructive',
+        })
+      )
+    })
+  })
+
+  it('no debería mostrar mensajes de estado inline al guardar correctamente', async () => {
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ usuario: usuarioFicticio }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ usuario: { ...usuarioFicticio, nombre: 'Ana García' } }),
+      })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Ana García')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Guardar cambios/i }))
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalled()
+    })
+
+    // No debe haber mensajes inline de estado con role="status"
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  // --- Tests de la sección de notificaciones push ---
+
+  it('debería mostrar la sección "Notificaciones" con botón "Activar" cuando el estado es inactivo', async () => {
+    mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByText('Notificaciones')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: /Activar/i })).toBeInTheDocument()
+  })
+
+  it('debería mostrar botón "Desactivar" cuando las notificaciones están activas', async () => {
+    mockObtenerEstadoSuscripcion.mockResolvedValue('activo')
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Desactivar/i })).toBeInTheDocument()
+    })
+  })
+
+  it('debería mostrar aviso de permisos bloqueados cuando el estado es "denegado"', async () => {
+    mockObtenerEstadoSuscripcion.mockResolvedValue('denegado')
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Has bloqueado los permisos/i)).toBeInTheDocument()
+    })
+  })
+
+  it('debería mostrar aviso de no soportado cuando el estado es "no-soportado"', async () => {
+    mockObtenerEstadoSuscripcion.mockResolvedValue('no-soportado')
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tu navegador no soporta notificaciones push/i)).toBeInTheDocument()
+    })
+  })
+
+  it('debería llamar a suscribirAPush al pulsar "Activar" notificaciones', async () => {
+    mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
+    mockSuscribirAPush.mockResolvedValue(true)
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Activar/i })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Activar/i }))
+
+    await waitFor(() => {
+      expect(mockSuscribirAPush).toHaveBeenCalled()
+    })
+  })
+
+  it('debería llamar a desuscribirDePush al pulsar "Desactivar" notificaciones', async () => {
+    mockObtenerEstadoSuscripcion.mockResolvedValue('activo')
+    mockDesuscribirDePush.mockResolvedValue(true)
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ usuario: usuarioFicticio }),
+    })
+
+    render(React.createElement(PaginaPerfil))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Desactivar/i })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /Desactivar/i }))
+
+    await waitFor(() => {
+      expect(mockDesuscribirDePush).toHaveBeenCalled()
     })
   })
 })

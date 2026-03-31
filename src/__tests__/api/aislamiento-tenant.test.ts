@@ -157,6 +157,8 @@ describe("Aislamiento entre tenants", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
+    // Mockear usuario.findMany para notificaciones de admins (Bloque 8)
+    prismaMock.usuario.findMany.mockResolvedValue([])
   })
 
   // ── 1. GET /api/instalaciones ───────────────────────────────────────────────

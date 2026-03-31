@@ -2,6 +2,15 @@ import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+/**
+ * Devuelve el destinatario real del email.
+ * Si EMAIL_REDIRECCION_DEV está configurada, todos los emails se redirigen a esa dirección.
+ * Útil para pruebas con el plan gratuito de Resend (solo permite enviar al email del propietario).
+ */
+function resolverDestinatario(emailReal: string): string {
+  return process.env.EMAIL_REDIRECCION_DEV ?? emailReal
+}
+
 // Datos necesarios para construir los emails de reserva y cancelación
 interface DatosReserva {
   emailUsuario: string
@@ -10,6 +19,11 @@ interface DatosReserva {
   fecha: string       // "YYYY-MM-DD"
   horaInicio: string  // "10:00"
   horaFin: string     // "11:00"
+}
+
+// Datos para notificaciones a admins — incluye quién realizó la acción
+interface DatosReservaAdmin extends DatosReserva {
+  nombreCiudadano: string
 }
 
 /**
@@ -23,31 +37,99 @@ export async function enviarEmailReserva(datos: DatosReserva): Promise<void> {
     return
   }
 
-  await resend.emails.send({
+  const resultado = await resend.emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
-    to: datos.emailUsuario,
+    to: resolverDestinatario(datos.emailUsuario),
     subject: `Reserva confirmada — ${datos.nombreInstalacion}`,
     html: plantillaReserva(datos),
   })
+  console.log("[Email] Confirmación reserva →", JSON.stringify(resultado))
 }
 
 /**
  * Envía email de cancelación al ciudadano tras cancelar una reserva.
+ * Si canceladoPorAdmin es true, usa un subject y plantilla diferenciados con disculpa.
  * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
  * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
  */
-export async function enviarEmailCancelacion(datos: DatosReserva): Promise<void> {
+export async function enviarEmailCancelacion(
+  datos: DatosReserva & { canceladoPorAdmin?: boolean }
+): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[Email] RESEND_API_KEY no configurada — email de cancelación omitido")
     return
   }
 
+  const subject = datos.canceladoPorAdmin
+    ? `Tu reserva ha sido cancelada por el ayuntamiento — ${datos.nombreInstalacion}`
+    : `Reserva cancelada — ${datos.nombreInstalacion}`
+
   await resend.emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
-    to: datos.emailUsuario,
-    subject: `Reserva cancelada — ${datos.nombreInstalacion}`,
-    html: plantillaCancelacion(datos),
+    to: resolverDestinatario(datos.emailUsuario),
+    subject,
+    html: plantillaCancelacion(datos, datos.canceladoPorAdmin ?? false),
   })
+}
+
+/**
+ * Envía email a cada admin activo del tenant cuando un ciudadano crea una reserva.
+ * Si la lista está vacía o RESEND_API_KEY no está configurada, omite y loguea.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailNotificacionAdmins(
+  datos: DatosReservaAdmin,
+  emailsAdmins: string[]
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — notificación a admins omitida")
+    return
+  }
+  if (emailsAdmins.length === 0) {
+    console.warn("[Email] Sin admins activos — notificación de nueva reserva omitida")
+    return
+  }
+
+  await Promise.all(
+    emailsAdmins.map((emailAdmin) =>
+      resend.emails.send({
+        from: "Reservas Pádel <onboarding@resend.dev>",
+        to: resolverDestinatario(emailAdmin),
+        subject: `Nueva reserva — ${datos.nombreInstalacion}`,
+        html: plantillaNotificacionAdminNuevaReserva(datos),
+      })
+    )
+  )
+}
+
+/**
+ * Envía email a cada admin activo del tenant cuando un ciudadano cancela una reserva.
+ * Si la lista está vacía o RESEND_API_KEY no está configurada, omite y loguea.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailCancelacionAdmins(
+  datos: DatosReservaAdmin,
+  emailsAdmins: string[]
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — notificación de cancelación a admins omitida")
+    return
+  }
+  if (emailsAdmins.length === 0) {
+    console.warn("[Email] Sin admins activos — notificación de cancelación omitida")
+    return
+  }
+
+  await Promise.all(
+    emailsAdmins.map((emailAdmin) =>
+      resend.emails.send({
+        from: "Reservas Pádel <onboarding@resend.dev>",
+        to: resolverDestinatario(emailAdmin),
+        subject: `Reserva cancelada — ${datos.nombreInstalacion}`,
+        html: plantillaNotificacionAdminCancelacion(datos),
+      })
+    )
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -80,14 +162,18 @@ function plantillaReserva(datos: DatosReserva): string {
             <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
           </tr>
         </table>
-        <p style="font-size: 14px; color: #6b7280;">Recuerda que puedes cancelar tu reserva hasta 2 horas antes del inicio desde <a href="${process.env.NEXTAUTH_URL}/mis-reservas">Mis Reservas</a>.</p>
+        <p style="font-size: 14px; color: #6b7280;">Puedes cancelar tu reserva en cualquier momento desde <a href="${process.env.NEXTAUTH_URL}/mis-reservas">Mis Reservas</a>.</p>
       </div>
     </body>
     </html>
   `
 }
 
-function plantillaCancelacion(datos: DatosReserva): string {
+function plantillaCancelacion(datos: DatosReserva, canceladoPorAdmin: boolean): string {
+  const mensajePrincipal = canceladoPorAdmin
+    ? "El ayuntamiento ha tenido que cancelar tu reserva. Lamentamos los inconvenientes."
+    : "Tu reserva ha sido cancelada:"
+
   return `
     <!DOCTYPE html>
     <html lang="es">
@@ -98,7 +184,7 @@ function plantillaCancelacion(datos: DatosReserva): string {
       </div>
       <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
         <p>Hola, <strong>${datos.nombreUsuario}</strong>:</p>
-        <p>Tu reserva ha sido cancelada:</p>
+        <p>${mensajePrincipal}</p>
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
           <tr style="border-bottom: 1px solid #e5e7eb;">
             <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalacion</td>
@@ -114,6 +200,76 @@ function plantillaCancelacion(datos: DatosReserva): string {
           </tr>
         </table>
         <p style="font-size: 14px; color: #6b7280;">Si tienes alguna duda, contacta con el ayuntamiento.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+function plantillaNotificacionAdminNuevaReserva(datos: DatosReservaAdmin): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #2563eb; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Nueva reserva realizada</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Se ha realizado una nueva reserva en el sistema:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Ciudadano</td>
+            <td style="padding: 10px;">${datos.nombreCiudadano} (${datos.emailUsuario})</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalacion</td>
+            <td style="padding: 10px;">${datos.nombreInstalacion}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Fecha</td>
+            <td style="padding: 10px;">${formatearFechaEmail(datos.fecha)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Horario</td>
+            <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
+          </tr>
+        </table>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+function plantillaNotificacionAdminCancelacion(datos: DatosReservaAdmin): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #dc2626; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Reserva cancelada por un ciudadano</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>El ciudadano <strong>${datos.nombreCiudadano}</strong> ha cancelado su reserva:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Ciudadano</td>
+            <td style="padding: 10px;">${datos.nombreCiudadano} (${datos.emailUsuario})</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalacion</td>
+            <td style="padding: 10px;">${datos.nombreInstalacion}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Fecha</td>
+            <td style="padding: 10px;">${formatearFechaEmail(datos.fecha)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Horario</td>
+            <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
+          </tr>
+        </table>
       </div>
     </body>
     </html>
@@ -150,12 +306,13 @@ export async function enviarEmailRecuperacion(
     return
   }
 
-  await resend.emails.send({
+  const resultado = await resend.emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
-    to: emailUsuario,
+    to: resolverDestinatario(emailUsuario),
     subject: "Recupera tu contraseña — Reservas Pádel",
     html: plantillaRecuperacion(nombreUsuario, urlReset),
   })
+  console.log("[Email] Recuperación contraseña →", JSON.stringify(resultado))
 }
 
 function plantillaRecuperacion(nombreUsuario: string, urlReset: string): string {

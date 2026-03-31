@@ -130,6 +130,18 @@ Revisar este archivo al inicio de cada sesión.
 **Corrección:** Cambiar `errorMap: () => ({ message: "..." })` por `error: () => ({ message: "..." })` en todas las llamadas a `z.enum()` y `z.literal()`.
 **Regla:** En Zod v4, el parámetro de mapeo de errores en `z.enum()` y `z.literal()` se llama `error`, no `errorMap`. Aplica a cualquier constructor de Zod que acepte opciones de mensaje personalizado.
 
+### LESSON-021: Los módulos con dependencias transitivas (web-push) deben mockearse en tests de rutas que los importan
+**Contexto:** Al integrar `@/lib/push` en `cancelar/route.ts`, ese módulo importa `web-push` que intenta configurar VAPID al cargarse.
+**Error:** Los tests de `cancelar.test.ts` fallaban porque `web-push` intentaba ejecutarse sin claves VAPID.
+**Corrección:** Añadir `jest.mock('web-push', ...)` en cualquier test que importe directamente o transitivamente un módulo que usa web-push.
+**Regla:** Cuando se añade un import a una route que usa servicios externos (push, email, SMS), revisar todos los tests de esa route y añadir los mocks necesarios de las dependencias transitivas.
+
+### LESSON-022: El `update` del upsert de Prisma puede diferir del `create` en campos opcionales
+**Contexto:** Al implementar `suscripcionPush.upsert`, el test esperaba `update: { activa: true }` pero la implementación también actualizaba p256dh y auth en el update.
+**Error:** `toHaveBeenCalledWith` con `update: { activa: true }` falla cuando el update real incluye campos adicionales.
+**Corrección:** Usar `update: expect.objectContaining({ activa: true })` para validar solo los campos relevantes sin ser estricto con los adicionales.
+**Regla:** En tests de upsert, usar `expect.objectContaining()` en la propiedad `update` cuando la implementación puede incluir más campos que los mínimos esperados.
+
 ### LESSON-020: getByText falla cuando el texto aparece en múltiples elementos del DOM
 **Contexto:** En el test del formulario de registro, "Crear cuenta" aparece tanto en el h1 como en el botón submit.
 **Error:** `screen.getByText('Crear cuenta')` lanza "Found multiple elements with the text" porque hay dos nodos que contienen ese texto.

@@ -24,6 +24,7 @@ jest.mock('next-auth', () => ({
 // Mockear el módulo de email para que los tests no dependan de RESEND_API_KEY
 jest.mock('@/lib/email', () => ({
   enviarEmailReserva: jest.fn().mockResolvedValue(undefined),
+  enviarEmailNotificacionAdmins: jest.fn().mockResolvedValue(undefined),
 }))
 
 import { POST } from '@/app/api/reservas/route'
@@ -62,6 +63,8 @@ const instalacionActiva = {
 describe('POST /api/reservas', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Mockear usuario.findMany para notificación de admins post-creación (Bloque 8)
+    prismaMock.usuario.findMany.mockResolvedValue([])
   })
 
   it('debería devolver 401 cuando el usuario no está autenticado', async () => {

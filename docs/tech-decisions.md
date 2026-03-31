@@ -83,6 +83,41 @@ construir objetos `Date` correctos independientemente del servidor donde corra l
 Alternativa más moderna a Nodemailer. API REST simple, buen plan gratuito (3.000 emails/mes),
 no requiere configurar un servidor SMTP propio.
 
+### Sistema de notificaciones: email transaccional con Resend (no push, no in-app)
+
+Se ha evaluado tres enfoques para las notificaciones del sistema:
+
+| Opción | Descripción | Decisión |
+|---|---|---|
+| Email transaccional (Resend) | Extender las funciones existentes en `email.ts` | **Elegida** |
+| In-app (tabla `Notificacion` en BD) | Centro de notificaciones con campana en la UI | Fase futura |
+| Web Push API | Notificaciones del navegador tipo push | Bloque 11 (Fase 3) |
+
+**Por qué email primero:**
+- Resend ya está integrado y funcionando — coste de implementación mínimo
+- No requiere que el usuario esté conectado a la aplicación para recibir el aviso
+- Cobertura total: funciona en todos los dispositivos sin configuración adicional
+- El plan gratuito de Resend (3.000 emails/mes) es más que suficiente para municipios pequeños/medianos
+- Las notificaciones push (Bloque 11) complementarán esto en el futuro, no lo reemplazarán
+
+**Diseño de la extensión en `email.ts`:**
+
+1. `enviarEmailCancelacion(datos, canceladoPorAdmin)` — el flag booleano adapta el copy:
+   - `false` (cancelación propia): "Has cancelado tu reserva"
+   - `true` (cancelación por admin): "El ayuntamiento ha cancelado tu reserva" + texto de disculpa
+
+2. `enviarEmailNuevaReservaAdmins(datos, emailsAdmins[])` — aviso a todos los admins activos del tenant:
+   - Llamada desde la API Route de creación de reserva
+   - Se obtienen los emails de admins activos con una query Prisma antes de llamar a esta función
+   - Envío en paralelo con `Promise.all` para no bloquear la respuesta HTTP
+
+3. `enviarEmailCancelacionAdmins(datos, emailsAdmins[])` — aviso a todos los admins activos del tenant:
+   - Llamada desde la API Route de cancelación de reserva
+   - Mismo patrón que la anterior
+
+**Regla de no-bloqueo:** todas las llamadas a email se hacen con `.catch(console.error)` y nunca
+bloquean la respuesta HTTP. Si Resend falla, la operación de reserva/cancelación sigue siendo válida.
+
 ### Multi-tenancy: Row-Level Isolation
 Se eligió row-level isolation (una BD compartida con `tenantId` en todas las tablas) sobre
 bases de datos separadas por tenant porque:

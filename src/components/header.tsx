@@ -26,7 +26,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="w-full px-6">
+      <div className="w-full px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center gap-2 font-bold text-blue-700 text-lg shrink-0">

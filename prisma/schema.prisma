@@ -30,12 +30,13 @@ model Tenant {
   actualizadoEn DateTime @updatedAt
 
   // Relaciones — todos los datos del ayuntamiento
-  usuarios           Usuario[]
-  instalaciones      Instalacion[]
-  reservas           Reserva[]
-  bloqueos           Bloqueo[]
-  avisos             Aviso[]
-  tokensRecuperacion TokenRecuperacion[]
+  usuarios            Usuario[]
+  instalaciones       Instalacion[]
+  reservas            Reserva[]
+  bloqueos            Bloqueo[]
+  avisos              Aviso[]
+  tokensRecuperacion  TokenRecuperacion[]
+  suscripcionesPush   SuscripcionPush[]
 }
 
 // Usuario: ciudadanos y administradores del ayuntamiento
@@ -58,6 +59,7 @@ model Usuario {
   reservasCanceladas   Reserva[]           @relation("CanceladorReservas")
   bloqueosCreados      Bloqueo[]           @relation("AdminBloqueos")
   tokensRecuperacion   TokenRecuperacion[]
+  suscripcionesPush    SuscripcionPush[]
 
   // Email único dentro del mismo tenant (no globalmente)
   // NOTA: tenantId es opcional para superadmins (sin tenant)
@@ -103,6 +105,9 @@ model Reserva {
   usuario     Usuario     @relation("UsuarioReservas", fields: [usuarioId], references: [id])
   instalacion Instalacion @relation(fields: [instalacionId], references: [id])
   cancelador  Usuario?    @relation("CanceladorReservas", fields: [canceladoPor], references: [id])
+
+  // Campo para evitar enviar el recordatorio push más de una vez por reserva
+  recordatorioEnviado Boolean @default(false)
 
   // Índices para búsquedas frecuentes y control de duplicados
   @@index([tenantId])
@@ -164,4 +169,25 @@ model Bloqueo {
 
   @@index([tenantId])
   @@index([instalacionId, fechaInicio, fechaFin])
+}
+
+// SuscripcionPush: suscripción Web Push de un usuario para recibir notificaciones nativas
+model SuscripcionPush {
+  id         String   @id @default(uuid())
+  tenantId   String
+  usuarioId  String
+  endpoint   String
+  p256dh     String
+  auth       String
+  activa     Boolean  @default(true)
+  creadoEn   DateTime @default(now())
+
+  // Relaciones
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  // Un usuario no puede suscribir el mismo endpoint dos veces
+  @@unique([usuarioId, endpoint])
+  @@index([tenantId])
+  @@index([usuarioId])
 }
