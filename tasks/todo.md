@@ -1,5 +1,96 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
+## Bloque 10 — PWA (COMPLETADO)
+
+### Objetivo
+Hacer la app instalable desde el navegador como PWA, con soporte offline básico y botón de instalación para iOS y Android.
+
+### PASO 1: Icono SVG
+- [x] Crear `public/icons/icon.svg` — icono raqueta de pádel + pelota, azul y blanco
+- [x] Crear `public/icons/apple-touch-icon.svg` — fondo sólido para iOS
+
+### PASO 2: manifest.ts dinámico por tenant
+- [x] Crear `src/app/manifest.ts` usando `headers()` para leer el slug del tenant
+- [x] Devolver nombre del servicio, colores y ruta de icono según la config del tenant
+- [x] El manifest incluye: `name`, `short_name`, `start_url`, `display: standalone`, `theme_color`, `background_color`, `icons`, `lang`, `dir`, `categories`
+
+### PASO 3: Meta tags PWA en layout.tsx
+- [x] Añadir `appleWebApp` a `generateMetadata()`: `capable: true`, `title`, `statusBarStyle`
+- [x] Añadir `themeColor` con el color primario del tenant
+- [x] Añadir `<link rel="apple-touch-icon">` y `<meta name="mobile-web-app-capable">` al `<head>`
+
+### PASO 4: Caché offline en sw.js
+- [x] Añadir evento `install`: pre-cachear `/`, `/pistas`, `/mis-reservas`, `/dashboard`, `/login`
+- [x] Añadir evento `activate`: limpiar cachés antiguas
+- [x] Añadir evento `fetch`: network-first para navegación, fallback a caché; ignorar rutas `/api/` y `/_next/`
+- [x] NO se tocaron los handlers existentes de `push`, `notificationclick`, `pushsubscriptionchange`
+
+### PASO 5: Componente InstalarPWA.tsx
+- [x] Detectar `beforeinstallprompt` (Android/Chrome) → guardar el evento, mostrar banner
+- [x] Detectar iOS/Safari → mostrar instrucciones manuales ("Pulsa Compartir → Añadir a pantalla de inicio")
+- [x] Ocultar el banner si ya está instalada (`display-mode: standalone`)
+- [x] Guardar en `localStorage` si el usuario lo descartó (no volver a mostrar)
+
+### PASO 6: Integrar InstalarPWA en el Header
+- [x] Importar `InstalarPWA` en `src/components/header.tsx`
+- [x] Renderizado como banner fijo inferior dentro del `<header>`
+
+### PASO 7: Tests (TDD — 4/4 pasan)
+- [x] `src/__tests__/frontend/instalar-pwa.test.tsx` — 4 tests:
+  - Banner visible cuando `beforeinstallprompt` disponible
+  - No muestra nada en modo standalone
+  - Muestra instrucciones iOS cuando el UA es Safari/iOS
+  - Oculta banner al pulsar descartar
+
+### Verificación
+- [x] `npx vitest run` — 4 tests nuevos pasan, sin nuevas regresiones introducidas
+- [ ] Lighthouse PWA score ≥ 90 (requiere Chrome DevTools)
+- [ ] App instalable desde Chrome en Android (manifest válido)
+- [ ] Meta tags iOS correctos en `<head>`
+
+---
+
+## Bloque 9 — Mejoras de UX mobile (COMPLETADO)
+
+### Objetivo
+Pulir la experiencia del ciudadano en dispositivos móviles: navegación más clara, zonas de toque adecuadas, feedback visual consistente y formularios optimizados.
+
+### Cambios por archivo
+
+#### `src/app/pistas/[id]/page.tsx`
+- [x] Botón "← Volver" → aumentar a área de toque mínima 44px (py-2 px-1, text-sm)
+- [x] Añadir breadcrumb contextual: "Instalaciones › [nombre pista]" bajo el header
+- [x] DialogContent → añadir `max-h-[90dvh] overflow-y-auto` para que los botones no queden cortados en móvil
+- [x] Instrucción de slots (`text-xs`) → `text-sm` en mobile
+- [x] Botón "Reservar" → añadir spinner SVG animado mientras `cargandoReserva`
+
+#### `src/app/mis-reservas/page.tsx`
+- [x] Nombre de instalación → añadir `truncate` para no romper layout en nombres largos
+- [ ] DialogContent de cancelación → añadir `max-h-[90dvh] overflow-y-auto`
+- [x] Botón "Cancelar reserva" → añadir spinner mientras procesa
+
+#### `src/app/perfil/page.tsx`
+- [ ] DialogContent de eliminar cuenta → añadir `max-h-[90dvh] overflow-y-auto`
+- [x] File input avatar: cambiar `hidden` por `sr-only` (accesibilidad screen readers)
+- [x] Botones de guardar → añadir spinner mientras procesan
+
+#### `src/app/login/page.tsx`
+- [x] Input email → añadir `inputMode="email"`
+- [x] Botón submit → añadir spinner SVG mientras `cargando`
+
+#### `src/app/registro/page.tsx`
+- [x] Input email → añadir `inputMode="email"`
+- [x] Botón submit → añadir spinner SVG mientras `cargando`
+
+#### `src/app/recuperar-password/page.tsx`
+- [x] Input email → añadir `inputMode="email"`
+
+### Verificación
+- [x] Ejecutar suite E2E: `npx playwright test --config=e2e/playwright.config.ts`
+- [ ] 26/26 tests pasan
+
+---
+
 ## Bloque 11 — Sistema de notificaciones Web Push — Backend (COMPLETADO 2026-03-30)
 
 ### Plan TDD

@@ -142,6 +142,12 @@ Revisar este archivo al inicio de cada sesión.
 **Corrección:** Usar `update: expect.objectContaining({ activa: true })` para validar solo los campos relevantes sin ser estricto con los adicionales.
 **Regla:** En tests de upsert, usar `expect.objectContaining()` en la propiedad `update` cuando la implementación puede incluir más campos que los mínimos esperados.
 
+### LESSON-023: Los tests de componentes que integran InstalarPWA necesitan mock de matchMedia
+**Contexto:** Al integrar `InstalarPWA` en el `Header`, los tests de Header fallaban con `TypeError: window.matchMedia is not a function` porque jsdom no implementa `matchMedia`.
+**Error:** `InstalarPWA` llama a `window.matchMedia("(display-mode: standalone)")` en su `useEffect`. Los tests de componentes que renderizan el Header transitan por ese código.
+**Corrección:** En cualquier test que renderice un componente que use `matchMedia` (directa o transitivamente), añadir `vi.mock('@/components/InstalarPWA', () => ({ default: () => null }))` para aislar el componente. En los tests propios de `InstalarPWA`, usar el helper `mockMatchMedia` en `beforeEach`.
+**Regla:** Cuando un componente usa APIs de navegador (matchMedia, navigator, geolocation), los tests de componentes que lo integran deben mockearlo o configurar el entorno jsdom adecuadamente.
+
 ### LESSON-020: getByText falla cuando el texto aparece en múltiples elementos del DOM
 **Contexto:** En el test del formulario de registro, "Crear cuenta" aparece tanto en el h1 como en el botón submit.
 **Error:** `screen.getByText('Crear cuenta')` lanza "Found multiple elements with the text" porque hay dos nodos que contienen ese texto.

@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { AvatarUsuario } from "@/components/AvatarUsuario"
+import InstalarPWA from "@/components/InstalarPWA"
 
 interface HeaderProps {
   /** Nombre del servicio a mostrar en el logo. Si no se pasa, usa el valor por defecto. */
@@ -19,6 +20,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
   const cargandoSesion = status === "loading"
   const esAdmin = sesion?.user?.rol === "ADMIN"
   const esCiudadano = sesion?.user?.rol === "CIUDADANO"
+  const esSuperadmin = sesion?.user?.rol === "SUPERADMIN"
 
   function cerrarSesion() {
     signOut({ callbackUrl: "/login" })
@@ -37,8 +39,8 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
 
           {/* Navegación desktop */}
           <nav aria-label="Navegación principal" className="hidden md:flex items-center gap-4">
-              {/* Sin sesión o cargando: mostrar login y registro */}
-              {!sesion && (
+              {/* Sin sesión: mostrar login y registro */}
+              {!sesion && !cargandoSesion && (
                 <>
                   <Link
                     href="/login"
@@ -93,18 +95,71 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                 </>
               )}
 
-              {/* Admin logueado */}
-              {esAdmin && (
+              {/* Superadmin logueado */}
+              {esSuperadmin && (
                 <>
                   <Link
-                    href="/admin"
-                    className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
+                    href="/superadmin"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors px-3 py-1.5 rounded-lg"
                   >
-                    Panel Admin
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Superadmin
                   </Link>
                   <span className="text-sm text-gray-500 border-l border-gray-200 pl-4">
                     {sesion.user?.name}
                   </span>
+                  <button
+                    onClick={cerrarSesion}
+                    className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                  >
+                    Cerrar sesión
+                  </button>
+                </>
+              )}
+
+              {/* Admin logueado — ve los mismos links que ciudadano más acceso al panel */}
+              {esAdmin && (
+                <>
+                  <Link
+                    href="/pistas"
+                    className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
+                  >
+                    Instalaciones
+                  </Link>
+                  <Link
+                    href="/mis-reservas"
+                    className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
+                  >
+                    Mis reservas
+                  </Link>
+                  <Link
+                    href="/perfil"
+                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    aria-label="Mi perfil"
+                  >
+                    <AvatarUsuario
+                      nombre={sesion.user?.name ?? "U"}
+                      avatarUrl={(sesion.user as { avatarUrl?: string | null }).avatarUrl}
+                      className="w-8 h-8 text-xs"
+                    />
+                    <span className="text-sm font-medium hidden sm:block text-gray-700">
+                      {sesion.user?.name}
+                    </span>
+                  </Link>
+                  {/* Separador visual antes del acceso al panel */}
+                  <span className="border-l border-gray-200 h-5 self-center" aria-hidden="true" />
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-1.5 rounded-lg"
+                  >
+                    {/* Icono de escudo */}
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Panel Admin
+                  </Link>
                   <button
                     onClick={cerrarSesion}
                     className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
@@ -143,7 +198,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
         <div className="md:hidden border-t border-gray-200 bg-white">
           <nav aria-label="Menú de navegación" className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-1">
             {/* Sin sesión: solo login y registro */}
-            {!sesion && (
+            {!sesion && !cargandoSesion && (
               <>
                 <Link
                   href="/login"
@@ -198,17 +253,70 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
               </>
             )}
 
-            {/* Admin logueado */}
+            {/* Superadmin logueado */}
+            {esSuperadmin && (
+              <>
+                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
+                  {sesion.user?.name}
+                </div>
+                <Link
+                  href="/superadmin"
+                  className="px-3 py-2 text-sm font-semibold text-purple-700 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Panel Superadmin
+                </Link>
+                <button
+                  onClick={() => { setMenuAbierto(false); cerrarSesion() }}
+                  className="px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            )}
+
+            {/* Admin logueado — ve links de ciudadano más acceso al panel */}
             {esAdmin && (
               <>
                 <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
                   {sesion.user?.name}
                 </div>
                 <Link
-                  href="/admin"
+                  href="/pistas"
                   className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
+                  Instalaciones
+                </Link>
+                <Link
+                  href="/mis-reservas"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Mis reservas
+                </Link>
+                <Link
+                  href="/perfil"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => setMenuAbierto(false)}
+                  aria-label="Mi perfil"
+                >
+                  Mi perfil
+                </Link>
+                {/* Separador antes del panel de admin */}
+                <div className="border-t border-gray-100 my-1" aria-hidden="true" />
+                <Link
+                  href="/admin"
+                  className="px-3 py-2 text-sm font-semibold text-blue-700 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  {/* Icono de escudo */}
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
                   Panel Admin
                 </Link>
                 <button
@@ -222,6 +330,9 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
           </nav>
         </div>
       )}
+
+      {/* Banner de instalación PWA — fijo en la parte inferior de la pantalla */}
+      <InstalarPWA />
     </header>
   )
 }

@@ -39,6 +39,10 @@ interface DatosReservas {
 export default function PaginaMisReservas() {
   const router = useRouter()
   const { toast } = useToast()
+
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Mis reservas" }, [])
+
   const [datos, setDatos] = useState<DatosReservas | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
@@ -193,7 +197,7 @@ export default function PaginaMisReservas() {
                           {/* Info de la reserva */}
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-gray-800">
+                              <p className="text-sm font-semibold text-gray-800 truncate">
                                 {reserva.instalacion.nombre}
                               </p>
                               <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-xs">
@@ -264,7 +268,7 @@ export default function PaginaMisReservas() {
 
       {/* Dialog de confirmación de cancelación */}
       <Dialog open={dialogAbierto} onOpenChange={(abierto) => { if (!abierto) cerrarDialog() }}>
-        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cancelar reserva</DialogTitle>
             <DialogDescription>
@@ -313,8 +317,17 @@ export default function PaginaMisReservas() {
               variant="destructive"
               onClick={confirmarCancelacion}
               disabled={cancelando}
+              className="flex items-center gap-2"
             >
-              {cancelando ? "Cargando..." : "Confirmar cancelación"}
+              {cancelando ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Cancelando...
+                </>
+              ) : "Confirmar cancelación"}
             </Button>
           </DialogFooter>
         </DialogContent>

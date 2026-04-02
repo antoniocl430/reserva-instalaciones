@@ -60,6 +60,9 @@ export default function PaginaConfiguracion() {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null)
   const [mensajeError, setMensajeError] = useState<string | null>(null)
 
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Configuración" }, [])
+
   // ── Carga inicial ──────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -105,15 +108,17 @@ export default function PaginaConfiguracion() {
     setMensajeExito(null)
     setMensajeError(null)
 
-    const payload: ConfiguracionTenant = {
-      nombreServicio: formulario.nombreServicio,
-      colores: {
-        primario: formulario.colorPrimario,
-        secundario: formulario.colorSecundario,
-      },
-      metadata: {
-        title: formulario.metadataTitle,
-        description: formulario.metadataDescription,
+    const payload = {
+      configuracion: {
+        nombreServicio: formulario.nombreServicio,
+        colores: {
+          primario: formulario.colorPrimario,
+          secundario: formulario.colorSecundario,
+        },
+        metadata: {
+          title: formulario.metadataTitle,
+          description: formulario.metadataDescription,
+        },
       },
     }
 
@@ -129,7 +134,7 @@ export default function PaginaConfiguracion() {
         throw new Error(`Error al guardar: ${cuerpo.error ?? "Error del servidor"}`)
       }
 
-      setMensajeExito("Configuración guardada correctamente")
+      setMensajeExito("Configuración guardada. Recarga la página para ver el nuevo nombre en el logo.")
     } catch (err) {
       setMensajeError(
         err instanceof Error ? err.message : "Error al guardar la configuración"

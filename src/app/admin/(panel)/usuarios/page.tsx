@@ -33,6 +33,10 @@ interface Usuario {
 
 export default function PaginaUsuariosAdmin() {
   const { data: session } = useSession()
+
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Usuarios" }, [])
+
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)

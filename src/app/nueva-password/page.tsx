@@ -15,6 +15,9 @@ function FormularioNuevaPassword() {
   const [cargando, setCargando] = useState(false)
   const [completado, setCompletado] = useState(false)
 
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Nueva contraseña" }, [])
+
   // Verificar que hay token en la URL
   useEffect(() => {
     if (!token) {

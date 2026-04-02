@@ -24,7 +24,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Bell, Plus, Pencil, Trash2, AlertCircle } from "lucide-react"
+import { Bell, Plus, Pencil, Trash2, AlertCircle, Eye, EyeOff } from "lucide-react"
 import FormularioAviso, {
   AvisoExistente,
   DatosFormularioAviso,
@@ -75,6 +75,9 @@ function fechaParaFormulario(fechaIso: string): string {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function PaginaAdminAvisos() {
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Avisos" }, [])
+
   const [avisos, setAvisos] = useState<Aviso[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +88,9 @@ export default function PaginaAdminAvisos() {
 
   // Estado de error al guardar
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null)
+
+  // Estado de toggling de activo/inactivo
+  const [toggleandoId, setToggleandoId] = useState<string | null>(null)
 
   // Estado del dialog de confirmación de eliminación
   const [dialogEliminar, setDialogEliminar] = useState(false)
@@ -178,6 +184,28 @@ export default function PaginaAdminAvisos() {
     }
   }
 
+  // ── Activar / desactivar aviso ─────────────────────────────────────────────
+
+  async function toggleActivo(aviso: Aviso) {
+    setToggleandoId(aviso.id)
+    try {
+      const res = await fetch(`/api/avisos/${aviso.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: !aviso.activo }),
+      })
+      if (!res.ok) {
+        const cuerpo = await res.json()
+        throw new Error(cuerpo.error ?? "Error al actualizar el aviso")
+      }
+      await cargarAvisos()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar el aviso")
+    } finally {
+      setToggleandoId(null)
+    }
+  }
+
   // ── Eliminar aviso ─────────────────────────────────────────────────────────
 
   function confirmarEliminar(aviso: Aviso) {
@@ -267,6 +295,8 @@ export default function PaginaAdminAvisos() {
                 aviso={aviso}
                 onEditar={() => abrirEditar(aviso)}
                 onEliminar={() => confirmarEliminar(aviso)}
+                onToggle={() => toggleActivo(aviso)}
+                toggleando={toggleandoId === aviso.id}
               />
             ))}
           </div>
@@ -342,9 +372,11 @@ interface FilaAvisoProps {
   aviso: Aviso
   onEditar: () => void
   onEliminar: () => void
+  onToggle: () => void
+  toggleando: boolean
 }
 
-function FilaAviso({ aviso, onEditar, onEliminar }: FilaAvisoProps) {
+function FilaAviso({ aviso, onEditar, onEliminar, onToggle, toggleando }: FilaAvisoProps) {
   const estilo = ESTILOS_TIPO[aviso.tipo] ?? { clase: "bg-gray-100 text-gray-700", etiqueta: aviso.tipo }
 
   return (
@@ -376,6 +408,23 @@ function FilaAviso({ aviso, onEditar, onEliminar }: FilaAvisoProps) {
         >
           <Pencil className="w-4 h-4" aria-hidden="true" />
           <span className="sr-only">Editar</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggle}
+          disabled={toggleando}
+          aria-label={aviso.activo ? `Desactivar aviso: ${aviso.titulo}` : `Activar aviso: ${aviso.titulo}`}
+          className={aviso.activo
+            ? "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            : "text-green-600 hover:text-green-700 hover:bg-green-50"
+          }
+        >
+          {aviso.activo
+            ? <EyeOff className="w-4 h-4" aria-hidden="true" />
+            : <Eye className="w-4 h-4" aria-hidden="true" />
+          }
+          <span className="sr-only">{aviso.activo ? "Desactivar" : "Activar"}</span>
         </Button>
         <Button
           variant="ghost"

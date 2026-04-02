@@ -76,21 +76,22 @@ optimizada para pantallas pequeñas.
 - [ ] Añadir función `enviarEmailNotificacionAdmins` que consulta los admins activos del tenant y les envía el aviso
 - [ ] Tests unitarios de las nuevas plantillas y funciones
 
-### Bloque 9: Mejoras de UX y flujos de usuario
-- [ ] Revisar y pulir todos los flujos ciudadano en mobile (reserva, mis reservas, cancelación)
-- [ ] Mejorar navegación entre páginas (breadcrumbs, botones de volver)
-- [ ] Feedback visual claro en acciones (toasts, estados de carga, confirmaciones)
-- [ ] Formularios optimizados para teclado móvil (tipos de input correctos, autocomplete)
+### Bloque 9: Mejoras de UX y flujos de usuario ✅
+- [x] Revisar y pulir todos los flujos ciudadano en mobile (reserva, mis reservas, cancelación)
+- [x] Mejorar navegación entre páginas (breadcrumbs, botones de volver)
+- [x] Feedback visual claro en acciones (toasts, estados de carga, confirmaciones)
+- [x] Formularios optimizados para teclado móvil (tipos de input correctos, autocomplete)
 
-### Bloque 10: PWA — instalable desde el navegador
-- [ ] Configurar `manifest.json` con nombre, iconos y colores por tenant
-- [ ] Service worker para carga offline básica (páginas visitadas)
-- [ ] Botón "Añadir a pantalla de inicio" en iOS y Android
-- [ ] Icono y splash screen personalizados
+### Bloque 10: PWA — instalable desde el navegador ✅
+- [x] Configurar `manifest.ts` dinámico con nombre, iconos y colores por tenant
+- [x] Service worker para carga offline básica (páginas visitadas) — extendido sw.js
+- [x] Banner "Añadir a pantalla de inicio" en iOS y Android (componente InstalarPWA)
+- [x] Icono SVG deportivo en /public/icons/ (icon.svg, apple-touch-icon.svg)
+- [x] Meta tags PWA en layout.tsx (appleWebApp, themeColor, mobile-web-app-capable)
 
-### Bloque 11: Notificaciones web push
-- [ ] Integración con Web Push API (sin app nativa)
-- [ ] Recordatorio 1h antes de cada reserva
+### Bloque 11: Notificaciones web push ✅
+- [x] Integración con Web Push API (sin app nativa)
+- [x] Recordatorio 1h antes de cada reserva
 - [ ] Notificación al cancelar una reserva (propia o por el admin)
 - [ ] Gestión de preferencias de notificación por usuario
 

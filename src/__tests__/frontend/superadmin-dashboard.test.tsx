@@ -71,8 +71,8 @@ describe('SuperadminDashboard — /superadmin/(panel)/page.tsx', () => {
     render(<SuperadminDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText(/total tenants/i)).toBeInTheDocument()
-      expect(screen.getByText(/tenants activos/i)).toBeInTheDocument()
+      expect(screen.getByText(/total centros/i)).toBeInTheDocument()
+      expect(screen.getByText(/centros activos/i)).toBeInTheDocument()
       expect(screen.getByText(/total usuarios/i)).toBeInTheDocument()
       expect(screen.getByText(/total instalaciones/i)).toBeInTheDocument()
       expect(screen.getByText(/reservas hoy/i)).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('SuperadminDashboard — /superadmin/(panel)/page.tsx', () => {
     render(<SuperadminDashboard />)
 
     await waitFor(() => {
-      const enlace = screen.getByRole('link', { name: /gestionar tenants/i })
+      const enlace = screen.getByRole('link', { name: /gestionar centros/i })
       expect(enlace).toHaveAttribute('href', '/superadmin/tenants')
     })
   })

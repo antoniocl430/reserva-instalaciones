@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma"
 import { formatearFechaCorta, formatearHora } from "@/lib/formato"
 import BotonesRGPD from "@/components/BotonesRGPD"
 
+export const metadata = { title: "Inicio" }
+
 export default async function PaginaDashboard() {
   // Proteccion de ruta: si no hay sesion, redirige al login
   const sesion = await getServerSession(opcionesAuth)
@@ -42,8 +44,12 @@ export default async function PaginaDashboard() {
           </div>
           <Link
             href="/perfil"
-            className="text-sm text-blue-600 hover:text-blue-800 underline underline-offset-2 shrink-0 mt-1"
+            className="flex items-center gap-1.5 shrink-0 mt-1 text-sm font-medium text-gray-700 bg-white border border-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-colors"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            </svg>
             Mi perfil
           </Link>
         </div>

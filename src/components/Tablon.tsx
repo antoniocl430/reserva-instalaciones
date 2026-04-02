@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -104,22 +105,42 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
   )
 }
 
-// Formatea una fecha ISO a texto legible en español con hora
+// Formatea una fecha ISO a texto legible en español con hora.
+// Usa formatToParts() para extraer solo los valores numéricos y montar el string
+// manualmente, evitando que el ICU de Node.js añada conectores como "a las"
+// que no genera Chrome (causa hydration mismatch en SSR).
 function formatearFechaAviso(fechaIso: string): string {
   try {
     const fecha = new Date(fechaIso)
-    return fecha.toLocaleString("es-ES", {
+    const partes = new Intl.DateTimeFormat("es-ES", {
       day: "numeric",
       month: "long",
       hour: "2-digit",
       minute: "2-digit",
-    })
+      hour12: false,
+      timeZone: "Europe/Madrid",
+    }).formatToParts(fecha)
+
+    const get = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? ""
+    const dia = get("day")
+    const mes = get("month")
+    const hora = get("hour").padStart(2, "0")
+    const minuto = get("minute").padStart(2, "0")
+
+    return `${dia} de ${mes}, ${hora}:${minuto}`
   } catch {
     return fechaIso
   }
 }
 
 function TarjetaAviso({ aviso }: { aviso: Aviso }) {
+  // Renderizar la fecha solo en el cliente para evitar hydration mismatch:
+  // Node.js ICU (servidor) y el navegador formatean fechas es-ES de forma diferente.
+  const [fechaTexto, setFechaTexto] = useState("")
+  useEffect(() => {
+    setFechaTexto(formatearFechaAviso(aviso.fecha))
+  }, [aviso.fecha])
+
   const iconoTipo =
     aviso.tipo === "CIERRE" ? (
       <AlertCircle className="w-5 h-5 text-red-600" aria-hidden="true" />
@@ -133,7 +154,7 @@ function TarjetaAviso({ aviso }: { aviso: Aviso }) {
     <div className="flex gap-3 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0">
       <div className="flex-shrink-0 pt-1">{iconoTipo}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 font-medium">{formatearFechaAviso(aviso.fecha)}</p>
+        <p className="text-xs text-gray-500 font-medium">{fechaTexto}</p>
         <h4 className="font-semibold text-sm text-gray-900 mt-0.5">{aviso.titulo}</h4>
         <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">{aviso.descripcion}</p>
       </div>

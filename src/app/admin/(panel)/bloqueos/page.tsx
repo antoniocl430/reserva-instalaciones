@@ -48,6 +48,9 @@ interface Pista {
 }
 
 export default function PaginaBloqueoAdmin() {
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Bloqueos" }, [])
+
   const [bloqueos, setBloqueos] = useState<Bloqueo[]>([])
   const [pistas, setPistas] = useState<Pista[]>([])
   const [cargando, setCargando] = useState(true)

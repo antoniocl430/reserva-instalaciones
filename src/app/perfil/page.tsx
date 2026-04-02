@@ -39,6 +39,9 @@ export default function PaginaPerfil() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Mi perfil" }, [])
+
   // Estado del formulario de datos
   const [nombre, setNombre] = useState("")
   const [email, setEmail] = useState("")
@@ -296,7 +299,7 @@ export default function PaginaPerfil() {
                 ref={inputArchivoRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                className="hidden"
+                className="sr-only"
                 onChange={alSeleccionarArchivo}
                 aria-label="Seleccionar archivo de imagen"
               />
@@ -359,9 +362,17 @@ export default function PaginaPerfil() {
             <Button
               type="submit"
               disabled={guardando || cargandoDatos}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto flex items-center gap-2"
             >
-              {guardando ? "Guardando..." : "Guardar cambios"}
+              {guardando ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Guardando...
+                </>
+              ) : "Guardar cambios"}
             </Button>
           </form>
         </div>
@@ -428,7 +439,7 @@ export default function PaginaPerfil() {
 
       {/* Dialog de confirmación de eliminación */}
       <Dialog open={dialogAbierto} onOpenChange={setDialogAbierto}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>¿Eliminar tu cuenta?</DialogTitle>
             <DialogDescription>

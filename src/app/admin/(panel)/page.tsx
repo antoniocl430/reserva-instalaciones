@@ -17,6 +17,9 @@ export default function AdminDashboard() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Panel de administración" }, [])
+
   useEffect(() => {
     async function cargarMetricas() {
       try {

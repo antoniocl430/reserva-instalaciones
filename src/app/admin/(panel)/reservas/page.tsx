@@ -50,6 +50,9 @@ interface Pista {
 }
 
 export default function PaginaReservasAdmin() {
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Reservas" }, [])
+
   const [reservas, setReservas] = useState<Reserva[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)

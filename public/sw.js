@@ -1,5 +1,66 @@
-// Service Worker para notificaciones Web Push
-// Gestiona eventos push, clics en notificaciones y renovación de suscripciones
+// Service Worker — gestiona caché offline y notificaciones Web Push
+
+// ─── CACHÉ OFFLINE ────────────────────────────────────────────────────────────
+
+// Nombre de la caché de la app — cambiar versión para invalidar al desplegar
+const NOMBRE_CACHE = 'reservas-v1'
+
+// Páginas a pre-cachear al instalar el SW
+const PAGINAS_PRECACHE = ['/', '/pistas', '/mis-reservas', '/dashboard', '/login']
+
+// Instalar SW: pre-cachear páginas clave
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(NOMBRE_CACHE).then((cache) => cache.addAll(PAGINAS_PRECACHE))
+  )
+  // Activar el nuevo SW inmediatamente sin esperar a que los clientes lo soliciten
+  self.skipWaiting()
+})
+
+// Activar SW: eliminar cachés de versiones anteriores
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((claves) =>
+      Promise.all(
+        claves
+          .filter((clave) => clave !== NOMBRE_CACHE)
+          .map((clave) => caches.delete(clave))
+      )
+    )
+  )
+  // Tomar control de las páginas abiertas sin necesidad de recarga
+  self.clients.claim()
+})
+
+// Fetch: network-first para navegación, fallback a caché
+self.addEventListener('fetch', (event) => {
+  // Solo interceptar peticiones GET
+  if (event.request.method !== 'GET') return
+
+  // Ignorar rutas de API y recursos internos de Next.js (siempre van a red)
+  const url = new URL(event.request.url)
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/')) return
+
+  event.respondWith(
+    fetch(event.request)
+      .then((respuesta) => {
+        // Guardar copia en caché si la respuesta es válida y es del mismo origen
+        if (respuesta && respuesta.status === 200 && respuesta.type === 'basic') {
+          const copia = respuesta.clone()
+          caches.open(NOMBRE_CACHE).then((cache) => cache.put(event.request, copia))
+        }
+        return respuesta
+      })
+      .catch(() => {
+        // Sin red: intentar servir desde caché
+        return caches.match(event.request).then((respuestaCache) => {
+          return respuestaCache || new Response('Sin conexión', { status: 503 })
+        })
+      })
+  )
+})
+
+// ─── NOTIFICACIONES WEB PUSH ──────────────────────────────────────────────────
 
 // Maneja evento push: muestra notificación del sistema
 self.addEventListener('push', (event) => {

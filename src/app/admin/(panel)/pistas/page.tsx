@@ -34,6 +34,9 @@ interface Pista {
 }
 
 export default function PaginaPistasAdmin() {
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Instalaciones" }, [])
+
   const [pistas, setPistas] = useState<Pista[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)

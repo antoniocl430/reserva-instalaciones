@@ -4,6 +4,8 @@ import Link from "next/link"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { obtenerTenantPorSlug } from "@/lib/tenant"
+
+export const metadata = { title: "Instalaciones" }
 import {
   Card,
   CardContent,

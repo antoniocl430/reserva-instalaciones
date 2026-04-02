@@ -34,8 +34,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
     if (!tenant) {
       return {
-        title: "Reservas Deportivas",
+        title: { template: "%s | Reservas Deportivas", default: "Reservas Deportivas" },
         description: "Sistema de reservas de instalaciones deportivas municipales",
+        appleWebApp: {
+          capable: true,
+          title: "Reservas Deportivas",
+          statusBarStyle: "default",
+        },
       }
     }
 
@@ -52,20 +57,41 @@ export async function generateMetadata(): Promise<Metadata> {
       }
     }
 
-    const titulo =
+    const nombreBase =
       configuracion?.metadata?.title ??
       `Reservas Deportivas — ${tenant.municipio}`
+
+    const nombreServicioMeta =
+      configuracion?.nombreServicio ?? nombreBase
 
     const descripcion =
       configuracion?.metadata?.description ??
       "Sistema de reservas de instalaciones deportivas municipales"
 
-    return { title: titulo, description: descripcion }
+    const colorTema = configuracion?.colores?.primario ?? "#2563eb"
+
+    return {
+      title: { template: `%s | ${nombreBase}`, default: nombreBase },
+      description: descripcion,
+      // Meta tags PWA para iOS (Safari no usa Web App Manifest para instalación)
+      appleWebApp: {
+        capable: true,
+        title: nombreServicioMeta,
+        statusBarStyle: "default",
+      },
+      // Color de la barra del navegador en Android/Chrome
+      themeColor: colorTema,
+    }
   } catch {
     // Cualquier fallo (BD no disponible, etc.) → metadata por defecto sin bloquear el render
     return {
-      title: "Reservas Deportivas",
+      title: { template: "%s | Reservas Deportivas", default: "Reservas Deportivas" },
       description: "Sistema de reservas de instalaciones deportivas municipales",
+      appleWebApp: {
+        capable: true,
+        title: "Reservas Deportivas",
+        statusBarStyle: "default",
+      },
     }
   }
 }
@@ -160,6 +186,12 @@ export default async function LayoutRaiz({
         } as React.CSSProperties
       }
     >
+      <head>
+        {/* Icono para iOS (Safari no usa el Web App Manifest para esto) */}
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg" />
+        {/* Habilita "Añadir a pantalla de inicio" en Chrome para Android */}
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         {/* Enlace de salto al contenido principal — accesibilidad WCAG 2.1 */}
         <a

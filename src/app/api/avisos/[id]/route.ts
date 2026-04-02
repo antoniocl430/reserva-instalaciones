@@ -88,7 +88,7 @@ export async function PATCH(
 }
 
 // ─── DELETE /api/avisos/[id] ─────────────────────────────────────────────────
-// Solo ADMIN — soft delete (activo = false)
+// Solo ADMIN — soft delete (marca activo = false, no elimina el registro)
 
 export async function DELETE(
   request: NextRequest,
@@ -123,14 +123,15 @@ export async function DELETE(
       )
     }
 
-    // 4. Desactivar el aviso (soft delete)
+    // 4. Soft delete: desactivar el aviso en lugar de eliminarlo físicamente
+    // Esto permite auditoría y recuperación posterior
     await prisma.aviso.update({
       where: { id },
       data: { activo: false },
     })
 
     return NextResponse.json(
-      { mensaje: "Aviso eliminado correctamente" },
+      { mensaje: "Aviso desactivado correctamente" },
       { status: 200 }
     )
   } catch (error) {

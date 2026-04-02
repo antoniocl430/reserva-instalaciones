@@ -268,7 +268,7 @@ describe('Página de configuración del tenant', () => {
       expect(url).toBe('/api/admin/configuracion')
       expect(opciones.method).toBe('PATCH')
       const cuerpo = JSON.parse(opciones.body)
-      expect(cuerpo.nombreServicio).toBe('Nuevo Nombre')
+      expect(cuerpo.configuracion.nombreServicio).toBe('Nuevo Nombre')
     })
   })
 

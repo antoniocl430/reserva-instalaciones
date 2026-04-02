@@ -19,7 +19,7 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    label: "Tenants",
+    label: "Centros",
     href: "/superadmin/tenants",
     icon: Building2,
   },

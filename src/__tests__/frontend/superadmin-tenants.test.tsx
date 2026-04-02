@@ -111,7 +111,7 @@ describe('SuperadminTenants — /superadmin/(panel)/tenants/page.tsx', () => {
     })
   })
 
-  it('deberia tener boton "Nuevo tenant"', async () => {
+  it('deberia tener boton "Nuevo centro"', async () => {
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => tenantsEjemplo,
@@ -120,7 +120,7 @@ describe('SuperadminTenants — /superadmin/(panel)/tenants/page.tsx', () => {
     render(<SuperadminTenants />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /nuevo tenant/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /nuevo centro/i })).toBeInTheDocument()
     })
   })
 
@@ -130,7 +130,7 @@ describe('SuperadminTenants — /superadmin/(panel)/tenants/page.tsx', () => {
     const { container } = render(<SuperadminTenants />)
 
     // Mientras carga, deberia mostrar titulo pero skeletons en lugar de tabla
-    expect(screen.getByText(/tenants/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/centros/i).length).toBeGreaterThan(0)
   })
 
   it('deberia mostrar error si la API falla', async () => {

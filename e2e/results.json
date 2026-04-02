@@ -1,0 +1,1095 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\anton\\OneDrive - UNIVERSIDAD DE SEVILLA\\Escritorio\\proyecto claude code\\reserva-instalaciones\\e2e\\playwright.config.ts",
+    "rootDir": "C:/Users/anton/OneDrive - UNIVERSIDAD DE SEVILLA/Escritorio/proyecto claude code/reserva-instalaciones/e2e/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/anton/OneDrive - UNIVERSIDAD DE SEVILLA/Escritorio/proyecto claude code/reserva-instalaciones/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "C:/Users/anton/OneDrive - UNIVERSIDAD DE SEVILLA/Escritorio/proyecto claude code/reserva-instalaciones/e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "./results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "admin.spec.ts",
+      "file": "admin.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Flujo administrador",
+          "file": "admin.spec.ts",
+          "line": 40,
+          "column": 6,
+          "specs": [
+            {
+              "title": "01 — Login admin carga correctamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1633,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL login admin: http://localhost:3000/admin/login\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:57:55.246Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-dbc03018ec74184be0c9",
+              "file": "admin.spec.ts",
+              "line": 42,
+              "column": 7
+            },
+            {
+              "title": "02 — Login como admin y acceso al panel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4136,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL tras login admin: http://localhost:3000/admin\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:57:56.975Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-c9cc6c8ae94fd8bf819d",
+              "file": "admin.spec.ts",
+              "line": 53,
+              "column": 7
+            },
+            {
+              "title": "03 — Dashboard admin carga",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6364,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL dashboard admin: http://localhost:3000/admin\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:01.130Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-c9c9513830bea9c64e32",
+              "file": "admin.spec.ts",
+              "line": 64,
+              "column": 7
+            },
+            {
+              "title": "04 — Panel reservas admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6118,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL reservas admin: http://localhost:3000/admin/reservas\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:07.506Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-32a667e0639a52e62821",
+              "file": "admin.spec.ts",
+              "line": 74,
+              "column": 7
+            },
+            {
+              "title": "05 — Panel pistas admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5862,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL pistas admin: http://localhost:3000/admin/pistas\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:13.639Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-8a45d6d6d14f27ee7aba",
+              "file": "admin.spec.ts",
+              "line": 85,
+              "column": 7
+            },
+            {
+              "title": "06 — Panel usuarios admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6175,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL usuarios admin: http://localhost:3000/admin/usuarios\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:19.515Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-3cf3257319372e67f75b",
+              "file": "admin.spec.ts",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "07 — Panel bloqueos admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6222,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL bloqueos admin: http://localhost:3000/admin/bloqueos\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:25.702Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-331719d46b3c7ee2c2f8",
+              "file": "admin.spec.ts",
+              "line": 107,
+              "column": 7
+            },
+            {
+              "title": "08 — Panel configuración admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6208,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL configuracion admin: http://localhost:3000/admin/configuracion\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:31.936Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-7c7e09f20e9741e25cb8",
+              "file": "admin.spec.ts",
+              "line": 118,
+              "column": 7
+            },
+            {
+              "title": "09 — Panel avisos admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6640,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL avisos admin: http://localhost:3000/admin/avisos\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:38.161Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-a5493eeae970dcdf5e8f",
+              "file": "admin.spec.ts",
+              "line": 129,
+              "column": 7
+            },
+            {
+              "title": "10 — Botón crear bloqueo existe en panel",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5914,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Botón crear bloqueo visible: true\n"
+                        },
+                        {
+                          "text": "Modal/form de bloqueo abierto\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:44.810Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-0a3cf15a12c0bd619549",
+              "file": "admin.spec.ts",
+              "line": 140,
+              "column": 7
+            },
+            {
+              "title": "11 — Lista de reservas en panel admin",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5694,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Elementos de reservas encontrados: 1\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:50.735Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-60e708d4f41b3a3b4c54",
+              "file": "admin.spec.ts",
+              "line": 158,
+              "column": 7
+            },
+            {
+              "title": "12 — Protección de rutas admin (sin sesión)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1501,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL acceso admin sin sesión: http://localhost:3000/admin/login\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:56.447Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-1097e98a5cc7f1aaa218",
+              "file": "admin.spec.ts",
+              "line": 170,
+              "column": 7
+            },
+            {
+              "title": "13 — Protección de rutas ciudadano (sin sesión)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1850,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL acceso mis-reservas sin sesión: http://localhost:3000/login\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:57.958Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-bbe0757636b40947a75a",
+              "file": "admin.spec.ts",
+              "line": 182,
+              "column": 7
+            },
+            {
+              "title": "14 — Superadmin panel accesible con credenciales correctas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6724,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL superadmin: http://localhost:3000/superadmin\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:58:59.817Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d4043a9dd1ab94463227-f1ffb7722bbe283ae89a",
+              "file": "admin.spec.ts",
+              "line": 193,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ciudadano.spec.ts",
+      "file": "ciudadano.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Flujo ciudadano",
+          "file": "ciudadano.spec.ts",
+          "line": 42,
+          "column": 6,
+          "specs": [
+            {
+              "title": "01 — Página de inicio carga correctamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2970,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Título página: Reservas Deportivas — Desarrollo\n"
+                        },
+                        {
+                          "text": "Encabezado: Instalaciones — Desarrollo\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:06.560Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-58dbd0c7a26907107070",
+              "file": "ciudadano.spec.ts",
+              "line": 44,
+              "column": 7
+            },
+            {
+              "title": "02 — Página de registro carga correctamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1034,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:09.546Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-8a5c3a83f42da03bddc8",
+              "file": "ciudadano.spec.ts",
+              "line": 59,
+              "column": 7
+            },
+            {
+              "title": "03 — Registro de nuevo ciudadano",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4214,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL tras registro: http://localhost:3000/dashboard\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:10.589Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-ded771ff973449aa5d8d",
+              "file": "ciudadano.spec.ts",
+              "line": 69,
+              "column": 7
+            },
+            {
+              "title": "04 — Login como ciudadano",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2694,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL tras login: http://localhost:3000/dashboard\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:14.816Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-9572498c13ba04eb6f55",
+              "file": "ciudadano.spec.ts",
+              "line": 90,
+              "column": 7
+            },
+            {
+              "title": "05 — Ver listado de pistas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4973,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Elementos de pista encontrados: 4\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:17.520Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-bbc445893765a5765119",
+              "file": "ciudadano.spec.ts",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "06 — Ver detalle de pista y disponibilidad",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4447,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Enlace pista: /pistas/246318d6-9a40-4000-8c54-53d42fc1ab5c\n"
+                        },
+                        {
+                          "text": "URL detalle pista: http://localhost:3000/pistas/246318d6-9a40-4000-8c54-53d42fc1ab5c\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:22.502Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-e7bc348036eb59038fde",
+              "file": "ciudadano.spec.ts",
+              "line": 121,
+              "column": 7
+            },
+            {
+              "title": "07 — Crear una reserva",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10812,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL tras intentar reserva: http://localhost:3000/pistas/246318d6-9a40-4000-8c54-53d42fc1ab5c\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:26.960Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-402e2d3c4a04fee84119",
+              "file": "ciudadano.spec.ts",
+              "line": 141,
+              "column": 7
+            },
+            {
+              "title": "08 — Ver mis reservas",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6278,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL mis-reservas: http://localhost:3000/mis-reservas\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:37.784Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-df59c4dd0f78a01220e7",
+              "file": "ciudadano.spec.ts",
+              "line": 181,
+              "column": 7
+            },
+            {
+              "title": "09 — Cancelar una reserva (si existe)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5486,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Sin reservas activas para cancelar\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:44.073Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-aa3304d7d7d9103f6f5f",
+              "file": "ciudadano.spec.ts",
+              "line": 192,
+              "column": 7
+            },
+            {
+              "title": "10 — Ver perfil de usuario",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6550,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL perfil: http://localhost:3000/perfil\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:49.569Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-8b5ac3927a53670531cf",
+              "file": "ciudadano.spec.ts",
+              "line": 214,
+              "column": 7
+            },
+            {
+              "title": "11 — Página recuperar contraseña carga",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1547,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:56.131Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-f4fd2a1b123e81964657",
+              "file": "ciudadano.spec.ts",
+              "line": 225,
+              "column": 7
+            },
+            {
+              "title": "12 — Dashboard ciudadano",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3712,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "URL dashboard: http://localhost:3000/dashboard\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-31T11:59:57.686Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "204124e73a6425ef0155-ff1b5fb67f98fccbbb3b",
+              "file": "ciudadano.spec.ts",
+              "line": 234,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-03-31T11:57:54.315Z",
+    "duration": 127180.422,
+    "expected": 26,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

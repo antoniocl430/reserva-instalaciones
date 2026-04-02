@@ -70,6 +70,9 @@ const formCrearInicial: FormCrear = {
 }
 
 export default function SuperadminTenants() {
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Centros" }, [])
+
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +98,7 @@ export default function SuperadminTenants() {
         throw new Error("Error al cargar tenants")
       }
       const data = await res.json()
-      setTenants(data)
+      setTenants(data.tenants ?? data)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -251,9 +254,9 @@ export default function SuperadminTenants() {
         {/* Cabecera */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion de Tenants</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Centros</h1>
             <p className="text-sm sm:text-base text-gray-500 mt-1">
-              Crea, edita y gestiona los ayuntamientos del sistema
+              Crea, edita y gestiona los centros deportivos del sistema
             </p>
           </div>
           <Button
@@ -264,7 +267,7 @@ export default function SuperadminTenants() {
             }}
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
           >
-            Nuevo tenant
+            Nuevo centro
           </Button>
         </div>
 
@@ -287,7 +290,7 @@ export default function SuperadminTenants() {
             </div>
           ) : tenants.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No hay tenants creados todavia.
+              No hay centros creados todavía.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -371,9 +374,9 @@ export default function SuperadminTenants() {
       <Dialog open={dialogCrear} onOpenChange={setDialogCrear}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Crear nuevo tenant</DialogTitle>
+            <DialogTitle>Crear nuevo centro</DialogTitle>
             <DialogDescription>
-              Registra un nuevo ayuntamiento en el sistema
+              Registra un nuevo centro deportivo en el sistema
             </DialogDescription>
           </DialogHeader>
 
@@ -481,7 +484,7 @@ export default function SuperadminTenants() {
               disabled={guardandoCrear}
               className="bg-purple-600 hover:bg-purple-700"
             >
-              {guardandoCrear ? "Creando..." : "Crear tenant"}
+              {guardandoCrear ? "Creando..." : "Crear centro"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -491,9 +494,9 @@ export default function SuperadminTenants() {
       <Dialog open={dialogEditar} onOpenChange={setDialogEditar}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Editar tenant</DialogTitle>
+            <DialogTitle>Editar centro</DialogTitle>
             <DialogDescription>
-              Actualiza los datos del ayuntamiento
+              Actualiza los datos del centro deportivo
             </DialogDescription>
           </DialogHeader>
 

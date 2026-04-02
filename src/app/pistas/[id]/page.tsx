@@ -71,9 +71,13 @@ export default function PaginaDetallePista({ params }: Props) {
         if (!res.ok) return
         const json = await res.json()
         const encontrada = (json.instalaciones as Instalacion[]).find((p) => p.id === id)
-        if (encontrada) setPista(encontrada)
+        if (encontrada) {
+          setPista(encontrada)
+          document.title = `Reservar — ${encontrada.nombre}`
+        }
       } catch {
         // Si no carga la info, mostramos nombre genérico
+        document.title = "Reservar pista"
       }
     }
 
@@ -200,10 +204,18 @@ export default function PaginaDetallePista({ params }: Props) {
         <div>
           <button
             onClick={() => router.back()}
-            className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2"
+            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors py-2 -ml-1 mb-2"
+            aria-label="Volver a instalaciones"
           >
             ← Volver
           </button>
+          {pista && (
+            <nav aria-label="Ruta de navegación" className="flex items-center gap-1 text-xs text-gray-400 mb-3 min-w-0">
+              <span className="shrink-0">Instalaciones</span>
+              <span aria-hidden="true">›</span>
+              <span className="truncate text-gray-600 font-medium">{pista.nombre}</span>
+            </nav>
+          )}
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{nombrePista}</h1>
             {pista?.descripcion && (
@@ -240,7 +252,7 @@ export default function PaginaDetallePista({ params }: Props) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Disponibilidad</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 mt-0.5">
               {sesion
                 ? "Haz click en un slot verde para reservar"
                 : "Inicia sesión para poder reservar un slot"}
@@ -310,7 +322,7 @@ export default function PaginaDetallePista({ params }: Props) {
 
       {/* Dialog de confirmación de reserva */}
       <Dialog open={dialogAbierto} onOpenChange={(abierto) => { if (!abierto) cerrarDialog() }}>
-        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirmar reserva</DialogTitle>
             <DialogDescription>
@@ -357,7 +369,15 @@ export default function PaginaDetallePista({ params }: Props) {
               onClick={confirmarReserva}
               disabled={confirmando}
             >
-              {confirmando ? "Cargando..." : "Confirmar reserva"}
+              {confirmando ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Reservando...
+                </>
+              ) : "Confirmar reserva"}
             </Button>
           </DialogFooter>
         </DialogContent>

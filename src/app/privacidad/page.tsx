@@ -1,6 +1,8 @@
 import { headers } from "next/headers"
 import { extraerSlugDelHost, obtenerTenantPorSlug } from "@/lib/tenant"
 
+export const metadata = { title: "Política de privacidad" }
+
 // Obtiene el nombre y municipio del tenant actual para personalizar la política de privacidad
 async function obtenerDatosTenant(): Promise<{ nombre: string; municipio: string }> {
   try {

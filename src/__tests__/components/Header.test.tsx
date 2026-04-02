@@ -35,6 +35,16 @@ vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }))
 
+vi.mock('@/components/AvatarUsuario', () => ({
+  AvatarUsuario: ({ nombre }: { nombre: string }) =>
+    React.createElement('span', { 'data-testid': 'avatar-usuario' }, nombre),
+}))
+
+// Mockear InstalarPWA para evitar dependencias de matchMedia en estos tests
+vi.mock('@/components/InstalarPWA', () => ({
+  default: () => null,
+}))
+
 // --- Suite de tests ---
 
 describe('Header — personalización por tenant', () => {

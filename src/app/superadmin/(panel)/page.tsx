@@ -18,6 +18,9 @@ export default function SuperadminDashboard() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Título de la pestaña del navegador
+  useEffect(() => { document.title = "Panel Superadmin" }, [])
+
   useEffect(() => {
     async function cargarMetricas() {
       try {
@@ -43,7 +46,7 @@ export default function SuperadminDashboard() {
         <div className="max-w-6xl space-y-6">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Resumen global</h2>
-            <p className="text-sm sm:text-base text-gray-500 mt-1">Metricas de todos los tenants</p>
+            <p className="text-sm sm:text-base text-gray-500 mt-1">Métricas de todos los centros</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -69,13 +72,13 @@ export default function SuperadminDashboard() {
 
   const tarjetas = [
     {
-      titulo: "Total tenants",
+      titulo: "Total centros",
       valor: metricas.totalTenants,
-      subtitulo: "ayuntamientos registrados",
+      subtitulo: "centros registrados",
       icono: Building2,
     },
     {
-      titulo: "Tenants activos",
+      titulo: "Centros activos",
       valor: metricas.tenantsActivos,
       subtitulo: "actualmente operativos",
       icono: Activity,
@@ -83,7 +86,7 @@ export default function SuperadminDashboard() {
     {
       titulo: "Total usuarios",
       valor: metricas.totalUsuarios,
-      subtitulo: "en todos los tenants",
+      subtitulo: "en todos los centros",
       icono: Users,
     },
     {
@@ -106,7 +109,7 @@ export default function SuperadminDashboard() {
         {/* Cabecera */}
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Resumen global</h2>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">Metricas de todos los tenants</p>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">Métricas de todos los centros</p>
         </div>
 
         {/* Grid de metricas */}
@@ -137,8 +140,8 @@ export default function SuperadminDashboard() {
             href="/superadmin/tenants"
             className="block p-5 sm:p-6 bg-white border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all"
           >
-            <h3 className="font-semibold text-sm sm:text-base text-gray-900">Gestionar tenants</h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-2">Crear, editar y suspender ayuntamientos</p>
+            <h3 className="font-semibold text-sm sm:text-base text-gray-900">Gestionar centros</h3>
+            <p className="text-xs sm:text-sm text-gray-500 mt-2">Crear, editar y suspender centros deportivos</p>
           </Link>
         </div>
       </div>
