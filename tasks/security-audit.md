@@ -1,98 +1,88 @@
-# Auditoría de Seguridad — Sistema de Reservas Deportivas
+# Auditoria de Seguridad — Sistema de Reservas Deportivas
 
-**Fecha:** 2026-03-27
-**Auditor:** Análisis estático automatizado (Claude Code)
-**Versión auditada:** Next.js 14.2.25 / NextAuth 4.24.5 / Prisma 5.9.1
-**Alcance:** Código fuente completo + dependencias (`npm audit`)
+**Fecha:** 2026-04-06 (segunda auditoria)
+**Auditoria anterior:** 2026-03-27
+**Auditor:** Analisis estatico automatizado (Claude Code)
+**Version auditada:** Next.js 14.2.25 / NextAuth 4.24.5 / Prisma 5.9.1 / Zod 4.3.6
+**Alcance:** Codigo fuente completo (30 API routes) + dependencias + configuracion
 
 ---
 
 ## Resumen Ejecutivo
 
-| Severidad | Cantidad |
-|-----------|----------|
-| CRÍTICA   | 2        |
-| ALTA      | 3        |
-| MEDIA     | 5        |
-| BAJA      | 4        |
-| **TOTAL** | **14**   |
+| Severidad | Cantidad | Corregidas desde auditoria anterior |
+|-----------|----------|--------------------------------------|
+| CRITICA   | 1        | 1 parcialmente corregida (VULN-002)  |
+| ALTA      | 3        | 0                                    |
+| MEDIA     | 4        | 2 corregidas (VULN-007, VULN-009)    |
+| BAJA      | 3        | 2 corregidas (VULN-011, VULN-012)    |
+| **TOTAL** | **11**   | **5 corregidas / 14 originales**     |
 
 ---
 
-## Vulnerabilidades CRÍTICAS
+## Estado de vulnerabilidades de la auditoria anterior (2026-03-27)
+
+| VULN | Estado | Detalle |
+|------|--------|---------|
+| VULN-001 (Credenciales en .env) | **SIN CORREGIR** | El archivo `.env` sigue conteniendo credenciales reales de Supabase, Resend y un NEXTAUTH_SECRET debil |
+| VULN-002 (IDOR delete usuarios) | **CORREGIDA** | Ahora usa `deleteMany` con filtro `tenantId` (linea 33) |
+| VULN-003 (Next.js CVEs) | **SIN CORREGIR** | Sigue en version ^14.2.25 |
+| VULN-004 (Rate limit en memoria) | **PARCIALMENTE** | Se anadio `x-vercel-forwarded-for` como primera opcion (linea 18 auth.ts), pero el Map en memoria sigue sin persistencia entre instancias serverless |
+| VULN-005 (CSP unsafe-inline) | **PARCIALMENTE** | `unsafe-eval` ahora solo se aplica en development (linea 25 next.config.js), pero `unsafe-inline` persiste en produccion |
+| VULN-006 (x-tenant-id inyectable) | **CORREGIDA** | Las rutas publicas ahora solo usan `x-tenant-slug` y `host`, no aceptan `x-tenant-id` |
+| VULN-007 (Contrasenas debiles) | **CORREGIDA** | Minimo 8 caracteres + mayuscula + numero en todos los schemas |
+| VULN-008 (Middleware incompleto) | **PARCIALMENTE** | Se anadieron mas rutas al matcher (lineas 141-146), pero `/api/cuenta` y `/api/cron` siguen sin cubrir |
+| VULN-009 (Tokens no invalidados) | **CORREGIDA** | `updateMany` invalida todos los tokens del usuario (linea 83 nueva-password/route.ts) |
+| VULN-010 (NEXT_PUBLIC_APP_URL) | **NO APLICA** | La variable usa `APP_URL` y `VERCEL_URL` (sin NEXT_PUBLIC), correcto |
+| VULN-011 (bcrypt coste 10) | **CORREGIDA** | Ahora usa coste 12 en superadmin/tenants (linea 72) |
+| VULN-012 (PATCH sin Zod) | **CORREGIDA** | Ahora usa `schemaActualizarTenantSuperadmin.safeParse` (linea 29) |
+| VULN-013 (devDependencies) | **PARCIALMENTE** | `npm audit` reporta 3 vulnerabilidades (1 moderate, 1 high, 1 critical) |
 
 ---
 
-## VULN-001: Credenciales reales de producción en archivos `.env` versionados
+## Vulnerabilidades CRITICAS
 
-**Severidad:** CRÍTICA
-**Tipo:** Exposición de datos / Secretos
-**Ubicación:** `.env` líneas 1-5 y `.env.local` líneas 1-5
-**Descripción:**
-Los archivos `.env` y `.env.local` contienen credenciales reales de la base de datos en Supabase (usuario, contraseña y URL completa), una API key de Resend y el secreto de NextAuth. Aunque el `.gitignore` incluye `.env` y `.env.*`, estos archivos existen en disco y podrían haber sido comprometidos si el repositorio fue empujado a un origen remoto.
+---
 
-Adicionalmente, el `NEXTAUTH_SECRET` es el valor por defecto de plantilla (`"cambia-este-secreto-en-produccion..."`) — extremadamente débil.
+### VULN-001: Credenciales reales de produccion en archivo `.env` en disco (SIN CORREGIR)
+
+**Severidad:** CRITICA
+**Tipo:** Exposicion de datos / Secretos
+**Ubicacion:** `.env` lineas 1-6
+**Descripcion:**
+El archivo `.env` sigue conteniendo credenciales reales:
+- URL completa de PostgreSQL en Supabase con usuario y contrasena
+- API key de Resend
+- NEXTAUTH_SECRET con valor placeholder extremadamente debil ("cambia-este-secreto-en-produccion...")
+- Email personal del desarrollador
+
+Aunque `.gitignore` incluye `.env` y los archivos nunca fueron commiteados al repositorio git (verificado con `git log --all`), las credenciales estan activas y el secreto JWT es trivialmente adivinable.
 
 **Impacto:**
-- Acceso completo a la base de datos PostgreSQL en Supabase (lectura y escritura de todos los datos de todos los tenants)
-- Envío de emails fraudulentos usando la cuenta de Resend (API key expuesta)
-- Falsificación de tokens JWT de sesión al conocer el `NEXTAUTH_SECRET` débil
-- Escalada de privilegios: un atacante puede crear usuarios ADMIN o SUPERADMIN directamente en BD
+- Falsificacion de tokens JWT: cualquiera que conozca el secreto puede crear sesiones de ADMIN o SUPERADMIN
+- Acceso completo a la base de datos PostgreSQL en Supabase
+- Envio de emails fraudulentos con la API key de Resend
+- El email personal expone informacion del desarrollador
 
 **Evidencia:**
 ```
 DATABASE_URL="postgresql://postgres.njxddgmppvzrkwqohgux:58945218ttUU@aws-1-eu-west-1.pooler.supabase.com:6543/postgres..."
-DIRECT_URL="postgresql://postgres.njxddgmppvzrkwqohgux:58945218ttUU@aws-1-eu-west-1.pooler.supabase.com:5432/postgres"
 NEXTAUTH_SECRET="cambia-este-secreto-en-produccion-usa-openssl-rand-base64-32"
 RESEND_API_KEY="re_LpFKvBHA_FdM46w3AxRoELyYSDdVdQVQH"
 ```
 
-**Corrección:**
-1. **Acción inmediata:** Rotar TODAS las credenciales expuestas en el panel de Supabase y en Resend.
-2. Generar un `NEXTAUTH_SECRET` fuerte: `openssl rand -base64 32`
-3. Revisar historial git: `git log --all --full-history -- .env .env.local` para confirmar que no fueron commiteados.
-4. En producción, usar exclusivamente variables de entorno del proveedor (Vercel Dashboard), nunca archivos `.env` locales con secretos reales.
+**Correccion:**
+1. **INMEDIATO:** Rotar la contrasena de la base de datos en Supabase
+2. **INMEDIATO:** Revocar y regenerar la API key de Resend
+3. **INMEDIATO:** Generar un NEXTAUTH_SECRET fuerte: `openssl rand -base64 32`
+4. En Vercel, configurar todas las variables exclusivamente desde el Dashboard (Settings > Environment Variables)
+5. El `.env` local debe usar valores de desarrollo, nunca credenciales de produccion
 
----
-
-## VULN-002: IDOR en eliminación de usuarios admin — sin filtro de tenant
-
-**Severidad:** CRÍTICA
-**Tipo:** Autorización / IDOR (Insecure Direct Object Reference)
-**Ubicación:** `src/app/api/admin/usuarios/[id]/route.ts` línea 34
-**Descripción:**
-El endpoint `DELETE /api/admin/usuarios/[id]` verifica que el solicitante tiene rol ADMIN, pero **no verifica** que el usuario a eliminar pertenece al mismo tenant. Un administrador del tenant A puede eliminar usuarios administradores del tenant B simplemente conociendo (o adivinando) el UUID.
-
-**Impacto:**
-- Un admin de cualquier tenant puede eliminar cuentas de admin de otros tenants
-- Dejar tenants sin ningún administrador (indisponibilidad de servicio para ese ayuntamiento)
-- Eliminar el admin raíz de un tenant rival dejándolo sin acceso
-
-**Evidencia:**
-```typescript
-// src/app/api/admin/usuarios/[id]/route.ts — línea 34
-await prisma.usuario.delete({
-  where: { id: params.id }, // ← SIN filtro tenantId: cualquier UUID es eliminable
-})
-```
-Contrasta con el patrón correcto usado en otros endpoints del mismo proyecto:
-```typescript
-// src/app/api/admin/bloqueos/[id]/route.ts — línea 27 (correcto)
-const bloqueo = await prisma.bloqueo.findFirst({
-  where: { id: params.id, tenantId: sesion.user.tenantId }, // ← verificación correcta
-})
-```
-
-**Corrección:**
-```typescript
-// Verificar primero que el usuario pertenece al tenant del admin autenticado
-const usuarioAEliminar = await prisma.usuario.findFirst({
-  where: { id: params.id, tenantId: sesion.user.tenantId },
-})
-if (!usuarioAEliminar) {
-  return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-}
-await prisma.usuario.delete({ where: { id: params.id } })
+**Verificacion:**
+```bash
+# Confirmar que .env no tiene credenciales de produccion
+grep -i "supabase\|resend\|cambia-este" .env
+# El resultado debe ser vacio
 ```
 
 ---
@@ -101,90 +91,97 @@ await prisma.usuario.delete({ where: { id: params.id } })
 
 ---
 
-## VULN-003: Next.js desactualizado con múltiples CVEs de severidad alta (DoS y SSRF)
+### VULN-003: Next.js 14.2.25 con multiples CVEs activas (SIN CORREGIR)
 
 **Severidad:** ALTA
-**Tipo:** Configuración / Dependencias desactualizadas
-**Ubicación:** `package.json` línea 35 — `"next": "^14.2.25"`
-**Descripción:**
-La versión instalada (14.2.25) está afectada por al menos 10 vulnerabilidades conocidas según `npm audit`:
+**Tipo:** Dependencias / CVE conocidas
+**Ubicacion:** `package.json` — `"next": "^14.2.25"`
+**Descripcion:**
+`npm audit` reporta 11 vulnerabilidades en Next.js incluyendo:
+- **GHSA-mwv6-3258-q52c** (HIGH): DoS con Server Components
+- **GHSA-5j59-xgg2-r9c4** (HIGH): DoS con Server Components (fix incompleto)
+- **GHSA-4342-x723-ch2f** (MODERATE): SSRF via middleware redirects
+- **GHSA-ggv3-7p47-pfv8** (MODERATE): HTTP Request Smuggling en rewrites
+- **GHSA-h25m-26qc-wcjf** (HIGH): DoS via HTTP deserialization
 
-- **GHSA-mwv6-3258-q52c** (HIGH, CVSS 7.5): DoS con Server Components maliciosos — `>=13.3.0 <14.2.34`
-- **GHSA-5j59-xgg2-r9c4** (HIGH, CVSS 7.5): DoS con Server Components (fix incompleto) — `>=13.3.1 <14.2.35`
-- **GHSA-4342-x723-ch2f** (MODERATE, CVSS 6.5): SSRF mediante redirecciones en Middleware — `<14.2.32`
-- **GHSA-g5qg-72qw-gw5v** (MODERATE, CVSS 6.2): Cache Key Confusion en Image Optimization — `<14.2.31`
-- **GHSA-h25m-26qc-wcjf** (HIGH, CVSS 7.5): DoS por deserialización HTTP en Server Components — `<15.0.8`
-- **GHSA-ggv3-7p47-pfv8** (MODERATE): HTTP Request Smuggling en rewrites — `<15.5.13`
-- **GHSA-223j-4rm8-mrmf** (LOW): Filtración de `x-middleware-subrequest-id` — versión exacta 14.2.25
+Tambien hay vulnerabilidades criticas en `handlebars` (dependencia transitiva).
 
 **Impacto:**
-- Denegación de servicio mediante peticiones HTTP especialmente crafteadas a Server Components
-- Posible SSRF explotando redirecciones del middleware
-- Filtración de cabeceras internas de subpeticiones (exacerba otros ataques)
+- Denegacion de servicio explotable remotamente
+- Posible SSRF a traves del middleware
+- HTTP request smuggling
 
-**Corrección:**
+**Correccion:**
 ```bash
-npm install next@latest   # Actualizar a >= 15.5.14 para corregir todas las CVEs conocidas
+npm audit fix
+# Si hay breaking changes:
+npm install next@latest
 ```
 
 ---
 
-## VULN-004: Rate limiting en memoria — bypasseable en entorno serverless y mediante cabeceras forjadas
+### VULN-004: Rate limiting solo en memoria — ineficaz en Vercel serverless (PARCIALMENTE CORREGIDO)
 
 **Severidad:** ALTA
-**Tipo:** Autenticación / Control de acceso
-**Ubicación:** `src/lib/rate-limit.ts` línea 6 y `src/lib/auth.ts` línea 18
-**Descripción:**
-El rate limiter de login usa un `Map` en memoria del proceso Node.js. En Vercel (serverless), cada petición puede ejecutarse en una instancia diferente, por lo que el estado del mapa no se comparte entre instancias. Un atacante puede realizar miles de intentos de fuerza bruta en paralelo.
-
-Adicionalmente, la función de extracción de IP confía en el header `x-forwarded-for` que puede ser inyectado por el cliente:
+**Tipo:** Autenticacion / Fuerza bruta
+**Ubicacion:** `src/lib/rate-limit.ts` linea 6, `src/lib/auth.ts` linea 15
+**Descripcion:**
+La mejora de usar `x-vercel-forwarded-for` como primera opcion para obtener la IP real es correcta y mitiga el bypass por cabeceras falsificadas en Vercel. Sin embargo, el almacenamiento en `Map` en memoria sigue sin persistir entre instancias serverless, haciendo que el rate limiting sea ineficaz en produccion.
 
 **Evidencia:**
 ```typescript
-// rate-limit.ts línea 6 — estado en memoria, no persistente entre instancias serverless
+// rate-limit.ts linea 6 — estado volatil entre cold starts
 const intentos = new Map<string, { count: number; resetAt: number }>()
-
-// auth.ts línea 17 — header falsificable por el cliente
-const forwarded = req.headers?.["x-forwarded-for"]
-if (forwarded) {
-  return forwarded.split(",")[0].trim() // ← el cliente puede enviar cualquier IP aquí
-}
 ```
 
 **Impacto:**
-- En Vercel: rate limiting esencialmente inoperativo
-- Con cabeceras forjadas: bypass completo del rate limit con solo cambiar el header `X-Forwarded-For` en cada petición
-- Ataques de fuerza bruta sobre contraseñas de 6 caracteres mínimo son viables
+- Cada cold start en Vercel reinicia el contador de intentos
+- Un atacante distribuido puede hacer fuerza bruta con miles de peticiones en paralelo
+- La proteccion funciona correctamente en desarrollo local (proceso unico)
 
-**Corrección:**
-1. Usar Redis distribuido (Upstash Redis + `@upstash/ratelimit`) para estado compartido
-2. En Vercel, usar `request.ip` o el header `x-vercel-forwarded-for` (establecido por Vercel, no modificable por el cliente)
-3. Aumentar el mínimo de contraseñas a 8 caracteres (ver VULN-007)
+**Correccion:**
+Implementar rate limiting con Redis distribuido:
+```bash
+npm install @upstash/ratelimit @upstash/redis
+```
+```typescript
+import { Ratelimit } from "@upstash/ratelimit"
+import { Redis } from "@upstash/redis"
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.fixedWindow(5, "15 m"),
+})
+```
 
 ---
 
-## VULN-005: CSP con `unsafe-inline` y `unsafe-eval` — protección XSS nula
+### VULN-005: CSP con `unsafe-inline` en produccion (PARCIALMENTE CORREGIDO)
 
 **Severidad:** ALTA
-**Tipo:** Configuración / XSS
-**Ubicación:** `next.config.js` línea 22
-**Descripción:**
-La política Content-Security-Policy incluye `'unsafe-inline'` y `'unsafe-eval'` en `script-src`, lo que anula completamente la protección XSS que ofrece una CSP. Si algún atacante logra inyectar HTML en la página (a través de un aviso del tablón, nombre de instalación u otro campo renderizado), puede ejecutar JavaScript arbitrario.
+**Tipo:** Configuracion / XSS
+**Ubicacion:** `next.config.js` linea 25
+**Descripcion:**
+Se corrigio correctamente que `unsafe-eval` solo se aplique en desarrollo. Sin embargo, `unsafe-inline` sigue presente en `script-src` para produccion, lo que permite la ejecucion de scripts inyectados inline.
 
 **Evidencia:**
 ```javascript
-// next.config.js línea 22
-"script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval requerido por Next.js en dev
+// next.config.js linea 25-26
+process.env.NODE_ENV === "development"
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'",  // <-- unsafe-inline en produccion
 ```
 
 **Impacto:**
-- La CSP no actúa como segunda línea de defensa contra XSS
-- Aunque el ORM (Prisma) y el framework (React) previenen XSS por defecto al escapar salidas, la ausencia de CSP efectiva elimina la defensa en profundidad
+- Si un atacante logra inyectar HTML (por ejemplo via XSS stored en titulo de aviso), puede ejecutar JavaScript arbitrario
+- La CSP no actua como segunda linea de defensa
 
-**Corrección:**
-1. En producción, eliminar `'unsafe-eval'` (Next.js 14+ no lo requiere)
-2. Migrar a CSP basada en nonces usando el soporte nativo de Next.js App Router
-3. Usar `'strict-dynamic'` para scripts de confianza sin `unsafe-inline`
+**Correccion:**
+Migrar a CSP basada en nonces con el soporte nativo de Next.js:
+```javascript
+// En produccion, usar strict-dynamic con nonces
+"script-src 'self' 'nonce-${nonce}' 'strict-dynamic'",
+```
 
 ---
 
@@ -192,120 +189,134 @@ La política Content-Security-Policy incluye `'unsafe-inline'` y `'unsafe-eval'`
 
 ---
 
-## VULN-006: Header `x-tenant-id` inyectable por clientes externos en rutas públicas
+### VULN-008: Middleware no cubre `/api/cuenta` ni `/api/cron` (PARCIALMENTE CORREGIDO)
 
 **Severidad:** MEDIA
-**Tipo:** Autorización / Manipulación de tenant
-**Ubicación:** `src/app/api/instalaciones/route.ts` línea 7, `src/app/api/disponibilidad/route.ts` línea 6, `src/app/api/avisos/route.ts` línea 16
-**Descripción:**
-Las rutas públicas resuelven el `tenantId` dando prioridad al header `x-tenant-id` si está presente, antes de leer `x-tenant-slug` o derivar del host. Un cliente externo puede incluir este header con el UUID de cualquier tenant y obtener datos de esa organización.
+**Tipo:** Configuracion / Defensa en profundidad
+**Ubicacion:** `src/middleware.ts` lineas 124-147
+**Descripcion:**
+El matcher del middleware se amplio respecto a la auditoria anterior (ahora incluye `/api/admin/:path*`, `/api/reservas/:path*`, `/api/avisos/:path*`, `/api/push/:path*`). Sin embargo, las siguientes rutas siguen sin cobertura del middleware:
+- `/api/cuenta` y `/api/cuenta/*` (perfil, avatar, exportar, eliminar cuenta)
+- `/api/cron/recordatorios` (cron job)
+
+Los endpoints si verifican autenticacion internamente, pero la falta de cobertura del middleware elimina la capa de inyeccion del header `x-tenant-slug` para estas rutas.
 
 **Evidencia:**
 ```typescript
-async function resolverTenantId(request: NextRequest): Promise<string | null> {
-  const tenantId = request.headers.get("x-tenant-id") // ← cliente puede inyectar cualquier UUID
-  if (tenantId) return tenantId
-  // ...
-}
-```
-
-**Impacto:**
-- Enumeración de instalaciones, disponibilidad y avisos de cualquier tenant conociendo su UUID
-- En sistemas multi-tenant, esto representa filtración de datos entre organizaciones
-
-**Corrección:**
-Eliminar el soporte para `x-tenant-id` en las rutas públicas. Solo confiar en `x-tenant-slug` (inyectado por el middleware Edge) o en el `host` directamente:
-```typescript
-async function resolverTenantId(request: NextRequest): Promise<string | null> {
-  // Solo confiar en x-tenant-slug (inyectado por middleware) o en el host
-  const slug =
-    request.headers.get("x-tenant-slug") ??
-    extraerSlugDelHost(request.headers.get("host") ?? "")
-  return obtenerTenantIdPorSlug(slug)
-}
-```
-
----
-
-## VULN-007: Contraseñas débiles — mínimo de solo 6 caracteres
-
-**Severidad:** MEDIA
-**Tipo:** Autenticación
-**Ubicación:** `src/lib/validaciones.ts` líneas 15, 93, 247
-**Descripción:**
-Los schemas de Zod aceptan contraseñas con mínimo de 6 caracteres, sin requisitos de complejidad. Esto aplica al registro de ciudadanos, creación de usuarios admin y creación de tenants por superadmin. Sin un rate limiting robusto (ver VULN-004), contraseñas simples como "123456" son vulnerables a fuerza bruta.
-
-**Evidencia:**
-```typescript
-// validaciones.ts — líneas 15, 93, 247
-password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-```
-
-**Corrección:**
-```typescript
-password: z.string()
-  .min(8, "La contraseña debe tener al menos 8 caracteres")
-  .regex(/^(?=.*[A-Za-z])(?=.*\d)/, "La contraseña debe contener letras y números"),
-```
-
----
-
-## VULN-008: Middleware no cubre rutas de API privadas — riesgo ante descuidos futuros
-
-**Severidad:** MEDIA
-**Tipo:** Configuración / Autenticación
-**Ubicación:** `src/middleware.ts` líneas 124-138
-**Descripción:**
-El `matcher` del middleware no incluye las rutas de API privadas (excepto `/api/disponibilidad` y `/api/superadmin`). La seguridad depende completamente de que cada API route llame a `getServerSession` individualmente. Si un desarrollador añade una nueva ruta sin verificación de sesión, quedará expuesta sin ninguna capa de defensa previa.
-
-**Evidencia:**
-```typescript
+// middleware.ts — matcher actual (lineas 124-147)
 export const config = {
   matcher: [
-    // UI routes...
+    // ... rutas de pagina ...
     "/api/disponibilidad/:path*",
     "/api/superadmin/:path*",
-    // ← Ausentes: /api/admin/:path*, /api/reservas/:path*, /api/avisos
+    "/api/admin/:path*",
+    "/api/reservas/:path*",
+    "/api/instalaciones/:path*",
+    "/api/avisos/:path*",
+    "/api/push/:path*",
+    // AUSENTES: /api/cuenta/:path*, /api/cron/:path*
   ],
 }
 ```
 
-**Corrección:**
-Adoptar un patrón deny-by-default para las rutas de API con una allowlist explícita para las rutas públicas:
+**Impacto:**
+- Bajo impacto directo: los endpoints verifican sesion internamente
+- `/api/cron/recordatorios` esta protegido por `CRON_SECRET`, no por sesion
+- Riesgo principal: si se anade un nuevo endpoint bajo `/api/cuenta/` sin verificacion de sesion, no hay capa de defensa
+
+**Correccion:**
+Anadir al matcher:
 ```typescript
-const RUTAS_API_PUBLICAS = ["/api/auth", "/api/instalaciones", "/api/disponibilidad", "/api/avisos"]
-// matcher: incluir /api/:path* y verificar en middleware
+"/api/cuenta/:path*",
 ```
 
 ---
 
-## VULN-009: Tokens de recuperación no se invalidan masivamente al cambiar contraseña
+### VULN-014: Endpoint cron protegido solo por secreto compartido sin validacion adicional
 
 **Severidad:** MEDIA
-**Tipo:** Autenticación
-**Ubicación:** `src/app/api/auth/nueva-password/route.ts` líneas 77-85
-**Descripción:**
-Al resetear la contraseña, solo se marca como usado el token que se utilizó. Si el usuario (o un atacante) generó múltiples tokens de recuperación para el mismo email, los tokens adicionales siguen siendo válidos durante 1 hora tras el cambio de contraseña.
+**Tipo:** Autenticacion / Autorizacion
+**Ubicacion:** `src/app/api/cron/recordatorios/route.ts` lineas 18-25
+**Descripcion:**
+El endpoint `/api/cron/recordatorios` se protege comparando el header `Authorization: Bearer <CRON_SECRET>` con la variable de entorno `CRON_SECRET`. Esta comparacion usa `!==` (comparacion de strings estricta) en lugar de una comparacion de tiempo constante, lo que podria permitir un ataque de timing side-channel para deducir el secreto byte a byte.
+
+Ademas, si `CRON_SECRET` no esta definido (`undefined`), la comparacion `authHeader !== "Bearer undefined"` podria ser bypasseada enviando exactamente ese valor.
 
 **Evidencia:**
 ```typescript
-// nueva-password/route.ts — solo invalida el token actual, no todos los del usuario
-await prisma.$transaction([
-  prisma.usuario.update({ where: { id: ... }, data: { passwordHash } }),
-  prisma.tokenRecuperacion.update({ where: { id: tokenRecuperacion.id }, data: { usado: true } }),
-  // ← Faltan: invalidar TODOS los tokens pendientes del usuario
-])
+// cron/recordatorios/route.ts lineas 21-25
+const cronSecret = process.env.CRON_SECRET
+if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+  // Si CRON_SECRET es undefined, authHeader === "Bearer undefined" pasa la validacion
 ```
 
-**Corrección:**
+**Impacto:**
+- Si `CRON_SECRET` no esta configurado: cualquiera puede disparar el cron enviando `Authorization: Bearer undefined`
+- Timing attack teorico (bajo riesgo practico por la latencia de red)
+
+**Correccion:**
 ```typescript
-await prisma.$transaction([
-  prisma.usuario.update({ where: { id: tokenRecuperacion.usuario.id }, data: { passwordHash } }),
-  prisma.tokenRecuperacion.updateMany({
-    where: { usuarioId: tokenRecuperacion.usuario.id, usado: false },
-    data: { usado: true },
-  }),
-])
+const cronSecret = process.env.CRON_SECRET
+if (!cronSecret) {
+  console.error("[Cron] CRON_SECRET no configurado — endpoint deshabilitado")
+  return NextResponse.json({ error: "Servicio no disponible" }, { status: 503 })
+}
+if (!authHeader || !timingSafeEqual(authHeader, `Bearer ${cronSecret}`)) {
+  return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+}
+```
+
+---
+
+### VULN-015: Falta de rate limiting en registro y recuperacion de contrasena
+
+**Severidad:** MEDIA
+**Tipo:** Abuso / DoS
+**Ubicacion:** `src/app/api/auth/registro/route.ts`, `src/app/api/auth/recuperar/route.ts`
+**Descripcion:**
+Los endpoints de registro y recuperacion de contrasena no tienen ningun rate limiting. Un atacante puede:
+- Crear miles de cuentas de ciudadano automaticamente (spam de registros)
+- Generar miles de tokens de recuperacion y emails (abuso de la cuota de Resend)
+
+**Impacto:**
+- Agotamiento de cuota de emails en Resend (plan gratuito: 100/dia)
+- Llenado de la base de datos con usuarios falsos
+- Posible enumeracion de emails via timing (aunque se mitiga parcialmente con la respuesta 200 constante en recuperacion)
+
+**Correccion:**
+Aplicar rate limiting por IP en estos endpoints (5 intentos/hora para registro, 3 intentos/hora para recuperacion).
+
+---
+
+### VULN-016: Plantillas de email con interpolacion de datos sin escapar HTML
+
+**Severidad:** MEDIA
+**Tipo:** XSS / Inyeccion
+**Ubicacion:** `src/lib/email.ts` lineas 149, 154, 224
+**Descripcion:**
+Las plantillas HTML de email usan template literals con interpolacion directa de datos del usuario (`${datos.nombreUsuario}`, `${datos.nombreInstalacion}`, etc.) sin escapar caracteres HTML. Si un usuario se registra con un nombre como `<script>alert('xss')</script>`, ese contenido se inserta directamente en el HTML del email.
+
+**Evidencia:**
+```typescript
+// email.ts linea 149
+<p>Hola, <strong>${datos.nombreUsuario}</strong>:</p>
+// Si nombreUsuario = '<img src=x onerror=alert(1)>' se inyecta directamente
+```
+
+**Impacto:**
+- XSS en clientes de email que renderizan HTML (la mayoria de clientes modernos bloquean scripts, pero no todos bloquean tags como `<img>` con event handlers)
+- Riesgo moderado porque los clientes de email tienen sus propias protecciones
+
+**Correccion:**
+Crear una funcion helper de escapado HTML y aplicarla a todos los datos interpolados:
+```typescript
+function escaparHtml(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 ```
 
 ---
@@ -314,131 +325,165 @@ await prisma.$transaction([
 
 ---
 
-## VULN-010: `NEXT_PUBLIC_APP_URL` expone innecesariamente configuración al bundle cliente
+### VULN-017: Log de ID de usuario en push/suscribir
 
 **Severidad:** BAJA
-**Tipo:** Configuración / Exposición de datos
-**Ubicación:** `src/app/page.tsx` líneas 50, 76
-**Descripción:**
-La variable `NEXT_PUBLIC_APP_URL` tiene el prefijo `NEXT_PUBLIC_`, lo que la incrusta en el bundle JavaScript del cliente. La variable se usa en un Server Component donde no es necesaria la exposición al cliente. Las variables `NEXT_PUBLIC_` deben usarse solo cuando el código del navegador las necesita.
-
-**Corrección:**
-Renombrar a `APP_URL` (sin prefijo `NEXT_PUBLIC_`) para mantenerla solo en el servidor.
-
----
-
-## VULN-011: Coste de bcrypt inconsistente — coste 10 en creación de tenants
-
-**Severidad:** BAJA
-**Tipo:** Autenticación
-**Ubicación:** `src/app/api/superadmin/tenants/route.ts` línea 72
-**Descripción:**
-El endpoint de creación de tenants usa `bcrypt.hash(passwordAdmin, 10)`, mientras que el resto del código usa coste 12 de manera consistente.
-
-**Evidencia:**
+**Tipo:** Exposicion de datos / Logs
+**Ubicacion:** `src/app/api/push/suscribir/route.ts` linea 28
+**Descripcion:**
+El endpoint de suscripcion push loguea el ID del usuario en cada peticion POST:
 ```typescript
-// superadmin/tenants/route.ts línea 72 — coste 10 (inconsistente)
-const passwordHash = await bcrypt.hash(passwordAdmin, 10)
-// vs. auth/registro/route.ts línea 46 — coste 12 (estándar del proyecto)
-const passwordHash = await bcrypt.hash(password, 12)
+console.log("[Push] POST suscribir -- sesion:", sesion?.user?.id ?? "null")
 ```
+Esto es un log de depuracion que no deberia estar en produccion. Los IDs de usuario en logs pueden facilitar la correlacion de actividad.
 
-**Corrección:**
+**Correccion:**
+Eliminar o condicionar al entorno de desarrollo:
 ```typescript
-const passwordHash = await bcrypt.hash(passwordAdmin, 12)
-```
-
----
-
-## VULN-012: `PATCH /api/superadmin/tenants/[id]` sin validación Zod
-
-**Severidad:** BAJA
-**Tipo:** Validación de entrada
-**Ubicación:** `src/app/api/superadmin/tenants/[id]/route.ts` líneas 28-39
-**Descripción:**
-Este endpoint extrae campos del body directamente sin usar el schema `schemaActualizarTenantSuperadmin` definido en validaciones.ts, a diferencia del patrón uniforme del resto de endpoints. La validación manual implementada es correcta pero inconsistente y frágil ante cambios futuros.
-
-**Corrección:**
-```typescript
-const validacion = schemaActualizarTenantSuperadmin.safeParse(body)
-if (!validacion.success) {
-  return NextResponse.json({ error: "Datos inválidos", detalles: validacion.error.flatten().fieldErrors }, { status: 400 })
+if (process.env.NODE_ENV === "development") {
+  console.log("[Push] POST suscribir -- sesion:", sesion?.user?.id ?? "null")
 }
 ```
 
 ---
 
-## VULN-013: Dependencias de desarrollo con 26 vulnerabilidades moderadas
+### VULN-018: CSP no permite imagenes externas necesarias para avatares
+
+**Severidad:** BAJA
+**Tipo:** Configuracion
+**Ubicacion:** `next.config.js` linea 29
+**Descripcion:**
+La directiva `img-src` de la CSP es `'self' data: blob:`, pero los avatares pueden almacenarse en Vercel Blob (dominio externo) o usar `api.dicebear.com` como fallback. Las imagenes externas seran bloqueadas por la CSP en produccion.
+
+**Evidencia:**
+```typescript
+// cuenta/avatar/route.ts — URLs de avatar externas
+avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=...`
+// o
+const { url } = await put(`avatars/${sesion.user.id}.${extension}`, ...)  // Vercel Blob URL
+```
+
+**Correccion:**
+Ampliar `img-src` para incluir los dominios necesarios:
+```javascript
+"img-src 'self' data: blob: https://api.dicebear.com https://*.public.blob.vercel-storage.com",
+```
+
+---
+
+### VULN-013: Dependencias con vulnerabilidades conocidas (ACTUALIZADO)
 
 **Severidad:** BAJA
 **Tipo:** Dependencias
-**Ubicación:** `package.json` — `devDependencies`
-**Descripción:**
-`npm audit` reporta 26 vulnerabilidades de severidad moderada en cadenas de dependencias de Jest y `@react-email/render` (vía Resend). Al ser dependencias de desarrollo, el riesgo se limita a entornos de CI/CD y máquinas de desarrollo, no al runtime de producción.
+**Ubicacion:** `package.json`
+**Descripcion:**
+`npm audit` reporta 3 vulnerabilidades:
+- `brace-expansion` (moderate): DoS por secuencia zero-step
+- `handlebars` (critical): Multiples inyecciones JS y prototype pollution — es dependencia transitiva de testing
+- `next` (high): Multiples CVEs (ver VULN-003)
 
-**Corrección:**
-- Ejecutar `npm audit --production` en CI/CD para verificar solo dependencias de producción
-- Revisar periódicamente y actualizar dependencias de testing cuando los fixes estén disponibles
-
----
-
-## Hallazgos Positivos — Buenas Prácticas Identificadas
-
-El código presenta numerosas buenas prácticas de seguridad:
-
-1. **Aislamiento de tenant consistente**: casi todas las consultas filtran por `tenantId` junto al `id`, previniendo acceso cruzado entre organizaciones (excepto VULN-002).
-2. **Protección contra timing attacks en login**: uso de `HASH_DUMMY` para igualar el tiempo de respuesta si el usuario no existe.
-3. **Transacciones para prevenir race conditions**: `prisma.$transaction` en creación y cancelación de reservas.
-4. **Límite de longitud en contraseñas**: 72 bytes máximo para prevenir DoS con bcrypt.
-5. **Tokens de reset con expiración y single-use**: expiran en 1 hora y se invalidan tras el uso.
-6. **Headers de seguridad**: X-Frame-Options DENY, HSTS, X-Content-Type-Options, Referrer-Policy y Permissions-Policy configurados.
-7. **Sin filtración de passwordHash**: los endpoints usan `select` explícito y nunca devuelven hashes.
-8. **Sesiones JWT con TTL corto**: 8 horas en lugar de 30 días por defecto.
-9. **Invalidación proactiva de sesiones**: el callback JWT verifica en cada refresh que el usuario sigue activo en BD.
-10. **Validación de entrada con Zod**: la mayoría de endpoints validan y sanitizan entradas de forma estricta.
+**Correccion:**
+```bash
+npm audit fix
+```
 
 ---
 
-## Plan de Remediación Priorizado
+## Verificacion de hallazgos previos solicitados por el usuario
 
-| Prioridad | VULN | Acción | Estimación |
+### BUG-02: Cancelar usa transaccion
+**Estado: VERIFICADO CORRECTO**
+- `src/app/api/reservas/[id]/cancelar/route.ts` linea 35: toda la logica de cancelacion (busqueda, validacion de permisos, update) se ejecuta dentro de `prisma.$transaction`
+- `src/app/api/admin/reservas/[id]/cancelar/route.ts` linea 25: idem para la cancelacion admin
+
+### BUG-03: Crear reserva valida dentro de transaccion
+**Estado: VERIFICADO CORRECTO**
+- `src/app/api/reservas/route.ts` linea 123: el conteo de reservas activas del ciudadano Y la verificacion de slot disponible se ejecutan DENTRO de `prisma.$transaction`, previniendo race conditions
+
+### SEG-02: Validacion de fecha con regex
+**Estado: VERIFICADO CORRECTO**
+- `src/app/api/disponibilidad/route.ts` linea 79: `REGEX_FECHA.test(fecha)` valida formato YYYY-MM-DD antes de usarlo
+
+### SEG-01: Try/catch en instalaciones
+**Estado: VERIFICADO CORRECTO**
+- `src/app/api/instalaciones/route.ts` linea 23: toda la logica envuelta en try/catch con mensaje generico en caso de error
+
+---
+
+## Hallazgos Positivos — Buenas Practicas Identificadas
+
+El codigo presenta un nivel de seguridad notablemente alto para su etapa de desarrollo:
+
+1. **Aislamiento multi-tenant robusto**: TODAS las consultas a BD filtran por `tenantId` junto al `id` del recurso. Se verifico en los 30 endpoints. La VULN-002 (IDOR en delete usuarios) fue corregida.
+
+2. **Proteccion contra timing attacks**: Hash dummy en login (linea 9 auth.ts) para igualar tiempo de respuesta cuando el usuario no existe.
+
+3. **Transacciones en operaciones criticas**: Creacion de reservas, cancelacion y eliminacion de cuentas usan `$transaction` para prevenir race conditions y doble reserva.
+
+4. **Limite de 72 bytes en contrasenas**: Previene DoS con payloads enormes en bcrypt (linea 49 auth.ts).
+
+5. **Tokens de recuperacion seguros**: UUID criptografico (`randomUUID`), expiracion de 1 hora, single-use, invalidacion masiva al usar cualquier token del usuario.
+
+6. **Headers de seguridad completos**: X-Frame-Options DENY, HSTS 1 ano, X-Content-Type-Options nosniff, Referrer-Policy strict-origin, Permissions-Policy restrictiva.
+
+7. **Nunca se filtra passwordHash**: Todos los endpoints usan `select` explicito excluyendo el hash.
+
+8. **Sesiones JWT con TTL de 8 horas**: Significativamente mejor que los 30 dias por defecto de NextAuth.
+
+9. **Invalidacion proactiva de sesiones**: El callback JWT verifica en cada refresh que el usuario sigue activo en BD (lineas 98-114 auth.ts).
+
+10. **Validacion de entrada exhaustiva con Zod**: 16 schemas definidos en validaciones.ts, aplicados consistentemente en todos los endpoints con body.
+
+11. **Proteccion contra enumeracion de emails**: El endpoint de recuperacion devuelve 200 siempre (linea 49 recuperar/route.ts), impidiendo saber si un email existe.
+
+12. **Tenant resuelto solo desde slug/host**: Las rutas publicas ya NO aceptan `x-tenant-id` del cliente (corregido desde la auditoria anterior).
+
+13. **Verificacion de usuario activo en cada refresh JWT**: Si un admin desactiva un usuario, su sesion se invalida en el proximo refresh (linea 103 auth.ts).
+
+14. **Soft delete en avisos**: Se desactivan en lugar de eliminarse, permitiendo auditoria.
+
+15. **RGPD implementado**: Exportacion de datos, eliminacion de cuenta con transaccion atomica (cancela reservas + borra tokens + elimina usuario).
+
+---
+
+## Plan de Remediacion Priorizado
+
+| Prioridad | VULN | Accion | Estimacion |
 |-----------|------|--------|------------|
-| P0 — Inmediato | VULN-001 | Rotar credenciales Supabase y Resend | 30 min |
-| P0 — Inmediato | VULN-001 | Generar NEXTAUTH_SECRET fuerte y seguro | 5 min |
-| P1 — Esta semana | VULN-002 | Añadir filtro `tenantId` en DELETE usuarios | 15 min |
-| P1 — Esta semana | VULN-003 | Actualizar Next.js a >= 15.5.14 | 1 h |
-| P1 — Esta semana | VULN-004 | Implementar rate limiting con Redis (Upstash) | 3 h |
-| P2 — Este sprint | VULN-005 | Migrar CSP a nonces en producción | 3 h |
-| P2 — Este sprint | VULN-006 | Eliminar soporte `x-tenant-id` en rutas públicas | 30 min |
-| P2 — Este sprint | VULN-007 | Aumentar mínimo contraseñas a 8 caracteres | 15 min |
-| P2 — Este sprint | VULN-009 | Invalidar todos los tokens al resetear contraseña | 30 min |
-| P3 — Backlog | VULN-008 | Ampliar matcher del middleware a rutas API privadas | 1 h |
-| P3 — Backlog | VULN-011 | Unificar coste bcrypt a 12 en todos los endpoints | 5 min |
-| P3 — Backlog | VULN-012 | Añadir validación Zod en PATCH superadmin/tenants | 20 min |
-| P3 — Backlog | VULN-010 | Renombrar NEXT_PUBLIC_APP_URL → APP_URL | 10 min |
-| P3 — Backlog | VULN-013 | Actualizar devDependencies Jest | 30 min |
+| P0 — INMEDIATO | VULN-001 | Rotar contrasena BD Supabase, revocar API key Resend, generar NEXTAUTH_SECRET fuerte | 30 min |
+| P1 — Esta semana | VULN-003 | Ejecutar `npm audit fix` o actualizar Next.js | 1 h |
+| P1 — Esta semana | VULN-004 | Implementar rate limiting con Upstash Redis | 3 h |
+| P1 — Esta semana | VULN-014 | Validar que CRON_SECRET esta definido + comparacion segura | 15 min |
+| P2 — Este sprint | VULN-005 | Migrar CSP a nonces y eliminar unsafe-inline | 3 h |
+| P2 — Este sprint | VULN-015 | Rate limiting en registro y recuperacion | 2 h |
+| P2 — Este sprint | VULN-016 | Escapar HTML en plantillas de email | 30 min |
+| P3 — Backlog | VULN-008 | Anadir /api/cuenta al matcher del middleware | 10 min |
+| P3 — Backlog | VULN-017 | Eliminar log de depuracion en push/suscribir | 5 min |
+| P3 — Backlog | VULN-018 | Ampliar img-src en CSP para avatares externos | 10 min |
+| P3 — Backlog | VULN-013 | Actualizar dependencias con vulnerabilidades | 30 min |
 
 ---
 
-*Fin del informe de auditoría — 2026-03-27*
+## Historial de auditorias
 
-## Estado actual
-> Primera auditoría pendiente — ejecutar cuando el Bloque 1 esté completado.
-
----
-
-## Historial de auditorías
-
-| Fecha | Fase | Vulnerabilidades encontradas | Críticas | Altas | Resueltas |
+| Fecha | Fase | Vulnerabilidades encontradas | Criticas | Altas | Corregidas |
 |---|---|---|---|---|---|
-| Pendiente | — | — | — | — | — |
+| 2026-03-27 | Primera auditoria estatica | 14 | 2 | 3 | 0 |
+| 2026-04-06 | Segunda auditoria estatica | 11 (4 nuevas, 5 corregidas de la anterior) | 1 | 3 | 5 de 14 |
 
 ---
 
-## Vulnerabilidades abiertas
-> Se irán añadiendo automáticamente por el agente de seguridad.
+## Conclusion
+
+El proyecto ha mejorado significativamente desde la primera auditoria: 5 de 14 vulnerabilidades fueron corregidas (incluyendo la CRITICA VULN-002 de IDOR). La arquitectura de seguridad es solida con excelente aislamiento multi-tenant, transacciones correctas y validacion exhaustiva.
+
+Los puntos pendientes mas urgentes son:
+1. **Rotacion de credenciales** (VULN-001) — riesgo critico inmediato
+2. **Actualizacion de Next.js** (VULN-003) — CVEs publicas explotables
+3. **Rate limiting distribuido** (VULN-004) — proteccion contra fuerza bruta ineficaz en produccion
+
+Una vez resueltos estos tres puntos, el nivel de seguridad de la aplicacion sera adecuado para un despliegue en produccion con datos reales de ciudadanos.
 
 ---
 
-## Vulnerabilidades resueltas
-> Se moverán aquí cuando estén corregidas y verificadas.
+*Fin del informe de auditoria — 2026-04-06*
