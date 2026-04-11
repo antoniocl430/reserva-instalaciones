@@ -56,7 +56,8 @@ test('DIAG — registro ciudadano funciona', async ({ page }) => {
     // Fallback: segundo input de tipo password
     await page.locator('input[type="password"]').nth(1).fill('Test1234!')
   })
-  await page.locator('input[type="checkbox"]').check()
+  // shadcn/ui Checkbox renderiza como button[role="checkbox"], no como input
+  await page.locator('[role="checkbox"]').click()
   await page.locator('button[type="submit"]').click()
 
   await page.waitForURL('**/dashboard', { timeout: 10000 }).catch(() => {})

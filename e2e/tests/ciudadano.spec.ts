@@ -77,7 +77,8 @@ test.describe('Flujo ciudadano', () => {
     await page.locator('input#password').fill(CITIZEN_PASSWORD)
     // Confirmar contraseña: selector directo por id para evitar ambigüedad
     await page.locator('input#confirmar').fill(CITIZEN_PASSWORD)
-    await page.locator('input[type="checkbox"]').first().check()
+    // shadcn/ui Checkbox renderiza como button[role="checkbox"], no como input
+    await page.locator('[role="checkbox"]').first().click()
     await page.locator('button[type="submit"]').click()
 
     // Tras registro exitoso redirige a /dashboard

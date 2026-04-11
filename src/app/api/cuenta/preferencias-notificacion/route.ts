@@ -48,23 +48,31 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Obtener preferencias del usuario
-    const preferencias = await prisma.preferenciaNotificacion.findUnique({
-      where: { usuarioId: sesion.user.id },
+    // Obtener preferencias del usuario (puede haber múltiples, una por tipoAlerta)
+    const preferenciasDB = await prisma.preferenciaNotificacion.findMany({
+      where: { usuarioId: sesion.user.id, tenantId: sesion.user.tenantId },
     })
 
-    // Si no existen, devolver con valores por defecto
-    if (!preferencias) {
-      return NextResponse.json(
-        {
-          usuarioId: sesion.user.id,
-          ...PREFERENCIAS_DEFECTO,
-        },
-        { status: 200 }
-      )
+    // Consolidar en un objeto: tipoAlerta → activa
+    const preferenciasConsolidadas: Record<string, boolean> = {
+      recordatorioReserva: true,
+      cancelacionPropia: true,
+      cancelacionAdmin: true,
     }
 
-    return NextResponse.json(preferencias, { status: 200 })
+    preferenciasDB.forEach((pref) => {
+      const tipoMap: Record<string, string> = {
+        'RECORDATORIO_RESERVA': 'recordatorioReserva',
+        'CANCELACION_PROPIA': 'cancelacionPropia',
+        'CANCELACION_ADMIN': 'cancelacionAdmin',
+      }
+      const campoLocal = tipoMap[pref.tipoAlerta]
+      if (campoLocal) {
+        preferenciasConsolidadas[campoLocal] = pref.activa
+      }
+    })
+
+    return NextResponse.json(preferenciasConsolidadas, { status: 200 })
   } catch (error) {
     console.error("[GET /api/cuenta/preferencias-notificacion]", error)
     return NextResponse.json(
@@ -109,25 +117,57 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Hacer upsert de las preferencias
-    // En update: solo actualizar los campos que se enviaron (partial update)
-    // En create: valores enviados + valores por defecto
-    const camposActualizar = Object.fromEntries(
-      Object.entries(validacion.data).filter(([, valor]) => valor !== undefined)
-    )
+    // Hacer upsert de cada preferencia por tipoAlerta
+    const tipoMap: Record<string, string> = {
+      'recordatorioReserva': 'RECORDATORIO_RESERVA',
+      'cancelacionPropia': 'CANCELACION_PROPIA',
+      'cancelacionAdmin': 'CANCELACION_ADMIN',
+    }
 
-    const preferenciasActualizadas = await prisma.preferenciaNotificacion.upsert({
-      where: { usuarioId: sesion.user.id },
-      update: camposActualizar,
-      create: {
-        usuarioId: sesion.user.id,
-        tenantId: sesion.user.tenantId,
-        ...PREFERENCIAS_DEFECTO,
-        ...validacion.data,
-      },
+    // Actualizar cada preferencia que se envió en validacion.data
+    for (const [campo, activa] of Object.entries(validacion.data)) {
+      if (activa !== undefined) {
+        const tipoAlerta = tipoMap[campo]
+        if (tipoAlerta) {
+          await prisma.preferenciaNotificacion.upsert({
+            where: {
+              usuarioId_tenantId_tipoAlerta: {
+                usuarioId: sesion.user.id,
+                tenantId: sesion.user.tenantId,
+                tipoAlerta,
+              },
+            },
+            update: { activa: activa === true },
+            create: {
+              usuarioId: sesion.user.id,
+              tenantId: sesion.user.tenantId,
+              tipoAlerta,
+              activa: activa === true,
+            },
+          })
+        }
+      }
+    }
+
+    // Devolver las preferencias consolidadas (como en GET)
+    const preferenciasActualizadas = await prisma.preferenciaNotificacion.findMany({
+      where: { usuarioId: sesion.user.id, tenantId: sesion.user.tenantId },
     })
 
-    return NextResponse.json(preferenciasActualizadas, { status: 200 })
+    const resultado: Record<string, boolean> = {
+      recordatorioReserva: true,
+      cancelacionPropia: true,
+      cancelacionAdmin: true,
+    }
+
+    preferenciasActualizadas.forEach((pref) => {
+      const campoLocal = Object.entries(tipoMap).find(([_, tipo]) => tipo === pref.tipoAlerta)?.[0]
+      if (campoLocal) {
+        resultado[campoLocal] = pref.activa
+      }
+    })
+
+    return NextResponse.json(resultado, { status: 200 })
   } catch (error) {
     console.error("[PATCH /api/cuenta/preferencias-notificacion]", error)
     return NextResponse.json(
