@@ -768,3 +768,156 @@ cada uno con su propio subdominio, configuracion y datos completamente aislados.
 - [x] Fase 7 — Testing de aislamiento: verificar que un tenant no accede a datos de otro
 
 ---
+
+## Bloque 11 — Componente PreferenciasNotificacion (COMPLETADO)
+
+### Objetivo
+Crear un componente reutilizable que permite a los usuarios gestionar sus preferencias de notificación (recordatorio de reserva, aviso de cancelación propia, aviso de cancelación admin). Se integrará en la página `/perfil` bajo la sección de notificaciones.
+
+### API Endpoint (Ya implementado)
+- `GET /api/cuenta/preferencias-notificacion` — obtiene preferencias del usuario
+- `PATCH /api/cuenta/preferencias-notificacion` — actualiza preferencias
+- Respuesta: `{ recordatorioReserva, cancelacionPropia, cancelacionAdmin, ... }` (booleanos)
+- Validación: solo CIUDADANO puede acceder
+
+### PASO 1: Tests TDD (RED)
+- [x] Crear `src/__tests__/frontend/preferencias-notificacion.test.tsx` con 5 tests:
+  - [x] Test 1: carga preferencias al montar (GET /api/cuenta/preferencias-notificacion)
+  - [x] Test 2: renderiza 3 checkboxes sin marcar (valores por defecto falsos)
+  - [x] Test 3: cambiar checkbox y guardar llama PATCH con el campo actualizado
+  - [x] Test 4: deshabilita checkboxes y muestra spinner en botón mientras se guarda
+  - [x] Test 5: muestra toast destructivo si el PATCH falla
+- [x] Ejecutar `npx vitest run` y confirmar que los 5 tests FALLAN (RED)
+
+### PASO 2: Componente PreferenciasNotificacion (GREEN)
+- [x] Crear `src/components/PreferenciasNotificacion.tsx` (Client Component):
+  - [x] Props: `onGuardado?: () => void` (callback opcional)
+  - [x] Estado: `{ recordatorioReserva, cancelacionPropia, cancelacionAdmin, guardando, cargando }`
+  - [x] useEffect al montar: GET `/api/cuenta/preferencias-notificacion` para cargar
+  - [x] Renderizar 3 checkboxes con labels:
+    - "Recordatorio 1h antes de la reserva"
+    - "Aviso cuando cancelo mi reserva"
+    - "Aviso cuando admin cancela mi reserva"
+  - [x] onChange en cada checkbox: actualizar estado
+  - [x] Botón "Guardar preferencias": PATCH `/api/cuenta/preferencias-notificacion`
+  - [x] Estados de carga:
+    - Mostrar Skeleton mientras se cargan preferencias iniciales
+    - Deshabilitar checkboxes mientras se guarda (guardando === true)
+    - Mostrar spinner en botón mientras se guarda
+  - [x] Manejo de errores: mostrar toast destructivo si falla el PATCH
+  - [x] Al guardar exitosamente: llamar `onGuardado()` si está definido
+- [x] Instalar `@shadcn/checkbox` para el componente checkbox
+- [x] Ejecutar `npx vitest run` y confirmar que los 5 tests PASAN (GREEN)
+
+### PASO 3: Integración en `/perfil/page.tsx`
+- [x] Importar `PreferenciasNotificacion` en `src/app/perfil/page.tsx`
+- [x] Integrar DENTRO de la sección actual de notificaciones (debajo del toggle de push)
+- [x] Pasar callback: `onGuardado={() => toast({ title: "Preferencias guardadas" })}`
+- [x] Asegurar que el layout visual es consistente (tarjeta blanca, border, padding)
+
+### PASO 4: Verificación y REFACTOR
+- [x] Ejecutar `npx vitest run` — todos los tests siguen en verde
+- [x] Actualizar tests de `perfil.test.tsx` para manejar dos calls a fetch (cuenta + preferencias)
+- [x] Crear mock inteligente basado en URL y método HTTP para manejar múltiples endpoints
+- [x] Revisar código: componente es simple, clara estructura de estados y efectos
+- [x] Revisar manejo de errores: toast muestra mensaje de éxito y destructivo en caso de fallo
+- [x] Verificar mobile-first: checkboxes y botón responsivos (clase `w-full sm:w-auto`)
+- [x] Sin regresiones: 137 tests de frontend pasan, 268 tests de backend pasan
+
+### Verificación Final
+- [x] `npx vitest run` — suite de frontend completa pasa: 19 archivos, 137 tests (5 nuevos + 132 existentes)
+- [x] `npm test` — suite Jest de API pasa: 22 suites, 268 tests (sin cambios en API)
+- [x] Componente visible en `/perfil`, interactivo, manejo de errores correcto
+- [x] Responsivo: funciona en móvil (w-full), tablet y desktop (sm:w-auto)
+- [x] Integración visual: ubicado en tarjeta de notificaciones, bajo toggle de push
+
+---
+
+## Bloque 11 — Notificación push al cancelar reserva propia (COMPLETADO 2026-04-08)
+
+### Objetivo
+Cuando un ciudadano cancela su propia reserva, recibe una notificación push (como ya hacía cuando el admin cancela una reserva ajena).
+
+### PASO 1: Corrección en `cancelar/route.ts`
+- [x] Leer lógica actual: solo enviaba push cuando `esAdminCancela && usuarioId !== sesion.user.id`
+- [x] Agregar nuevo branch: si `!esAdminCancela`, también envía push con `canceladoPorAdmin: false`
+- [x] Cambio mínimo: 9 líneas de código nuevas (líneas 151-160)
+
+### PASO 2: Tests TDD (RED → GREEN)
+- [x] Crear dos tests nuevos en `src/__tests__/api/cancelar.test.ts`:
+  - [x] Test 1: "debería enviar push de cancelación cuando un ciudadano cancela su propia reserva"
+  - [x] Test 2: "debería enviar push con canceladoPorAdmin:true cuando un admin cancela una reserva ajena"
+- [x] Tests RED confirmados: `enviarPushCancelacion` no se llamaba en el caso de ciudadano
+- [x] Implementación GREEN: 2 tests nuevos pasan sin afectar los 7 existentes
+- [x] Suite `cancelar.test.ts` completa: 9/9 tests pasan
+
+### Verificación
+- [x] `npm test -- cancelar.test.ts` pasa (9/9)
+- [x] `npm test` completo pasa (268/268 tests Jest)
+- [x] `npx vitest run` completo pasa (137/137 tests Vitest)
+- [x] Sin regresiones introducidas
+
+---
+
+## Bloque 11 — Migración Prisma para PreferenciaNotificacion (COMPLETADO 2026-04-08)
+
+### Objetivo
+Crear tabla `PreferenciaNotificacion` para almacenar preferencias de cada usuario (qué tipos de alertas recibir).
+
+### PASO 1: Schema Prisma
+- [x] Agregar modelo `PreferenciaNotificacion`:
+  - id, tenantId, usuarioId, tipoAlerta, activa, creadoEn, actualizadoEn
+  - Tipos de alerta: "RECORDATORIO_RESERVA" | "CANCELACION_PROPIA" | "CANCELACION_ADMIN"
+  - Constraint único: `@@unique([usuarioId, tenantId, tipoAlerta])`
+  - Relaciones: `usuario` y `tenant`
+- [x] Actualizar relaciones inversas en `Tenant` y `Usuario`
+
+### PASO 2: Migración
+- [x] `npx prisma migrate dev --name add-notification-preferences`
+- [x] Migración generada: `20260408054217_add_notification_preferences`
+- [x] Prisma Client regenerado
+
+### Verificación
+- [x] Migración aplicada exitosamente a BD PostgreSQL
+- [x] Schema en sync con código Prisma
+
+---
+
+## Bloque 11 — API endpoints para PreferenciaNotificacion (COMPLETADO 2026-04-08)
+
+### Objetivo
+Crear endpoints para leer y guardar preferencias de notificación.
+
+### PASO 1: Schema Zod
+- [x] Actualizar `src/lib/validaciones.ts` con `schemaPreferenciasNotificacion`
+- [x] Estructura: array de objetos `{ tipoAlerta: enum, activa: boolean }`
+- [x] Validaciones: tipos válidos, sin duplicados, mínimo 1 preferencia
+
+### PASO 2: Endpoints
+- [x] **GET** `/api/cuenta/preferencias-notificacion`:
+  - Obtiene preferencias del usuario
+  - Si no existen, devuelve valores por defecto (todos false)
+  - Solo CIUDADANO puede acceder (devuelve 403 si es ADMIN)
+- [x] **PATCH** `/api/cuenta/preferencias-notificacion`:
+  - Actualiza preferencias usando upsert (crea si no existe, actualiza si existe)
+  - Validación Zod del request
+  - Devuelve las preferencias guardadas
+
+### PASO 3: Tests TDD
+- [x] Crear `src/__tests__/api/preferencias-notificacion.test.ts` con 11 tests:
+  - GET sin sesión → 401
+  - GET como ADMIN → 403 (solo CIUDADANO)
+  - GET devuelve preferencias existentes o por defecto
+  - PATCH sin sesión → 401
+  - PATCH como ADMIN → 403
+  - PATCH crea preferencias (upsert)
+  - PATCH actualiza sin duplicar
+  - PATCH valida schema
+  - PATCH parcial (solo algunos campos)
+  - PATCH actualiza timestamp `actualizadoEn`
+- [x] Todos los 11 tests pasan (GREEN)
+
+### PASO 4: Integración
+- [x] Verificación: suite Jest completa pasa (268 tests)
+
+---

@@ -204,17 +204,73 @@ describe('PaginaPerfil', () => {
     vi.clearAllMocks()
     mockPush.mockReset()
     mockToast.mockClear()
-    global.fetch = vi.fn()
     // Estado de push por defecto para que los tests existentes no fallen
     mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
+
+    // Mock inteligente de fetch que maneja múltiples endpoints
+    const fetchMock = vi.fn()
+    fetchMock.mockImplementation((url: string, options?: any) => {
+      if (url === '/api/cuenta' && options?.method !== 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ usuario: usuarioFicticio }),
+        })
+      }
+      if (url === '/api/cuenta/preferencias-notificacion' && options?.method !== 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            recordatorioReserva: false,
+            cancelacionPropia: false,
+            cancelacionAdmin: false,
+          }),
+        })
+      }
+      if (url === '/api/cuenta' && options?.method === 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ usuario: { ...usuarioFicticio, nombre: 'Ana García' } }),
+        })
+      }
+      if (url === '/api/cuenta/preferencias-notificacion' && options?.method === 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            recordatorioReserva: false,
+            cancelacionPropia: false,
+            cancelacionAdmin: false,
+          }),
+        })
+      }
+      // Fallback
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      })
+    })
+    global.fetch = fetchMock as any
   })
 
-  it('debería renderizar el título "Mi perfil"', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
+  // Helper: mockear fetch para perfil (cuenta) + preferencias notificación (para tests específicos)
+  function mockFetchPerfil(overrideCuenta?: any, overridePreferencias?: any) {
+    const cuentaDefault = { usuario: usuarioFicticio }
+    const preferenciasDefault = {
+      recordatorioReserva: false,
+      cancelacionPropia: false,
+      cancelacionAdmin: false,
+    }
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => overrideCuenta ?? cuentaDefault,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => overridePreferencias ?? preferenciasDefault,
+      })
+  }
 
+  it('debería renderizar el título "Mi perfil"', async () => {
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -223,11 +279,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería mostrar el avatar con las iniciales cuando no hay avatarUrl', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -238,11 +289,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería mostrar el campo nombre con el valor cargado de la API', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -252,11 +298,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería tener el campo email deshabilitado', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -266,16 +307,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería llamar a PATCH /api/cuenta al pulsar "Guardar cambios"', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ usuario: usuarioFicticio }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ usuario: { ...usuarioFicticio, nombre: 'Ana García' } }),
-      })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -297,11 +328,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería mostrar la sección de zona de peligro', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -310,11 +336,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería abrir el dialog de confirmación al pulsar "Eliminar mi cuenta"', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -330,11 +351,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería mostrar enlace para volver al inicio', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -345,16 +361,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería llamar a toast con título de éxito al guardar los cambios correctamente', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ usuario: usuarioFicticio }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ usuario: { ...usuarioFicticio, nombre: 'Ana García' } }),
-      })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -373,14 +379,36 @@ describe('PaginaPerfil', () => {
   })
 
   it('debería llamar a toast con variante destructive cuando falla el guardado', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
+    // Override: hacer que el PATCH falle
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockImplementationOnce((url: string, options?: any) => {
+      if (url === '/api/cuenta' && options?.method === 'PATCH') {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+        })
+      }
+      // Usar el comportamiento default para otros endpoints
+      if (url === '/api/cuenta' && options?.method !== 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ usuario: usuarioFicticio }),
+        })
+      }
+      if (url === '/api/cuenta/preferencias-notificacion' && options?.method !== 'PATCH') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            recordatorioReserva: false,
+            cancelacionPropia: false,
+            cancelacionAdmin: false,
+          }),
+        })
+      }
+      return Promise.resolve({
         ok: true,
-        json: async () => ({ usuario: usuarioFicticio }),
+        json: async () => ({}),
       })
-      .mockResolvedValueOnce({
-        ok: false,
-      })
+    })
 
     render(React.createElement(PaginaPerfil))
 
@@ -400,16 +428,6 @@ describe('PaginaPerfil', () => {
   })
 
   it('no debería mostrar mensajes de estado inline al guardar correctamente', async () => {
-    ;(global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ usuario: usuarioFicticio }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ usuario: { ...usuarioFicticio, nombre: 'Ana García' } }),
-      })
-
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
@@ -430,10 +448,6 @@ describe('PaginaPerfil', () => {
 
   it('debería mostrar la sección "Notificaciones" con botón "Activar" cuando el estado es inactivo', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
 
     render(React.createElement(PaginaPerfil))
 
@@ -446,10 +460,6 @@ describe('PaginaPerfil', () => {
 
   it('debería mostrar botón "Desactivar" cuando las notificaciones están activas', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('activo')
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
 
     render(React.createElement(PaginaPerfil))
 
@@ -460,10 +470,6 @@ describe('PaginaPerfil', () => {
 
   it('debería mostrar aviso de permisos bloqueados cuando el estado es "denegado"', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('denegado')
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
 
     render(React.createElement(PaginaPerfil))
 
@@ -474,10 +480,6 @@ describe('PaginaPerfil', () => {
 
   it('debería mostrar aviso de no soportado cuando el estado es "no-soportado"', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('no-soportado')
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
 
     render(React.createElement(PaginaPerfil))
 
@@ -489,10 +491,6 @@ describe('PaginaPerfil', () => {
   it('debería llamar a suscribirAPush al pulsar "Activar" notificaciones', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
     mockSuscribirAPush.mockResolvedValue(true)
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
 
     render(React.createElement(PaginaPerfil))
 
@@ -510,10 +508,6 @@ describe('PaginaPerfil', () => {
   it('debería llamar a desuscribirDePush al pulsar "Desactivar" notificaciones', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('activo')
     mockDesuscribirDePush.mockResolvedValue(true)
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ usuario: usuarioFicticio }),
-    })
 
     render(React.createElement(PaginaPerfil))
 

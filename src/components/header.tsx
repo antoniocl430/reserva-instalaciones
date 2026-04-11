@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
+import { Menu, X, ShieldCheck, Zap } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { AvatarUsuario } from "@/components/AvatarUsuario"
 import InstalarPWA from "@/components/InstalarPWA"
@@ -102,9 +104,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                     href="/superadmin"
                     className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors px-3 py-1.5 rounded-lg"
                   >
-                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                    <Zap className="w-4 h-4 shrink-0" aria-hidden="true" />
                     Superadmin
                   </Link>
                   <span className="text-sm text-gray-500 border-l border-gray-200 pl-4">
@@ -154,10 +154,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                     href="/admin"
                     className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors px-3 py-1.5 rounded-lg"
                   >
-                    {/* Icono de escudo */}
-                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
+                    <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
                     Panel Admin
                   </Link>
                   <button
@@ -178,15 +175,9 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
               aria-label="Abrir menú"
             >
               {menuAbierto ? (
-                // Icono X
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-6 h-6" />
               ) : (
-                // Icono hamburger
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <Menu className="w-6 h-6" />
               )}
             </button>
           )}
@@ -194,9 +185,16 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
       </div>
 
       {/* Menú móvil desplegable */}
-      {!cargandoSesion && menuAbierto && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
-          <nav aria-label="Menú de navegación" className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-1">
+      <AnimatePresence>
+        {!cargandoSesion && menuAbierto && (
+          <motion.div
+            className="md:hidden border-t border-gray-200 bg-white"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <nav aria-label="Menú de navegación" className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-1">
             {/* Sin sesión: solo login y registro */}
             {!sesion && !cargandoSesion && (
               <>
@@ -264,9 +262,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                   className="px-3 py-2 text-sm font-semibold text-purple-700 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
                   onClick={() => setMenuAbierto(false)}
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
+                  <Zap className="w-4 h-4 shrink-0" aria-hidden="true" />
                   Panel Superadmin
                 </Link>
                 <button
@@ -313,10 +309,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                   className="px-3 py-2 text-sm font-semibold text-blue-700 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
                   onClick={() => setMenuAbierto(false)}
                 >
-                  {/* Icono de escudo */}
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
+                  <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
                   Panel Admin
                 </Link>
                 <button
@@ -327,9 +320,10 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                 </button>
               </>
             )}
-          </nav>
-        </div>
-      )}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Banner de instalación PWA — fijo en la parte inferior de la pantalla */}
       <InstalarPWA />

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { UserCircle, CalendarPlus, CalendarCheck, Clock } from "lucide-react"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { formatearFechaCorta, formatearHora } from "@/lib/formato"
@@ -46,10 +47,7 @@ export default async function PaginaDashboard() {
             href="/perfil"
             className="flex items-center gap-1.5 shrink-0 mt-1 text-sm font-medium text-gray-700 bg-white border border-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
+            <UserCircle className="h-4 w-4 text-gray-500" />
             Mi perfil
           </Link>
         </div>
@@ -60,14 +58,20 @@ export default async function PaginaDashboard() {
             href="/pistas"
             className="flex flex-col items-start gap-1 bg-blue-600 text-white font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-blue-700 transition-colors"
           >
-            <span className="text-sm sm:text-base font-semibold">Reservar instalación</span>
+            <div className="flex items-center gap-2">
+              <CalendarPlus className="h-4 w-4" />
+              <span className="text-sm sm:text-base font-semibold">Reservar instalación</span>
+            </div>
             <span className="text-xs sm:text-sm text-blue-100">Ver disponibilidad y reservar</span>
           </Link>
           <Link
             href="/mis-reservas"
             className="flex flex-col items-start gap-1 bg-white border border-gray-200 text-gray-800 font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <span className="text-sm sm:text-base font-semibold">Mis reservas</span>
+            <div className="flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-gray-600" />
+              <span className="text-sm sm:text-base font-semibold">Mis reservas</span>
+            </div>
             <span className="text-xs sm:text-sm text-gray-500">
               {totalActivas === 0
                 ? "No tienes reservas activas"
@@ -101,13 +105,20 @@ export default async function PaginaDashboard() {
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {reservasActivas.map((reserva) => (
-                <li key={reserva.id} className="px-4 py-3 flex items-center justify-between gap-2">
+              {reservasActivas.map((reserva, indice) => (
+                <li
+                  key={reserva.id}
+                  className={`px-4 py-3 flex items-center justify-between gap-2 ${
+                    indice === 0 ? "border-l-4 border-blue-600 bg-blue-50" : ""
+                  }`}
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
+                      {indice === 0 && <span className="text-blue-600 font-bold">⭐ </span>}
                       {reserva.instalacion.nombre}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
                       {formatearFechaCorta(reserva.horaInicio)} · {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
                     </p>
                   </div>

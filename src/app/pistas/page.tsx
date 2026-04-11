@@ -38,6 +38,24 @@ function etiquetaTipo(tipo: string): string {
   }
 }
 
+// Devuelve los colores y emoji para cada tipo de instalación
+function obtenerEstiloTipo(tipo: string): { bgColor: string; textColor: string; emoji: string; badgeBg: string; badgeText: string } {
+  switch (tipo) {
+    case "PADEL":
+      return { bgColor: "bg-blue-100", textColor: "text-blue-600", emoji: "🏓", badgeBg: "bg-blue-50", badgeText: "text-blue-700" }
+    case "TENIS":
+      return { bgColor: "bg-yellow-100", textColor: "text-yellow-600", emoji: "🎾", badgeBg: "bg-yellow-50", badgeText: "text-yellow-700" }
+    case "FUTBOL":
+      return { bgColor: "bg-green-100", textColor: "text-green-600", emoji: "⚽", badgeBg: "bg-green-50", badgeText: "text-green-700" }
+    case "PISCINA":
+      return { bgColor: "bg-cyan-100", textColor: "text-cyan-600", emoji: "🏊", badgeBg: "bg-cyan-50", badgeText: "text-cyan-700" }
+    case "BASQUETBOL":
+      return { bgColor: "bg-orange-100", textColor: "text-orange-600", emoji: "🏀", badgeBg: "bg-orange-50", badgeText: "text-orange-700" }
+    default:
+      return { bgColor: "bg-gray-100", textColor: "text-gray-600", emoji: "📌", badgeBg: "bg-gray-50", badgeText: "text-gray-700" }
+  }
+}
+
 export default async function PaginaPistas() {
   const sesion = await getServerSession(opcionesAuth)
 
@@ -89,27 +107,27 @@ export default async function PaginaPistas() {
               <Card key={pista.id} className="flex flex-col">
                 <CardHeader>
                   {/* Indicador visual del tipo de pista */}
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${
-                      pista.tipo === "PADEL" ? "bg-blue-100" : "bg-cyan-100"
-                    }`}
-                  >
-                    <span
-                      className={`text-lg font-bold ${
-                        pista.tipo === "PADEL" ? "text-blue-600" : "text-cyan-600"
-                      }`}
-                    >
-                      {pista.tipo === "PADEL" ? "P" : pista.tipo[0]}
-                    </span>
-                  </div>
+                  {(() => {
+                    const estilo = obtenerEstiloTipo(pista.tipo)
+                    return (
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${estilo.bgColor}`}>
+                        <span className="text-lg" aria-hidden="true">{estilo.emoji}</span>
+                      </div>
+                    )
+                  })()}
                   <CardTitle className="text-base leading-tight">{pista.nombre}</CardTitle>
                   <CardDescription>
-                    <Badge
-                      variant="secondary"
-                      className="text-xs font-medium uppercase tracking-wide text-blue-700 bg-blue-50 hover:bg-blue-50"
-                    >
-                      {etiquetaTipo(pista.tipo)}
-                    </Badge>
+                    {(() => {
+                      const estilo = obtenerEstiloTipo(pista.tipo)
+                      return (
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs font-medium uppercase tracking-wide ${estilo.badgeText} ${estilo.badgeBg} hover:${estilo.badgeBg}`}
+                        >
+                          {etiquetaTipo(pista.tipo)}
+                        </Badge>
+                      )
+                    })()}
                   </CardDescription>
                 </CardHeader>
 

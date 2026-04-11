@@ -4,6 +4,10 @@ import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function PaginaLogin() {
   const router = useRouter()
@@ -40,15 +44,16 @@ export default function PaginaLogin() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Cabecera */}
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Iniciar sesión</h1>
-          <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
-        </div>
+      <Card className="w-full max-w-sm">
+        <CardContent className="pt-6">
+          {/* Cabecera */}
+          <div className="space-y-4 mb-6 text-center">
+            <h1 className="text-2xl font-bold text-gray-900">Iniciar sesión</h1>
+            <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
+          </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div role="alert" aria-live="assertive" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
@@ -56,10 +61,8 @@ export default function PaginaLogin() {
           )}
 
           <div className="space-y-1">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
               inputMode="email"
@@ -67,23 +70,19 @@ export default function PaginaLogin() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="tu@email.com"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Contraseña
-            </label>
-            <input
+            <Label htmlFor="password">Contraseña</Label>
+            <Input
               id="password"
               type="password"
               required
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="••••••••"
             />
           </div>
@@ -95,34 +94,32 @@ export default function PaginaLogin() {
           >
             {cargando ? (
               <span className="inline-flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Entrando...
               </span>
             ) : "Entrar"}
           </button>
-        </form>
+          </form>
 
-        {/* Pie */}
-        <div className="space-y-2 text-center text-sm text-gray-500">
-          <p>
-            <Link href="/recuperar-password" className="font-medium text-blue-600 hover:underline">
-              ¿Olvidaste tu contraseña?
+          {/* Pie */}
+          <div className="space-y-2 text-center text-sm text-gray-500 mt-6">
+            <p>
+              <Link href="/recuperar-password" className="font-medium text-blue-600 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </p>
+            <p>
+              ¿No tienes cuenta?{" "}
+              <Link href="/registro" className="font-medium text-blue-600 hover:underline">
+                Regístrate
+              </Link>
+            </p>
+            <Link href="/" className="block text-gray-400 hover:text-gray-600">
+              ← Volver al inicio
             </Link>
-          </p>
-          <p>
-            ¿No tienes cuenta?{" "}
-            <Link href="/registro" className="font-medium text-blue-600 hover:underline">
-              Regístrate
-            </Link>
-          </p>
-          <Link href="/" className="block text-gray-400 hover:text-gray-600">
-            ← Volver al inicio
-          </Link>
-        </div>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   )
 }

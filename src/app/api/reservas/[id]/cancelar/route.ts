@@ -148,7 +148,8 @@ default:
       }).catch((err) => console.error("[Email] Error al notificar admins de cancelación:", err))
     }
 
-    // Push: notificar al ciudadano si el admin cancela una reserva que no es suya
+    // Push: notificar al usuario en dos casos:
+    // 1. Admin cancela una reserva ajena → notificar al dueño de la reserva
     if (esAdminCancela && datosReserva.usuarioId !== sesion.user.id) {
       enviarPushCancelacion({
         usuarioId: datosReserva.usuarioId,
@@ -156,6 +157,16 @@ default:
         fecha: fechaStr,
         horaInicio: horaInicioStr,
         canceladoPorAdmin: true,
+      }).catch((err) => console.error("[Push] Error al notificar cancelación:", err))
+    }
+    // 2. Ciudadano cancela su propia reserva
+    if (!esAdminCancela) {
+      enviarPushCancelacion({
+        usuarioId: datosReserva.usuarioId,
+        nombreInstalacion: datosReserva.instalacion.nombre,
+        fecha: fechaStr,
+        horaInicio: horaInicioStr,
+        canceladoPorAdmin: false,
       }).catch((err) => console.error("[Push] Error al notificar cancelación:", err))
     }
   }

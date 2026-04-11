@@ -77,7 +77,7 @@ export default function InstalarPWA() {
   return (
     <div
       role="banner"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 md:bottom-4 md:left-4 md:right-auto md:max-w-sm md:rounded-xl md:border md:shadow-xl"
+      className="fixed bottom-20 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg p-4 md:bottom-24 md:left-4 md:right-auto md:max-w-sm md:rounded-xl md:border md:shadow-xl"
     >
       <div className="flex items-center gap-3">
         {/* Icono de la app */}

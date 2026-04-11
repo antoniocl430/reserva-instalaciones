@@ -296,3 +296,17 @@ export const schemaActualizarPerfil = z.object({
 })
 
 export type ActualizarPerfilInput = z.infer<typeof schemaActualizarPerfil>
+
+/**
+ * Schema para actualizar preferencias de notificación del usuario autenticado
+ * Todos los campos son booleanos y opcionales (partial update)
+ */
+export const schemaPreferenciasNotificacion = z.object({
+  notificacionesEmail: z.boolean().optional(),
+  notificacionesPush: z.boolean().optional(),
+  recordatorioReserva: z.boolean().optional(),
+  recordatorioCancel: z.boolean().optional(),
+  notificacionesAviso: z.boolean().optional(),
+})
+
+export type PreferenciasNotificacionInput = z.infer<typeof schemaPreferenciasNotificacion>

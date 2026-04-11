@@ -170,4 +170,44 @@ describe('PATCH /api/reservas/[id]/cancelar', () => {
       })
     )
   })
+
+  it('debería enviar push de cancelación cuando un ciudadano cancela su propia reserva', async () => {
+    const { enviarPushCancelacion } = require('@/lib/push')
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.reserva.findFirst.mockResolvedValue(reservaActiva)
+    prismaMock.reserva.update.mockResolvedValue({ ...reservaActiva, estado: 'CANCELADA' })
+
+    await PATCH(crearRequest('reserva-1'), crearParams('reserva-1'))
+
+    // Esperar a que la promesa asíncrona de push se resuelva
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(enviarPushCancelacion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usuarioId: 'usuario-1',
+        nombreInstalacion: 'Padel 1',
+        canceladoPorAdmin: false,
+      })
+    )
+  })
+
+  it('debería enviar push con canceladoPorAdmin:true cuando un admin cancela una reserva ajena', async () => {
+    const { enviarPushCancelacion } = require('@/lib/push')
+    mockGetServerSession.mockResolvedValue(sesionAdmin)
+    prismaMock.reserva.findFirst.mockResolvedValue(reservaActiva)
+    prismaMock.reserva.update.mockResolvedValue({ ...reservaActiva, estado: 'CANCELADA' })
+
+    await PATCH(crearRequest('reserva-1'), crearParams('reserva-1'))
+
+    // Esperar a que la promesa asíncrona de push se resuelva
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(enviarPushCancelacion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usuarioId: 'usuario-1',
+        nombreInstalacion: 'Padel 1',
+        canceladoPorAdmin: true,
+      })
+    )
+  })
 })

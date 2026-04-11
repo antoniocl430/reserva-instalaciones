@@ -49,9 +49,10 @@ describe('PaginaRegistro', () => {
 
   it('debería renderizar el checkbox de aceptación de privacidad', () => {
     render(React.createElement(PaginaRegistro))
-    const checkbox = document.querySelector('#aceptaPrivacidad') as HTMLInputElement
+    // shadcn/ui Checkbox renderiza un <button role="checkbox">, no un <input>
+    const checkbox = screen.getByRole('checkbox')
     expect(checkbox).toBeInTheDocument()
-    expect(checkbox.type).toBe('checkbox')
+    expect(checkbox.id).toBe('aceptaPrivacidad')
   })
 
   it('debería contener un enlace a /privacidad en el checkbox de privacidad', () => {

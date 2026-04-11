@@ -4,6 +4,11 @@ import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function PaginaRegistro() {
   const router = useRouter()
@@ -61,15 +66,16 @@ export default function PaginaRegistro() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Cabecera */}
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Crear cuenta</h1>
-          <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
-        </div>
+      <Card className="w-full max-w-sm">
+        <CardContent className="pt-6">
+          {/* Cabecera */}
+          <div className="space-y-4 mb-6 text-center">
+            <h1 className="text-2xl font-bold text-gray-900">Crear cuenta</h1>
+            <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
+          </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div role="alert" aria-live="assertive" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
@@ -77,26 +83,21 @@ export default function PaginaRegistro() {
           )}
 
           <div className="space-y-1">
-            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
-              Nombre completo
-            </label>
-            <input
+            <Label htmlFor="nombre">Nombre completo</Label>
+            <Input
               id="nombre"
               type="text"
               required
               autoComplete="name"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Juan García"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
               inputMode="email"
@@ -104,51 +105,42 @@ export default function PaginaRegistro() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="tu@email.com"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Contraseña
-            </label>
-            <input
+            <Label htmlFor="password">Contraseña</Label>
+            <Input
               id="password"
               type="password"
               required
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Mínimo 8 caracteres"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="confirmar" className="block text-sm font-medium text-gray-700">
-              Confirmar contraseña
-            </label>
-            <input
+            <Label htmlFor="confirmar">Confirmar contraseña</Label>
+            <Input
               id="confirmar"
               type="password"
               required
               autoComplete="new-password"
               value={confirmar}
               onChange={(e) => setConfirmar(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="••••••••"
             />
           </div>
 
           {/* Aceptación de política de privacidad — obligatorio según RGPD */}
           <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
+            <Checkbox
               id="aceptaPrivacidad"
               checked={aceptaPrivacidad}
-              onChange={(e) => setAceptaPrivacidad(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              onCheckedChange={(checked) => setAceptaPrivacidad(checked === true)}
               required
             />
             <label htmlFor="aceptaPrivacidad" className="text-sm text-gray-700">
@@ -178,29 +170,27 @@ export default function PaginaRegistro() {
           >
             {cargando ? (
               <span className="inline-flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Creando cuenta...
               </span>
             ) : "Crear cuenta"}
           </button>
-        </form>
+          </form>
 
-        {/* Pie */}
-        <div className="space-y-2 text-center text-sm text-gray-500">
-          <p>
-            ¿Ya tienes cuenta?{" "}
-            <Link href="/login" className="font-medium text-blue-600 hover:underline">
-              Inicia sesión
+          {/* Pie */}
+          <div className="space-y-2 text-center text-sm text-gray-500 mt-6">
+            <p>
+              ¿Ya tienes cuenta?{" "}
+              <Link href="/login" className="font-medium text-blue-600 hover:underline">
+                Inicia sesión
+              </Link>
+            </p>
+            <Link href="/" className="block text-gray-400 hover:text-gray-600">
+              ← Volver al inicio
             </Link>
-          </p>
-          <Link href="/" className="block text-gray-400 hover:text-gray-600">
-            ← Volver al inicio
-          </Link>
-        </div>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   )
 }

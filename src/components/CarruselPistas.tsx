@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Clock, ChevronUp, ChevronDown } from "lucide-react"
+import { motion } from "framer-motion"
 
 // Tipo de instalación recibido por props
 interface Instalacion {
@@ -20,6 +21,18 @@ interface CarruselPistasProps {
 
 // Descripción por defecto cuando la pista no tiene una definida
 const DESCRIPCION_DEFECTO = "Pista de pádel cubierta con iluminación LED"
+
+// Devuelve la etiqueta legible del tipo de instalación
+function etiquetaTipo(tipo: string): string {
+  switch (tipo) {
+    case "PADEL": return "Pádel"
+    case "TENIS": return "Tenis"
+    case "FUTBOL": return "Fútbol"
+    case "PISCINA": return "Piscina"
+    case "BASQUETBOL": return "Baloncesto"
+    default: return tipo
+  }
+}
 
 export default function CarruselPistas({ pistas }: CarruselPistasProps) {
   const [indiceActivo, setIndiceActivo] = useState(0)
@@ -49,11 +62,14 @@ export default function CarruselPistas({ pistas }: CarruselPistasProps) {
   return (
     <div className="relative flex-1 overflow-hidden">
       {/* Slide activo */}
-      <div
-        key={pista.id}
+      <motion.div
+        key={indiceActivo}
         className="w-full h-full flex flex-col items-center justify-center px-6 py-12
-                   bg-gradient-to-br from-green-800 via-green-700 to-blue-900
-                   transition-opacity duration-500"
+                   bg-gradient-to-br from-green-800 via-green-700 to-blue-900"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
       >
         {/* Patrón de red de pádel (decorativo) */}
         <div
@@ -70,7 +86,7 @@ export default function CarruselPistas({ pistas }: CarruselPistasProps) {
           {/* Badge de tipo */}
           <div className="flex justify-center">
             <Badge className="bg-green-400 text-green-900 font-bold text-sm px-4 py-1 tracking-widest uppercase">
-              Pádel
+              {etiquetaTipo(pista.tipo)}
             </Badge>
           </div>
 
@@ -100,7 +116,7 @@ export default function CarruselPistas({ pistas }: CarruselPistasProps) {
             </Badge>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Flecha arriba */}
       <button

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { AvatarUsuario } from "@/components/AvatarUsuario"
+import PreferenciasNotificacion from "@/components/PreferenciasNotificacion"
 import { useToast } from "@/hooks/use-toast"
 import {
   suscribirAPush,
@@ -366,10 +368,7 @@ export default function PaginaPerfil() {
             >
               {guardando ? (
                 <>
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Guardando...
                 </>
               ) : "Guardar cambios"}
@@ -379,32 +378,46 @@ export default function PaginaPerfil() {
 
         {/* Sección notificaciones */}
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Notificaciones</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900">Notificaciones push</p>
-              <p className="text-sm text-gray-500">
-                Recibe avisos de reservas y cancelaciones en tu dispositivo
-              </p>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Notificaciones</h2>
+
+          {/* Notificaciones push */}
+          <div className="mb-6 pb-6 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Notificaciones push</p>
+                <p className="text-sm text-gray-500">
+                  Recibe avisos de reservas y cancelaciones en tu dispositivo
+                </p>
+              </div>
+              <Button
+                onClick={toggleNotificaciones}
+                variant={estadoPush === 'activo' ? 'destructive' : 'default'}
+                size="sm"
+              >
+                {estadoPush === 'activo' ? 'Desactivar' : 'Activar'}
+              </Button>
             </div>
-            <Button
-              onClick={toggleNotificaciones}
-              variant={estadoPush === 'activo' ? 'destructive' : 'default'}
-              size="sm"
-            >
-              {estadoPush === 'activo' ? 'Desactivar' : 'Activar'}
-            </Button>
+            {estadoPush === 'denegado' && (
+              <p className="mt-2 text-xs text-red-500">
+                Has bloqueado los permisos. Actívalos desde la configuración de tu navegador.
+              </p>
+            )}
+            {estadoPush === 'no-soportado' && (
+              <p className="mt-2 text-xs text-gray-500">
+                Tu navegador no soporta notificaciones push.
+              </p>
+            )}
           </div>
-          {estadoPush === 'denegado' && (
-            <p className="mt-2 text-xs text-red-500">
-              Has bloqueado los permisos. Actívalos desde la configuración de tu navegador.
-            </p>
-          )}
-          {estadoPush === 'no-soportado' && (
-            <p className="mt-2 text-xs text-gray-500">
-              Tu navegador no soporta notificaciones push.
-            </p>
-          )}
+
+          {/* Preferencias de notificación */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 mb-4">Tipos de notificaciones</h3>
+            <PreferenciasNotificacion
+              onGuardado={() => {
+                toast({ title: "Preferencias guardadas" })
+              }}
+            />
+          </div>
         </div>
 
         {/* Tarjeta de exportación de datos (RGPD) */}

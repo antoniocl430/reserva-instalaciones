@@ -30,13 +30,14 @@ model Tenant {
   actualizadoEn DateTime @updatedAt
 
   // Relaciones — todos los datos del ayuntamiento
-  usuarios            Usuario[]
-  instalaciones       Instalacion[]
-  reservas            Reserva[]
-  bloqueos            Bloqueo[]
-  avisos              Aviso[]
-  tokensRecuperacion  TokenRecuperacion[]
-  suscripcionesPush   SuscripcionPush[]
+  usuarios                    Usuario[]
+  instalaciones               Instalacion[]
+  reservas                    Reserva[]
+  bloqueos                    Bloqueo[]
+  avisos                      Aviso[]
+  tokensRecuperacion          TokenRecuperacion[]
+  suscripcionesPush           SuscripcionPush[]
+  preferenciaNotificaciones   PreferenciaNotificacion[]
 }
 
 // Usuario: ciudadanos y administradores del ayuntamiento
@@ -54,12 +55,13 @@ model Usuario {
   actualizadoEn DateTime @updatedAt
 
   // Relaciones
-  tenant               Tenant?             @relation(fields: [tenantId], references: [id])
-  reservas             Reserva[]           @relation("UsuarioReservas")
-  reservasCanceladas   Reserva[]           @relation("CanceladorReservas")
-  bloqueosCreados      Bloqueo[]           @relation("AdminBloqueos")
-  tokensRecuperacion   TokenRecuperacion[]
-  suscripcionesPush    SuscripcionPush[]
+  tenant                      Tenant?                     @relation(fields: [tenantId], references: [id])
+  reservas                    Reserva[]                   @relation("UsuarioReservas")
+  reservasCanceladas          Reserva[]                   @relation("CanceladorReservas")
+  bloqueosCreados             Bloqueo[]                   @relation("AdminBloqueos")
+  tokensRecuperacion          TokenRecuperacion[]
+  suscripcionesPush           SuscripcionPush[]
+  preferenciaNotificaciones   PreferenciaNotificacion[]
 
   // Email único dentro del mismo tenant (no globalmente)
   // NOTA: tenantId es opcional para superadmins (sin tenant)
@@ -188,6 +190,26 @@ model SuscripcionPush {
 
   // Un usuario no puede suscribir el mismo endpoint dos veces
   @@unique([usuarioId, endpoint])
+  @@index([tenantId])
+  @@index([usuarioId])
+}
+
+// PreferenciaNotificacion: preferencias de notificación por tipo de alerta
+model PreferenciaNotificacion {
+  id        String   @id @default(uuid())
+  tenantId  String
+  usuarioId String
+  tipoAlerta String // "RECORDATORIO_RESERVA" | "CANCELACION_PROPIA" | "CANCELACION_ADMIN"
+  activa    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  // Un usuario no puede tener dos preferencias del mismo tipo de alerta
+  @@unique([usuarioId, tenantId, tipoAlerta])
   @@index([tenantId])
   @@index([usuarioId])
 }
