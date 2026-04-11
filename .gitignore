@@ -141,3 +141,14 @@ vite.config.ts.timestamp-*
 # Prisma — base de datos local SQLite
 prisma/*.db
 prisma/*.db-journal
+
+# Test results y screenshots (Playwright, Jest, Vitest)
+test-results/
+**/test-results/
+jest-results-*.json
+e2e/results.json
+playwright-report/
+*.png
+*.jpg
+*.jpeg
+*.webp
