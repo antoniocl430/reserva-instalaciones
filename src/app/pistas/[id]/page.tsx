@@ -64,6 +64,11 @@ export default function PaginaDetallePista({ params }: Props) {
   const [confirmando, setConfirmando] = useState(false)
   const [errorConfirmacion, setErrorConfirmacion] = useState("")
 
+  // Estados para reservas recurrentes (solo instructores)
+  const [esRecurrente, setEsRecurrente] = useState(false)
+  const [frecuencia, setFrecuencia] = useState("SEMANAL")
+  const [fechaFin, setFechaFin] = useState("")
+
   // Carga info de la pista desde /api/instalaciones
   useEffect(() => {
     async function cargarPista() {
@@ -127,21 +132,35 @@ export default function PaginaDetallePista({ params }: Props) {
     setErrorConfirmacion("")
   }
 
-  // Confirma la reserva llamando a POST /api/reservas
+  // Confirma la reserva llamando a POST /api/reservas o /api/instructor/reservas-recurrentes
   async function confirmarReserva() {
     if (!slotSeleccionado) return
     setConfirmando(true)
     setErrorConfirmacion("")
 
     try {
-      const res = await fetch("/api/reservas", {
+      const body = esRecurrente
+        ? {
+            instalacionId: id,
+            horaInicio: slotSeleccionado.horaInicio,
+            fechaInicio: fecha,
+            fechaFin,
+            frecuencia,
+          }
+        : {
+            instalacionId: id,
+            fecha,
+            horaInicio: slotSeleccionado.horaInicio,
+          }
+
+      const endpoint = esRecurrente
+        ? "/api/instructor/reservas-recurrentes"
+        : "/api/reservas"
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instalacionId: id,
-          fecha,
-          horaInicio: slotSeleccionado.horaInicio,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (res.status === 401) {
@@ -159,6 +178,9 @@ export default function PaginaDetallePista({ params }: Props) {
       // Reserva creada con éxito
       setDialogAbierto(false)
       setSlotSeleccionado(null)
+      setEsRecurrente(false)
+      setFrecuencia("SEMANAL")
+      setFechaFin("")
       toast({
         title: "Reserva creada con éxito",
         description: "Tu instalación queda reservada.",
@@ -348,6 +370,79 @@ export default function PaginaDetallePista({ params }: Props) {
                   {slotSeleccionado.horaInicio} – {slotSeleccionado.horaFin}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Toggle recurrente para instructores */}
+          {sesion?.user?.rol === "INSTRUCTOR" && (
+            <div className="border-t pt-4 mt-4">
+              <label className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  checked={esRecurrente}
+                  onChange={(e) => setEsRecurrente(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Reserva recurrente</span>
+              </label>
+
+              {esRecurrente && (
+                <div className="space-y-4 mt-4 p-4 bg-blue-50 rounded">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Frecuencia</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="frecuencia"
+                          value="SEMANAL"
+                          checked={frecuencia === "SEMANAL"}
+                          onChange={(e) => setFrecuencia(e.target.value)}
+                        />
+                        <span className="text-sm">Semanal</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="frecuencia"
+                          value="QUINCENAL"
+                          checked={frecuencia === "QUINCENAL"}
+                          onChange={(e) => setFrecuencia(e.target.value)}
+                        />
+                        <span className="text-sm">Quincenal</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Hasta</label>
+                    <input
+                      type="date"
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  {fechaFin && (
+                    <div className="text-xs text-gray-600">
+                      Se crearán aproximadamente{" "}
+                      {frecuencia === "SEMANAL"
+                        ? Math.ceil(
+                            (new Date(fechaFin).getTime() -
+                              new Date(fecha).getTime()) /
+                              (7 * 24 * 60 * 60 * 1000)
+                          )
+                        : Math.ceil(
+                            (new Date(fechaFin).getTime() -
+                              new Date(fecha).getTime()) /
+                              (14 * 24 * 60 * 60 * 1000)
+                          )}{" "}
+                      sesiones
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

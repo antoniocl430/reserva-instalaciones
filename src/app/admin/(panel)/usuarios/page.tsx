@@ -28,6 +28,7 @@ interface Usuario {
   id: string
   nombre: string
   email: string
+  rol: string
   creadoEn: string
 }
 
@@ -45,6 +46,7 @@ export default function PaginaUsuariosAdmin() {
     nombre: "",
     email: "",
     password: "",
+    rol: "ADMIN",
   })
   const [guardando, setGuardando] = useState(false)
 
@@ -70,7 +72,7 @@ export default function PaginaUsuariosAdmin() {
     cargarUsuarios()
   }, [])
 
-  // Crear nuevo admin
+  // Crear nuevo usuario
   async function handleCrearAdmin() {
     if (!formNuevo.nombre.trim()) {
       setError("El nombre es obligatorio")
@@ -98,6 +100,7 @@ export default function PaginaUsuariosAdmin() {
           nombre: formNuevo.nombre,
           email: formNuevo.email,
           password: formNuevo.password,
+          rol: formNuevo.rol,
         }),
       })
 
@@ -107,7 +110,7 @@ export default function PaginaUsuariosAdmin() {
       }
 
       setDialogNuevo(false)
-      setFormNuevo({ nombre: "", email: "", password: "" })
+      setFormNuevo({ nombre: "", email: "", password: "", rol: "ADMIN" })
       cargarUsuarios()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido")
@@ -142,16 +145,16 @@ export default function PaginaUsuariosAdmin() {
         {/* Cabecera */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Usuarios Admin</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
             <p className="text-sm sm:text-base text-gray-500 mt-1">
-              Crea y elimina cuentas de administrador del sistema
+              Crea y elimina cuentas de usuario (admins e instructores)
             </p>
           </div>
           <Button
             onClick={() => setDialogNuevo(true)}
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
           >
-            Nuevo admin
+            Nuevo usuario
           </Button>
         </div>
 
@@ -174,7 +177,7 @@ export default function PaginaUsuariosAdmin() {
             </div>
           ) : usuarios.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No hay usuarios administrador
+              No hay usuarios en el sistema
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -183,6 +186,7 @@ export default function PaginaUsuariosAdmin() {
                   <TableRow>
                     <TableHead className="text-xs">Nombre</TableHead>
                     <TableHead className="text-xs">Email</TableHead>
+                    <TableHead className="text-xs">Rol</TableHead>
                     <TableHead className="text-xs">Creado el</TableHead>
                     <TableHead className="text-xs text-right">Acciones</TableHead>
                   </TableRow>
@@ -195,6 +199,11 @@ export default function PaginaUsuariosAdmin() {
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {usuario.email}
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {usuario.rol}
+                        </span>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         {formatearFechaCorta(usuario.creadoEn)}
@@ -220,13 +229,13 @@ export default function PaginaUsuariosAdmin() {
         </div>
       </div>
 
-      {/* Dialog de crear nuevo admin */}
+      {/* Dialog de crear nuevo usuario */}
       <Dialog open={dialogNuevo} onOpenChange={setDialogNuevo}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Crear nuevo administrador</DialogTitle>
+            <DialogTitle>Crear nuevo usuario</DialogTitle>
             <DialogDescription>
-              Añade una nueva cuenta de administrador al sistema
+              Añade una nueva cuenta de administrador o instructor
             </DialogDescription>
           </DialogHeader>
 
@@ -271,6 +280,32 @@ export default function PaginaUsuariosAdmin() {
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <Label>Rol</Label>
+              <div className="space-y-2 mt-1">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="rol"
+                    value="ADMIN"
+                    checked={formNuevo.rol === "ADMIN"}
+                    onChange={(e) => setFormNuevo({ ...formNuevo, rol: e.target.value })}
+                  />
+                  <span className="text-sm">Administrador</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="rol"
+                    value="INSTRUCTOR"
+                    checked={formNuevo.rol === "INSTRUCTOR"}
+                    onChange={(e) => setFormNuevo({ ...formNuevo, rol: e.target.value })}
+                  />
+                  <span className="text-sm">Instructor</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
@@ -282,7 +317,7 @@ export default function PaginaUsuariosAdmin() {
               disabled={guardando}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {guardando ? "Creando..." : "Crear admin"}
+              {guardando ? "Creando..." : "Crear usuario"}
             </Button>
           </DialogFooter>
         </DialogContent>

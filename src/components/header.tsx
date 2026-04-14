@@ -23,6 +23,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
   const esAdmin = sesion?.user?.rol === "ADMIN"
   const esCiudadano = sesion?.user?.rol === "CIUDADANO"
   const esSuperadmin = sesion?.user?.rol === "SUPERADMIN"
+  const esInstructor = sesion?.user?.rol === "INSTRUCTOR"
 
   function cerrarSesion() {
     signOut({ callbackUrl: "/login" })
@@ -73,6 +74,44 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                     className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
                   >
                     Mis reservas
+                  </Link>
+                  <Link
+                    href="/perfil"
+                    className="flex items-center gap-2 border-l border-gray-200 pl-4 hover:opacity-80 transition-opacity"
+                    aria-label="Mi perfil"
+                  >
+                    <AvatarUsuario
+                      nombre={sesion.user?.name ?? "U"}
+                      avatarUrl={(sesion.user as { avatarUrl?: string | null }).avatarUrl}
+                      className="w-8 h-8 text-xs"
+                    />
+                    <span className="text-sm font-medium hidden sm:block text-gray-700">
+                      {sesion.user?.name}
+                    </span>
+                  </Link>
+                  <button
+                    onClick={cerrarSesion}
+                    className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                  >
+                    Cerrar sesión
+                  </button>
+                </>
+              )}
+
+              {/* Instructor logueado */}
+              {esInstructor && (
+                <>
+                  <Link
+                    href="/pistas"
+                    className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
+                  >
+                    Instalaciones
+                  </Link>
+                  <Link
+                    href="/instructor"
+                    className="text-sm font-medium text-gray-600 hover:text-blue-700 transition-colors"
+                  >
+                    Mis Clases
                   </Link>
                   <Link
                     href="/perfil"
@@ -234,6 +273,42 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mis reservas
+                </Link>
+                <Link
+                  href="/perfil"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Mi perfil
+                </Link>
+                <button
+                  onClick={() => { setMenuAbierto(false); cerrarSesion() }}
+                  className="px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            )}
+
+            {/* Instructor logueado */}
+            {esInstructor && (
+              <>
+                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
+                  {sesion.user?.name}
+                </div>
+                <Link
+                  href="/pistas"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Instalaciones
+                </Link>
+                <Link
+                  href="/instructor"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Mis Clases
                 </Link>
                 <Link
                   href="/perfil"
