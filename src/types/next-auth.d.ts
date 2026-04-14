@@ -6,7 +6,7 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string
-      rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+      rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN" | "INSTRUCTOR"
       tenantId?: string
       avatarUrl?: string | null
     } & DefaultSession["user"]
@@ -18,7 +18,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string
-    rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+    rol: "CIUDADANO" | "ADMIN" | "SUPERADMIN" | "INSTRUCTOR"
     tenantId?: string
     avatarUrl?: string | null
     // Presente cuando la sesión ha sido invalidada (usuario desactivado)

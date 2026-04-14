@@ -38,6 +38,7 @@ model Tenant {
   tokensRecuperacion          TokenRecuperacion[]
   suscripcionesPush           SuscripcionPush[]
   preferenciaNotificaciones   PreferenciaNotificacion[]
+  gruposRecurrencia           GrupoRecurrencia[]
 }
 
 // Usuario: ciudadanos y administradores del ayuntamiento
@@ -62,6 +63,7 @@ model Usuario {
   tokensRecuperacion          TokenRecuperacion[]
   suscripcionesPush           SuscripcionPush[]
   preferenciaNotificaciones   PreferenciaNotificacion[]
+  gruposRecurrencia           GrupoRecurrencia[]
 
   // Email único dentro del mismo tenant (no globalmente)
   // NOTA: tenantId es opcional para superadmins (sin tenant)
@@ -84,6 +86,7 @@ model Instalacion {
   tenant   Tenant    @relation(fields: [tenantId], references: [id])
   reservas Reserva[]
   bloqueos Bloqueo[]
+  gruposRecurrencia  GrupoRecurrencia[]
 
   @@index([tenantId])
 }
@@ -101,12 +104,14 @@ model Reserva {
   creadoEn      DateTime  @default(now())
   canceladoEn   DateTime?
   canceladoPor  String?
+  grupoRecurrenciaId String?
 
   // Relaciones
   tenant      Tenant      @relation(fields: [tenantId], references: [id])
   usuario     Usuario     @relation("UsuarioReservas", fields: [usuarioId], references: [id])
   instalacion Instalacion @relation(fields: [instalacionId], references: [id])
   cancelador  Usuario?    @relation("CanceladorReservas", fields: [canceladoPor], references: [id])
+  grupoRecurrencia   GrupoRecurrencia? @relation(fields: [grupoRecurrenciaId], references: [id], onDelete: SetNull)
 
   // Campo para evitar enviar el recordatorio push más de una vez por reserva
   recordatorioEnviado Boolean @default(false)
@@ -212,4 +217,27 @@ model PreferenciaNotificacion {
   @@unique([usuarioId, tenantId, tipoAlerta])
   @@index([tenantId])
   @@index([usuarioId])
+}
+
+// GrupoRecurrencia: agrupa reservas recurrentes de un instructor
+model GrupoRecurrencia {
+  id            String   @id @default(uuid())
+  tenantId      String
+  usuarioId     String
+  instalacionId String
+  horaInicio    String   // "08:00"
+  frecuencia    String   // "SEMANAL" | "QUINCENAL"
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id], onDelete: Cascade)
+  reservas    Reserva[]
+
+  @@index([tenantId])
+  @@index([usuarioId])
+  @@index([instalacionId])
 }

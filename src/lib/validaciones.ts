@@ -41,6 +41,25 @@ export const schemaCrearReserva = z.object({
 export type CrearReservaInput = z.infer<typeof schemaCrearReserva>
 
 /**
+ * Schema para crear una reserva recurrente (instructores)
+ */
+export const schemaCrearReservaRecurrente = z.object({
+  instalacionId: z.string().min(1, "La instalación es obligatoria"),
+  horaInicio: z.enum(SLOTS_VALIDOS as [string, ...string[]]).refine(
+    (val) => SLOTS_VALIDOS.includes(val),
+    { message: "La hora de inicio no corresponde a un slot válido" }
+  ),
+  fechaInicio: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  fechaFin: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  frecuencia: z.enum(["SEMANAL", "QUINCENAL"], { message: "Frecuencia inválida" }),
+}).refine(
+  (data) => data.fechaFin >= data.fechaInicio,
+  { message: "La fecha fin debe ser posterior a la fecha inicio", path: ["fechaFin"] }
+)
+
+export type CrearReservaRecurrenteInput = z.infer<typeof schemaCrearReservaRecurrente>
+
+/**
  * Schema para cancelar una reserva (validación de parámetros)
  */
 export const schemaCancelarReserva = z.object({
@@ -104,6 +123,7 @@ export const schemaCrearUsuarioAdmin = z.object({
     .min(8, "La contraseña debe tener al menos 8 caracteres")
     .regex(/[A-Z]/, "La contraseña debe contener al menos una letra mayúscula")
     .regex(/[0-9]/, "La contraseña debe contener al menos un número"),
+  rol: z.enum(["ADMIN", "INSTRUCTOR"]).optional().default("ADMIN"),
 })
 
 export type CrearUsuarioAdminInput = z.infer<typeof schemaCrearUsuarioAdmin>

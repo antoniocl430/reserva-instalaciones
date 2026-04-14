@@ -7,6 +7,8 @@ import { extraerSlugDelHost } from "@/lib/tenant"
 const RUTAS_PROTEGIDAS = ["/dashboard", "/mis-reservas", "/perfil"]
 // Rutas que requieren estar autenticado Y tener rol ADMIN
 const RUTAS_ADMIN = ["/admin"]
+// Rutas que requieren estar autenticado Y tener rol INSTRUCTOR
+const RUTAS_INSTRUCTOR = ["/instructor"]
 // Rutas que requieren estar autenticado Y tener rol SUPERADMIN
 const RUTAS_SUPERADMIN = ["/superadmin"]
 // Rutas que solo tienen sentido sin sesión activa
@@ -98,6 +100,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // ─── Rutas INSTRUCTOR ──────────────────────────────────────────────────────
+  const esRutaInstructor = RUTAS_INSTRUCTOR.some((ruta) => pathname.startsWith(ruta))
+  if (esRutaInstructor && !estaAutenticado) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/login"
+    return NextResponse.redirect(url)
+  }
+
+  if (esRutaInstructor && rol !== "INSTRUCTOR") {
+    const url = request.nextUrl.clone()
+    url.pathname = "/dashboard"
+    return NextResponse.redirect(url)
+  }
+
   // Si intenta acceder a ruta protegida sin sesión → /login
   const esRutaProtegida = RUTAS_PROTEGIDAS.some((ruta) =>
     pathname.startsWith(ruta)
@@ -125,6 +141,7 @@ export const config = {
   matcher: [
     "/admin/login",
     "/admin/:path*",
+    "/instructor/:path*",
     "/superadmin/:path*",
     "/dashboard/:path*",
     "/pistas/:path*",
@@ -139,6 +156,7 @@ export const config = {
     "/api/superadmin/:path*",
     // Las rutas de API de admin y reservas pasan por el middleware para inyectar x-tenant-slug
     "/api/admin/:path*",
+    "/api/instructor/:path*",
     "/api/reservas/:path*",
     "/api/instalaciones/:path*",
     "/api/avisos/:path*",

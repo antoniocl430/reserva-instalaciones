@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nombre, email, password } = resultado.data
+    const { nombre, email, password, rol } = resultado.data
 
     // Comprobar si el email ya está registrado en este tenant
     const usuarioExistente = await prisma.usuario.findFirst({
@@ -82,19 +82,20 @@ export async function POST(request: NextRequest) {
     // Hashear contraseña con coste 12
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // Crear el usuario con rol ADMIN en el tenant actual
+    // Crear el usuario con el rol especificado (default: ADMIN)
     const usuario = await prisma.usuario.create({
       data: {
         tenantId: sesion.user.tenantId,
         nombre: nombre.trim(),
         email: email.toLowerCase(),
         passwordHash,
-        rol: "ADMIN",
+        rol: rol || "ADMIN",
       },
       select: {
         id: true,
         nombre: true,
         email: true,
+        rol: true,
         creadoEn: true,
       },
     })

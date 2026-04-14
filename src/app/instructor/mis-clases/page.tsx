@@ -7,14 +7,13 @@ import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 
 interface Reserva {
@@ -272,36 +271,42 @@ export default function MisClases() {
         </div>
       </main>
 
-      <AlertDialog
+      <Dialog
         open={grupoACancelar !== null}
-        onOpenChange={open => {
+        onOpenChange={(open: boolean) => {
           if (!open) setGrupoACancelar(null)
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar grupo de clases</AlertDialogTitle>
-            <AlertDialogDescription>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar grupo de clases</DialogTitle>
+            <DialogDescription>
               Estás a punto de cancelar todas las sesiones futuras de{' '}
               <strong>{grupoACancelar?.instalacion.nombre}</strong> a las{' '}
               <strong>{grupoACancelar?.horaInicio}</strong>. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800 my-4">
             Se cancelarán todas las sesiones futuras. Las sesiones pasadas no se afectarán.
           </div>
-          <div className="flex gap-3 justify-end">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setGrupoACancelar(null)}
+              disabled={cancelando}
+            >
+              Cancelar
+            </Button>
+            <Button
               onClick={cancelarGrupo}
               disabled={cancelando}
               className="bg-red-600 hover:bg-red-700"
             >
               {cancelando ? 'Cancelando...' : 'Confirmar cancelación'}
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

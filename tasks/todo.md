@@ -91,6 +91,188 @@ Pulir la experiencia del ciudadano en dispositivos móviles: navegación más cl
 
 ---
 
+## Bloque 12 — Fase A: Rol INSTRUCTOR + Reservas Recurrentes (Backend)
+
+### Objetivo
+Implementar el rol INSTRUCTOR y la funcionalidad de reservas recurrentes. Los instructores pueden crear reservas que se repiten semanal o quincenalmente durante un período. Los ciudadanos normales no tienen acceso a esta funcionalidad.
+
+**Responsable:** Subagente backend
+**Plan base:** `/c/Users/anton/.claude/plans/zesty-inventing-bonbon.md`
+
+---
+
+## PASO 1: Schema Prisma + Migración
+
+- [ ] Leer `prisma/schema.prisma` y analizar estructura actual
+- [ ] Añadir modelo `GrupoRecurrencia` con campos completos:
+  - `id` (uuid)
+  - `tenantId` (FK a Tenant)
+  - `usuarioId` (FK a Usuario — el instructor propietario)
+  - `instalacionId` (FK a Instalacion)
+  - `horaInicio` (String: "08:00")
+  - `frecuencia` (String: "SEMANAL" | "QUINCENAL")
+  - `fechaInicio` (DateTime)
+  - `fechaFin` (DateTime)
+  - `activo` (Boolean @default(true))
+  - `creadoEn` (DateTime @default(now()))
+  - Relaciones: tenant, usuario, instalacion, reservas
+  - Índices: tenantId, usuarioId
+- [ ] Añadir a modelo `Reserva`:
+  - Campo `grupoRecurrenciaId String?` (FK opcional a GrupoRecurrencia)
+  - Relación `grupoRecurrencia GrupoRecurrencia?`
+- [ ] Añadir a modelo `Usuario`:
+  - Relación `gruposRecurrencia GrupoRecurrencia[]`
+- [ ] Añadir a modelo `Instalacion`:
+  - Relación `gruposRecurrencia GrupoRecurrencia[]`
+- [ ] Añadir a modelo `Tenant`:
+  - Relación `gruposRecurrencia GrupoRecurrencia[]`
+- [ ] Ejecutar `npx prisma migrate dev --name add_recurring_reservations`
+- [ ] Verificar que la migración SQL se ejecuta sin errores
+
+---
+
+## PASO 2: Tipos TypeScript
+
+- [ ] Leer `src/types/next-auth.d.ts`
+- [ ] Añadir `"INSTRUCTOR"` a ambas unions de `rol`:
+  - `session.user.rol`
+  - `token.rol`
+- [ ] Leer `src/lib/auth.ts`
+- [ ] Actualizar los dos casts duros de tipo (líneas ~90 y ~119) para incluir "INSTRUCTOR"
+- [ ] Compilar y verificar sin errores TypeScript
+
+---
+
+## PASO 3: Middleware
+
+- [ ] Leer `src/middleware.ts`
+- [ ] Definir `RUTAS_INSTRUCTOR = ["/instructor"]`
+- [ ] Añadir protección: INSTRUCTOR sin sesión válida → redirect `/login`
+- [ ] Añadir protección: INSTRUCTOR en `/admin/*` → redirect `/instructor`
+- [ ] Actualizar `config.matcher` para incluir `/instructor/:path*` si no está
+- [ ] Probar que middleware funciona correctamente
+
+---
+
+## PASO 4: Validaciones Zod
+
+- [ ] Leer `src/lib/validaciones.ts`
+- [ ] Añadir nuevo schema `schemaCrearReservaRecurrente`:
+  ```
+  instalacionId: z.string().uuid()
+  horaInicio: z.enum(["08:00", "09:15", "10:30", "11:45", "16:45", "18:00", "19:15"])
+  fechaInicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+  fechaFin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+  frecuencia: z.enum(["SEMANAL", "QUINCENAL"])
+  ```
+- [ ] Actualizar `schemaCrearUsuarioAdmin`:
+  - Añadir campo `rol: z.enum(["ADMIN", "INSTRUCTOR"]).optional().default("ADMIN")`
+- [ ] Probar que los schemas compilan correctamente
+
+---
+
+## PASO 5: Tests TDD — APIs nuevas
+
+**Ubicación:** `src/__tests__/backend/instructor-recurrencias.test.ts`
+
+- [ ] Test: POST /api/instructor/reservas-recurrentes con grupo válido
+  - Debe devolver 200 con { grupo, reservas: [...] }
+  - El grupo debe tener creadoEn, activo: true
+  - Las reservas deben calcularse según la frecuencia
+- [ ] Test: POST /api/instructor/reservas-recurrentes rechaza CIUDADANO (403)
+- [ ] Test: POST /api/instructor/reservas-recurrentes rechaza sin auth (401)
+- [ ] Test: POST /api/instructor/reservas-recurrentes con conflicto en fecha (409)
+  - Devuelve listado de fechas en conflicto, NO crea nada (rollback)
+- [ ] Test: DELETE /api/instructor/reservas-recurrentes/[grupoId] cancela grupo
+  - Actualiza activo: false en GrupoRecurrencia
+  - Cancela todas las Reserva ACTIVAS futuras (horaInicio > now())
+  - Devuelve { grupo: { ...activo: false }, reservasCanceladas: N }
+- [ ] Test: DELETE /api/instructor/reservas-recurrentes/[grupoId] rechaza si no propietario (403)
+
+---
+
+## PASO 6: API — POST /api/instructor/reservas-recurrentes
+
+**Archivo:** `src/app/api/instructor/reservas-recurrentes/route.ts` (NUEVO)
+
+Funcionalidad:
+1. Validar sesión: 401 si no auth
+2. Validar rol: 403 si no INSTRUCTOR
+3. Parsear body con `schemaCrearReservaRecurrente`
+4. Calcular fechas: desde `fechaInicio` hasta `fechaFin` según `frecuencia`
+   - SEMANAL: cada 7 días
+   - QUINCENAL: cada 14 días
+   - Máximo 52 instancias por grupo
+5. EN TRANSACCIÓN PRISMA:
+   - Para CADA fecha:
+     - Buscar Reserva ACTIVA con mismo `instalacionId`, `horaInicio`
+     - Buscar Bloqueo activo que cubra esa fecha
+     - Si conflicto: acumular en lista y lanzar 409 con listado
+   - Si no hay conflictos:
+     - Crear GrupoRecurrencia
+     - Crear todas las Reserva asociadas
+6. Devolver `{ grupo, reservas: [...] }`
+
+**Validaciones:**
+- `fechaInicio` <= `fechaFin`
+- `horaInicio` debe estar en la lista de slots permitidos
+- máximo 52 instancias
+- el usuario debe ser INSTRUCTOR (ya validado en autenticación)
+
+---
+
+## PASO 7: API — DELETE /api/instructor/reservas-recurrentes/[grupoId]
+
+**Archivo:** `src/app/api/instructor/reservas-recurrentes/[grupoId]/route.ts` (NUEVO)
+
+Funcionalidad:
+1. Validar sesión y rol INSTRUCTOR (401/403)
+2. Buscar grupo: `GrupoRecurrencia` con `id` y `tenantId`
+3. Verificar que el usuario propietario es `usuarioId` (si no, 403)
+4. Actualizar `activo: false` en GrupoRecurrencia
+5. Buscar todas las Reserva del grupo con `estado: ACTIVA` y `horaInicio > now()`
+6. Actualizar esas Reserva a `estado: CANCELADA` + metadatos de cancelación
+7. (Opcional) Enviar emails de cancelación a cada reserva
+8. Devolver `{ grupo: { ...activo: false }, reservasCanceladas: N }`
+
+---
+
+## PASO 8: API actualizada — PATCH /api/reservas/[id]/cancelar
+
+**Archivo:** `src/app/api/reservas/[id]/cancelar/route.ts` (MODIFICACIÓN)
+
+Cambios:
+1. Aceptar en body parámetro opcional `cancelarGrupo: boolean`
+2. Si `cancelarGrupo === true` y la reserva tiene `grupoRecurrenciaId`:
+   - Buscar todas las Reserva futuras (horaInicio > now()) del mismo grupo
+   - Actualizar esas a estado CANCELADA
+   - Actualizar `activo: false` en GrupoRecurrencia
+   - NO cancela la reserva actual, solo las futuras
+3. Devolver array de IDs de todas las reservas canceladas (incluyendo la actual)
+
+---
+
+## PASO 9: API actualizada — POST /api/admin/usuarios
+
+**Archivo:** `src/app/api/admin/usuarios/route.ts` (MODIFICACIÓN)
+
+Cambios:
+1. Body ahora incluye campo `rol: z.enum(["ADMIN", "INSTRUCTOR"]).optional().default("ADMIN")`
+2. Validar que el valor es válido (no otras cadenas)
+3. Pasar `rol` al `prisma.usuario.create()` en lugar de hardcodearlo a "ADMIN"
+4. Devolver usuario creado con su rol
+
+---
+
+## PASO 10: Verificación final
+
+- [ ] Ejecutar `npx vitest run` — todos los tests verdes (incluye nuevos)
+- [ ] Ejecutar `npm test` — todos los tests Jest pasan
+- [ ] Verificar que no hay regresiones en tests existentes
+- [ ] Probar manualmente en el navegador (si es posible)
+
+---
+
 ## Bloque 11 — Sistema de notificaciones Web Push — Backend (COMPLETADO 2026-03-30)
 
 ### Plan TDD
