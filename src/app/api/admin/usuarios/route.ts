@@ -21,11 +21,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const usuarios = await prisma.usuario.findMany({
-      where: { tenantId: sesion.user.tenantId, rol: "ADMIN" },
+      where: {
+        tenantId: sesion.user.tenantId,
+        rol: { in: ["ADMIN", "INSTRUCTOR"] }
+      },
       select: {
         id: true,
         nombre: true,
         email: true,
+        rol: true,
         creadoEn: true,
       },
       orderBy: { creadoEn: "desc" },
