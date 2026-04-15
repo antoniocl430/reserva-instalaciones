@@ -1184,3 +1184,52 @@ Tareas:
 - [x] Playwright config actualizado a port dinámico (PLAYWRIGHT_TEST_PORT env var)
 - [x] Fixture `/instructor/mis-clases` páginas y componentes funcionando
 
+
+---
+
+## Corrección: PreferenciaNotificacion — Migración a columnas planas (✅ COMPLETADO 2026-04-15)
+
+### Contexto
+Los tests de preferencias-notificacion fallaban con 500 porque el modelo Prisma (tipoAlerta + activa con única constraint por tipo) no coincidía con los tests/schema Zod que esperaban 5 columnas booleanas planas en una sola fila.
+
+### Solución — Option B: Migración de BD + API + Componente
+
+#### PASO 1: Schema Prisma + Migración
+- [x] Reemplazar `tipoAlerta String + activa Boolean` por 5 columnas: `notificacionesEmail, notificacionesPush, recordatorioReserva, recordatorioCancel, notificacionesAviso` (todos `Boolean @default(true)`)
+- [x] Cambiar unique constraint: de `@@unique([usuarioId, tenantId, tipoAlerta])` a `@@unique([usuarioId, tenantId])`
+- [x] Crear migración `20260415102606_flat_notification_preferences`: limpiar datos viejos, dropear tipoAlerta+activa, crear 5 columnas nuevas
+- [x] Ejecutar: `npx prisma migrate deploy`
+- [x] Regenerar Prisma client: `npx prisma generate`
+
+#### PASO 2: API Route — GET + PATCH
+- [x] Reescribir GET: `findUnique({ where: { usuarioId_tenantId: { usuarioId, tenantId } } })`
+  - Si no existe: devolver defaults (todos true)
+  - Si existe: devolver registro con usuarioId, todos los 5 campos, actualizadoEn
+- [x] Reescribir PATCH: un único `upsert` keyed en `{ usuarioId_tenantId: { usuarioId, tenantId } }`
+  - `update: { ...validacion.data }`
+  - `create: { usuarioId, tenantId, ...PREFERENCIAS_DEFECTO, ...validacion.data }`
+  - Devolver el registro upsertado directamente
+
+#### PASO 3: Componente PreferenciasNotificacion.tsx
+- [x] Actualizar estado: de 3 campos (recordatorioReserva, cancelacionPropia, cancelacionAdmin) a 5 (+ notificacionesEmail, notificacionesPush, notificacionesAviso)
+- [x] UI: 5 checkboxes con labels actualizados
+- [x] PATCH body: enviar los 5 campos nuevos
+- [x] Defaults en cargarPreferencias: todos true
+
+#### PASO 4: Tests
+- [x] Actualizar `preferencias-notificacion.test.ts`: donde: de `{ usuarioId }` a `{ usuarioId_tenantId: { usuarioId, tenantId } }`
+- [x] Actualizar `preferencias-notificacion.test.tsx` (vitest): 5 checkboxes, datos nuevos, assertions para todos los campos
+- [x] Convertir `admin-usuarios-instructor.test.ts` de Vitest a Jest (para consistencia con el resto de tests Jest del proyecto)
+
+### Resultado
+- [x] `npm test` — 284/284 tests Jest pasando ✅
+- [x] `npx vitest run` — 151/151 tests Vitest pasando ✅
+- [x] Todos los tests de preferencias-notificacion: 11/11 pasando (antes 6 fallidos con 500)
+- [x] Cero nuevas regresiones introducidas
+
+### Entregables
+- Modelo Prisma alineado con tests y schema Zod
+- Migración de BD ejecutada exitosamente
+- API endpoints corregidos y simplificados (una transacción por usuario)
+- Componente actualizado con 5 campos funcionales
+- Tests actualizados y pasando
