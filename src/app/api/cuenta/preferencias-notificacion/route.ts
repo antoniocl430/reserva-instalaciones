@@ -111,7 +111,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Datos inválidos",
-          detalles: validacion.error.errors,
+          detalles: validacion.error.issues,
         },
         { status: 400 }
       )
@@ -133,14 +133,14 @@ export async function PATCH(request: NextRequest) {
             where: {
               usuarioId_tenantId_tipoAlerta: {
                 usuarioId: sesion.user.id,
-                tenantId: sesion.user.tenantId,
+                tenantId: sesion.user.tenantId!,
                 tipoAlerta,
               },
             },
             update: { activa: activa === true },
             create: {
               usuarioId: sesion.user.id,
-              tenantId: sesion.user.tenantId,
+              tenantId: sesion.user.tenantId!,
               tipoAlerta,
               activa: activa === true,
             },

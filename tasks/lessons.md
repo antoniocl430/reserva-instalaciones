@@ -153,3 +153,27 @@ Revisar este archivo al inicio de cada sesión.
 **Error:** `screen.getByText('Crear cuenta')` lanza "Found multiple elements with the text" porque hay dos nodos que contienen ese texto.
 **Corrección:** Usar `screen.getByRole('heading', { name: /Crear cuenta/i })` para apuntar al h1, o `screen.getByRole('button', { name: /Crear cuenta/i })` para el botón.
 **Regla:** Cuando un texto puede aparecer en múltiples elementos (heading + button, label + badge, etc.), usar `getByRole` con el rol específico en lugar de `getByText` genérico.
+
+### LESSON-024: El puerto del dev server en E2E tests debe ser configurable vía variable de entorno
+**Contexto:** Tests E2E en Playwright con baseURL hardcodeado a localhost:3000, pero dev server corriendo en 3002 debido a port contention.
+**Error:** Tests conectaban a localhost:3000 mientras el servidor estaba en 3002, causando timeouts en login (waiting for navigation).
+**Corrección:** (1) Actualizar `e2e/playwright.config.ts` para usar variable de entorno: `const port = process.env.PLAYWRIGHT_TEST_PORT || '3000'` y `baseURL: \`http://localhost:\${port}\``. (2) Ejecutar tests con `PLAYWRIGHT_TEST_PORT=3002 npx playwright test`.
+**Regla:** Cualquier hardcoded URL/port en E2E tests debe extraerse a variable de entorno para soportar múltiples entornos de desarrollo.
+
+### LESSON-025: El contenido HTML con opacity:0 en headless mode requiere esperas explícitas
+**Contexto:** Tests E2E que navigaban a `/pistas` no podían encontrar los slots (divs con role="button"). El HTML mostraba los elementos pero con `opacity:0` (animación Framer Motion inicial).
+**Error:** `toBeVisible()` devuelve false para elementos con opacity:0. En headless mode sin interacción del usuario, la animación no se ejecuta siempre de inmediato.
+**Corrección:** (1) Añadir `await page.waitForTimeout(800)` después de `waitForLoadState('networkidle')` para permitir que animaciones cliente completen. (2) Para selectores específicos, usar `waitForSelector()` en lugar de `toBeVisible()` cuando el elemento existe pero está animando.
+**Regla:** En tests E2E headless, después de navegar a una página con animaciones CSS/Framer Motion, esperar explícitamente 0.5-1s para que el contenido sea visible. No usar `toBeVisible()` como mecanismo de espera principal en headless mode; usa `waitForSelector()` o `waitForLoadState()` primero.
+
+### LESSON-026: En tests E2E, la autenticación con page.request mantiene cookies de sesión automáticamente
+**Contexto:** Test E2E que intentaba hacer una llamada POST autenticada a una API usando `request` fixture global de Playwright.
+**Error:** POST devolvía 401 porque `request` (fixture global) no incluye las cookies de sesión que se configuraron mediante la UI (`await loginInstructor(page)`).
+**Corrección:** Usar `page.request.post()` en lugar de `request.post()`. El `page.request` context hereda las cookies de la página actual.
+**Regla:** Para requests autenticadas en tests E2E, usar siempre `page.request` (context-aware con cookies) en lugar de `request` (global sin cookies). Alternativamente, pasar explícitamente las cookies: `{ headers: { 'Cookie': cookieString } }`.
+
+### LESSON-027: Los tests E2E que dependen de datos previos necesitan cleanup explícito
+**Contexto:** Test E2E que creaba un grupo recurrente (test 1), luego otros tests (2, 3) asumían que el grupo existía. En la segunda ejecución, la primer creación fallaba (409 Conflict) por un grupo previo.
+**Error:** Tests no eran idempotentes. La segunda ejecución encontraba grupos de la ejecución anterior, causando conflictos.
+**Corrección:** (1) En el test que crea datos, llamar primero a un DELETE/cleanup: `const respListar = await page.request.get('/api/instructor/reservas-recurrentes'); for (const grupo of grupos) await page.request.delete(/api/.../grupo.id)`. (2) Usar fechas/horas variadas (semana 7+ en el futuro) para evitar solapamientos entre runs.
+**Regla:** Tests E2E que crean datos compartidos deben limpiar estado anterior al inicio. Alternativa: usar identifiers únicos por ejecución (timestamps, UUIDs) para evitar colisiones.

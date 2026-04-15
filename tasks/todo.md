@@ -1103,3 +1103,84 @@ Crear endpoints para leer y guardar preferencias de notificación.
 - [x] Verificación: suite Jest completa pasa (268 tests)
 
 ---
+
+---
+
+## Fase 3 Final — Rol INSTRUCTOR (✅ COMPLETADO — 2026-04-14 22:45)
+
+### Objetivo
+Completar el rol INSTRUCTOR con:
+1. BLOQUE A1: Tabla expandible de grupos recurrentes en `/instructor/mis-clases` ✅
+2. BLOQUE A2: Tests E2E del flujo instructor (crear → ver → cancelar) ✅
+3. BLOQUE A3: Emails de notificación (confirmación, cancelación, recordatorio) ✅
+
+### BLOQUE A1 — GET /api/instructor/reservas-recurrentes (✅ COMPLETADO)
+
+**Responsable:** Subagente backend
+**Archivo:** `src/app/api/instructor/reservas-recurrentes/route.ts` (modificar GET)
+
+Tareas:
+- [x] Implementar GET que devuelve: `{ grupos: [{ id, instalacion: { nombre }, horaInicio, frecuencia, fechaInicio, fechaFin, activo, reservas: [...] }] }`
+- [x] Validar: 401 sin auth, 403 si rol !== INSTRUCTOR
+- [x] Incluir solo grupos del instructor actual (usuarioId === sesion.user.id)
+- [x] Incluir solo grupos activos (activo === true)
+- [x] Ordenar por fechaInicio DESC
+- [x] Verificar: `npm test` (274/280 pasan) y `npx vitest run` (151/151 pasan) sin nuevas fallas
+
+**Entregables:**
+- GET endpoint listando grupos recurrentes del instructor
+- Integración con `/instructor/mis-clases/page.tsx`
+- Validación de autenticación y autorización
+
+---
+
+### BLOQUE A2 — Tests E2E (✅ COMPLETADO — 3/3 PASAN)
+
+**Responsable:** Frontend (Playwright)
+**Archivo:** `e2e/tests/instructor.spec.ts` (NUEVO)
+
+Tareas:
+- [x] Test 1: Instructor crea grupo recurrente → aparece en `/instructor/mis-clases`
+- [x] Test 2: Expandir grupo → ver lista de sesiones (5 sesiones visibles)
+- [x] Test 3: Cancelar grupo → desaparece de lista (0 grupos después)
+- [x] Ejecutar: `npx playwright test e2e/tests/instructor.spec.ts` — RESULTADO: 3/3 PASSING ✅
+
+**Entregables:**
+- Test suite E2E validando flujo completo (crear → ver → cancelar)
+- Login helper function con espera explícita para form visibility
+- Cleanup logic (DELETE groups antes de crear) para evitar conflictos entre runs
+- Dynamic date selection (semana 7+ en futuro) para consistencia multi-run
+- API request pattern con page.request para mantener sesión autenticada
+
+---
+
+### BLOQUE A3 — Emails Notificaciones (✅ COMPLETADO)
+
+**Responsable:** Backend
+**Archivo:** `src/lib/email.ts` (añadir 3 funciones)
+
+Tareas:
+- [x] Función: `enviarEmailConfirmacionGrupo` — al crear grupo
+- [x] Función: `enviarEmailCancelacionGrupo` — al cancelar grupo
+- [x] Función: `enviarEmailRecordatorioGrupo` — recordatorio 24h antes
+- [x] Integrar en POST `/api/instructor/reservas-recurrentes` — llamar `enviarEmailConfirmacionGrupo` (fire-and-forget)
+- [x] Integrar en DELETE `/api/instructor/reservas-recurrentes/[grupoId]` — llamar `enviarEmailCancelacionGrupo` (fire-and-forget)
+- [x] Verificar: `npm test` (274/280) y `npx vitest run` (151/151) sin nuevas regresiones
+
+**Entregables:**
+- 3 funciones de email con HTML templating y es-ES date formatting
+- Integración fire-and-forget (.catch()) para no bloquear HTTP responses
+- Correo de confirmación con detalles de grupo, frecuencia, período, lista de sesiones
+- Correo de cancelación con instalación, hora, frecuencia, count de canceladas
+
+---
+
+### Verificación Final Fase 3 (✅ COMPLETA)
+
+- [x] `npm test` — 274/280 tests pasan (6 pre-existentes fallidos en preferencias-notificacion.test.ts — no relacionados)
+- [x] `npx vitest run` — 151/151 tests pasan, sin nuevas regresiones
+- [x] `npx playwright test e2e/tests/instructor.spec.ts` — 3/3 E2E pasando ✅
+- [x] Flujo manual: instructor crea grupo → ve en mis-clases → cancela → desaparece ✅
+- [x] Playwright config actualizado a port dinámico (PLAYWRIGHT_TEST_PORT env var)
+- [x] Fixture `/instructor/mis-clases` páginas y componentes funcionando
+

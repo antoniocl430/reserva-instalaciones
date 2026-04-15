@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { opcionesAuth } from "@/lib/auth"
+import { enviarEmailCancelacionGrupo } from "@/lib/email"
 
 export async function DELETE(
   request: NextRequest,
@@ -22,6 +23,11 @@ export async function DELETE(
 
     const grupo = await prisma.grupoRecurrencia.findUnique({
       where: { id: params.grupoId },
+      include: {
+        instalacion: {
+          select: { nombre: true },
+        },
+      },
     })
 
     if (!grupo) {
@@ -55,6 +61,16 @@ export async function DELETE(
       })
 
       return { grupo: grupoActualizado, reservasCanceladas: count }
+    })
+
+    // Enviar email de cancelación (fire-and-forget)
+    enviarEmailCancelacionGrupo(sesion.user.email!, sesion.user.name || "Instructor", {
+      instalacion: resultado.grupo.instalacion || { nombre: "" },
+      horaInicio: resultado.grupo.horaInicio,
+      frecuencia: resultado.grupo.frecuencia,
+      reservasCanceladas: resultado.reservasCanceladas,
+    }).catch((error) => {
+      console.error("[DELETE /api/instructor/reservas-recurrentes/[grupoId]] Error enviando email:", error)
     })
 
     return NextResponse.json(resultado, { status: 200 })

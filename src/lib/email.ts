@@ -338,3 +338,255 @@ function plantillaRecuperacion(nombreUsuario: string, urlReset: string): string 
     </html>
   `
 }
+
+// ---------------------------------------------------------------------------
+// Funciones para grupos recurrentes
+// ---------------------------------------------------------------------------
+
+interface DatosGrupoConfirmacion {
+  instalacion: { nombre: string }
+  horaInicio: string
+  frecuencia: string
+  fechaInicio: Date
+  fechaFin: Date
+  reservas: Array<{ horaInicio: string; horaFin: string; fecha: Date }>
+}
+
+interface DatosGrupoCancelacion {
+  instalacion: { nombre: string }
+  horaInicio: string
+  frecuencia: string
+  reservasCanceladas: number
+}
+
+interface DatosGrupoRecordatorio {
+  instalacion: { nombre: string }
+  horaInicio: string
+  fechaProxima: Date
+}
+
+/**
+ * Envía email de confirmación al instructor tras crear un grupo recurrente.
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailConfirmacionGrupo(
+  emailInstructor: string,
+  nombreInstructor: string,
+  grupo: DatosGrupoConfirmacion
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de confirmación de grupo omitido")
+    return
+  }
+
+  const resultado = await resend.emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailInstructor),
+    subject: `Clase Recurrente Creada: ${grupo.instalacion.nombre}`,
+    html: plantillaConfirmacionGrupo(nombreInstructor, grupo),
+  })
+  console.log("[Email] Confirmación grupo recurrente →", JSON.stringify(resultado))
+}
+
+/**
+ * Envía email de cancelación al instructor tras cancelar un grupo recurrente.
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailCancelacionGrupo(
+  emailInstructor: string,
+  nombreInstructor: string,
+  grupo: DatosGrupoCancelacion
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de cancelación de grupo omitido")
+    return
+  }
+
+  await resend.emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailInstructor),
+    subject: `Clase Recurrente Cancelada: ${grupo.instalacion.nombre}`,
+    html: plantillaCancelacionGrupo(nombreInstructor, grupo),
+  })
+}
+
+/**
+ * Envía email de recordatorio al instructor para la próxima sesión de su clase recurrente.
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailRecordatorioGrupo(
+  emailInstructor: string,
+  nombreInstructor: string,
+  grupo: DatosGrupoRecordatorio
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de recordatorio de grupo omitido")
+    return
+  }
+
+  await resend.emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailInstructor),
+    subject: `Recordatorio: Clase mañana en ${grupo.instalacion.nombre}`,
+    html: plantillaRecordatorioGrupo(nombreInstructor, grupo),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Plantillas HTML para grupos recurrentes
+// ---------------------------------------------------------------------------
+
+function plantillaConfirmacionGrupo(
+  nombreInstructor: string,
+  grupo: DatosGrupoConfirmacion
+): string {
+  const fechaInicioStr = grupo.fechaInicio.toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+  const fechaFinStr = grupo.fechaFin.toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
+  const sesionesHtml = grupo.reservas
+    .slice(0, 5)
+    .map(
+      (s) =>
+        `<li>${s.fecha.toLocaleDateString("es-ES")} de ${s.horaInicio} a ${s.horaFin}</li>`
+    )
+    .join("")
+
+  const frecuenciaTexto = grupo.frecuencia === "SEMANAL" ? "Semanal" : "Quincenal"
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #16a34a; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Clase Recurrente Creada</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreInstructor}</strong>:</p>
+        <p>Tu clase recurrente ha sido creada exitosamente:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalación</td>
+            <td style="padding: 10px;">${grupo.instalacion.nombre}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Horario</td>
+            <td style="padding: 10px;">${grupo.horaInicio}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Frecuencia</td>
+            <td style="padding: 10px;">${frecuenciaTexto}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Período</td>
+            <td style="padding: 10px;">${fechaInicioStr} a ${fechaFinStr}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Total sesiones</td>
+            <td style="padding: 10px;">${grupo.reservas.length}</td>
+          </tr>
+        </table>
+        <h3 style="margin-top: 24px; margin-bottom: 12px; color: #1a1a1a;">Próximas sesiones:</h3>
+        <ul style="padding-left: 20px; color: #4b5563;">
+          ${sesionesHtml}
+        </ul>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Puedes gestionar tu clase en: <a href="${process.env.NEXTAUTH_URL}/instructor/mis-clases" style="color: #2563eb; text-decoration: none;">Mis Clases</a></p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+function plantillaCancelacionGrupo(
+  nombreInstructor: string,
+  grupo: DatosGrupoCancelacion
+): string {
+  const frecuenciaTexto = grupo.frecuencia === "SEMANAL" ? "Semanal" : "Quincenal"
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #dc2626; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Clase Recurrente Cancelada</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreInstructor}</strong>:</p>
+        <p>Tu clase recurrente ha sido cancelada:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalación</td>
+            <td style="padding: 10px;">${grupo.instalacion.nombre}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Horario</td>
+            <td style="padding: 10px;">${grupo.horaInicio}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Frecuencia</td>
+            <td style="padding: 10px;">${frecuenciaTexto}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Sesiones canceladas</td>
+            <td style="padding: 10px;">${grupo.reservasCanceladas}</td>
+          </tr>
+        </table>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Las sesiones pasadas no se han visto afectadas. Solo se han cancelado las futuras.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+function plantillaRecordatorioGrupo(
+  nombreInstructor: string,
+  grupo: DatosGrupoRecordatorio
+): string {
+  const fechaStr = grupo.fechaProxima.toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #f59e0b; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Recordatorio: Clase Mañana</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreInstructor}</strong>:</p>
+        <p>Recordatorio de tu clase:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalación</td>
+            <td style="padding: 10px;">${grupo.instalacion.nombre}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Fecha y hora</td>
+            <td style="padding: 10px;">${fechaStr} a las ${grupo.horaInicio}</td>
+          </tr>
+        </table>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">¡No olvides preparar el material necesario!</p>
+      </div>
+    </body>
+    </html>
+  `
+}

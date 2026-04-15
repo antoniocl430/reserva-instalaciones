@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { opcionesAuth } from "@/lib/auth"
 import { schemaCrearReservaRecurrente } from "@/lib/validaciones"
+import { enviarEmailConfirmacionGrupo } from "@/lib/email"
 
 /**
  * Crea un objeto Date cuyo instante UTC corresponde a la hora y minutos indicados
@@ -135,6 +136,11 @@ export async function POST(request: NextRequest) {
           fechaFin: new Date(fechaFin),
           activo: true,
         },
+        include: {
+          instalacion: {
+            select: { nombre: true },
+          },
+        },
       })
 
       // Crear todas las reservas
@@ -165,6 +171,25 @@ export async function POST(request: NextRequest) {
       return { grupo, reservas }
     })
 
+    // Enviar email de confirmación (fire-and-forget)
+    const horaInicioStr = resultado.grupo.horaInicio
+    const horaFinStr = SLOTS_VALIDOS[horaInicioStr] || "22:00"
+
+    enviarEmailConfirmacionGrupo(sesion.user.email!, sesion.user.name || "Instructor", {
+      instalacion: resultado.grupo.instalacion || { nombre: "" },
+      horaInicio: horaInicioStr,
+      frecuencia: resultado.grupo.frecuencia,
+      fechaInicio: resultado.grupo.fechaInicio,
+      fechaFin: resultado.grupo.fechaFin,
+      reservas: resultado.reservas.map((r: any) => ({
+        horaInicio: horaInicioStr,
+        horaFin: horaFinStr,
+        fecha: r.fecha,
+      })),
+    }).catch((error) => {
+      console.error("[POST /api/instructor/reservas-recurrentes] Error enviando email:", error)
+    })
+
     return NextResponse.json(resultado, { status: 201 })
   } catch (error: any) {
     if (error.message?.startsWith("CONFLICTOS:")) {
@@ -176,6 +201,47 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("[POST /api/instructor/reservas-recurrentes]", error)
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const sesion = await getServerSession(opcionesAuth)
+    if (!sesion) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+    }
+
+    if (sesion.user.rol !== "INSTRUCTOR") {
+      return NextResponse.json(
+        { error: "Acceso denegado" },
+        { status: 403 }
+      )
+    }
+
+    const grupos = await prisma.grupoRecurrencia.findMany({
+      where: {
+        usuarioId: sesion.user.id,
+        tenantId: sesion.user.tenantId,
+        activo: true,
+      },
+      include: {
+        instalacion: {
+          select: { nombre: true },
+        },
+        reservas: {
+          orderBy: { horaInicio: "asc" },
+        },
+      },
+      orderBy: { fechaInicio: "desc" },
+    })
+
+    return NextResponse.json({ grupos }, { status: 200 })
+  } catch (error) {
+    console.error("[GET /api/instructor/reservas-recurrentes]", error)
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
