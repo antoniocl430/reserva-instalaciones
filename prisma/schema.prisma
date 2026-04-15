@@ -199,22 +199,25 @@ model SuscripcionPush {
   @@index([usuarioId])
 }
 
-// PreferenciaNotificacion: preferencias de notificación por tipo de alerta
+// PreferenciaNotificacion: preferencias de notificación planas por usuario
 model PreferenciaNotificacion {
-  id        String   @id @default(uuid())
-  tenantId  String
-  usuarioId String
-  tipoAlerta String // "RECORDATORIO_RESERVA" | "CANCELACION_PROPIA" | "CANCELACION_ADMIN"
-  activa    Boolean  @default(true)
-  creadoEn  DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  tenantId            String
+  usuarioId           String
+  notificacionesEmail Boolean  @default(true)
+  notificacionesPush  Boolean  @default(true)
+  recordatorioReserva Boolean  @default(true)
+  recordatorioCancel  Boolean  @default(true)
+  notificacionesAviso Boolean  @default(true)
+  creadoEn            DateTime @default(now())
+  actualizadoEn       DateTime @updatedAt
 
   // Relaciones
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
-  // Un usuario no puede tener dos preferencias del mismo tipo de alerta
-  @@unique([usuarioId, tenantId, tipoAlerta])
+  // Un usuario por tenant tiene una única fila de preferencias
+  @@unique([usuarioId, tenantId])
   @@index([tenantId])
   @@index([usuarioId])
 }

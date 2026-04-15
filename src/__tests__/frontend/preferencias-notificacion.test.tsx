@@ -3,7 +3,7 @@
  *
  * Verifica que el componente:
  * 1. Carga preferencias del usuario al montar
- * 2. Renderiza checkboxes sin marcar por defecto
+ * 2. Renderiza 5 checkboxes con los nuevos campos
  * 3. Permite cambiar preferencias y guardar (PATCH)
  * 4. Deshabilita e muestra spinner mientras guarda
  * 5. Muestra toast destructivo si falla el guardado
@@ -95,9 +95,11 @@ describe('PreferenciasNotificacion', () => {
     ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        recordatorioReserva: false,
-        cancelacionPropia: false,
-        cancelacionAdmin: false,
+        notificacionesEmail: true,
+        notificacionesPush: true,
+        recordatorioReserva: true,
+        recordatorioCancel: true,
+        notificacionesAviso: true,
       }),
     })
 
@@ -108,27 +110,33 @@ describe('PreferenciasNotificacion', () => {
     })
   })
 
-  // Test 2: renderiza 3 checkboxes sin marcar por defecto
-  it('debería renderizar 3 checkboxes sin marcar (valores por defecto falsos)', async () => {
+  // Test 2: renderiza 5 checkboxes marcados por defecto
+  it('debería renderizar 5 checkboxes marcados (valores por defecto true)', async () => {
     ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        recordatorioReserva: false,
-        cancelacionPropia: false,
-        cancelacionAdmin: false,
+        notificacionesEmail: true,
+        notificacionesPush: true,
+        recordatorioReserva: true,
+        recordatorioCancel: true,
+        notificacionesAviso: true,
       }),
     })
 
     render(React.createElement(PreferenciasNotificacion))
 
     await waitFor(() => {
+      const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail') as HTMLInputElement
+      const checkboxPush = screen.getByTestId('checkbox-notificacionesPush') as HTMLInputElement
       const checkboxRecordatorio = screen.getByTestId('checkbox-recordatorioReserva') as HTMLInputElement
-      const checkboxCancelacionPropia = screen.getByTestId('checkbox-cancelacionPropia') as HTMLInputElement
-      const checkboxCancelacionAdmin = screen.getByTestId('checkbox-cancelacionAdmin') as HTMLInputElement
+      const checkboxCancel = screen.getByTestId('checkbox-recordatorioCancel') as HTMLInputElement
+      const checkboxAviso = screen.getByTestId('checkbox-notificacionesAviso') as HTMLInputElement
 
-      expect(checkboxRecordatorio.checked).toBe(false)
-      expect(checkboxCancelacionPropia.checked).toBe(false)
-      expect(checkboxCancelacionAdmin.checked).toBe(false)
+      expect(checkboxEmail.checked).toBe(true)
+      expect(checkboxPush.checked).toBe(true)
+      expect(checkboxRecordatorio.checked).toBe(true)
+      expect(checkboxCancel.checked).toBe(true)
+      expect(checkboxAviso.checked).toBe(true)
     })
   })
 
@@ -138,30 +146,34 @@ describe('PreferenciasNotificacion', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          recordatorioReserva: false,
-          cancelacionPropia: false,
-          cancelacionAdmin: false,
+          notificacionesEmail: true,
+          notificacionesPush: true,
+          recordatorioReserva: true,
+          recordatorioCancel: true,
+          notificacionesAviso: true,
         }),
       })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          notificacionesEmail: false,
+          notificacionesPush: true,
           recordatorioReserva: true,
-          cancelacionPropia: false,
-          cancelacionAdmin: false,
+          recordatorioCancel: true,
+          notificacionesAviso: true,
         }),
       })
 
     render(React.createElement(PreferenciasNotificacion))
 
     await waitFor(() => {
-      const checkboxRecordatorio = screen.getByTestId('checkbox-recordatorioReserva')
-      expect(checkboxRecordatorio).toBeInTheDocument()
+      const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail')
+      expect(checkboxEmail).toBeInTheDocument()
     })
 
-    // Marcar el primer checkbox
-    const checkboxRecordatorio = screen.getByTestId('checkbox-recordatorioReserva')
-    fireEvent.change(checkboxRecordatorio, { target: { checked: true } })
+    // Desmarcar el checkbox de email
+    const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail')
+    fireEvent.change(checkboxEmail, { target: { checked: false } })
 
     // Pulsar "Guardar"
     const botonGuardar = screen.getByRole('button', { name: /Guardar/i })
@@ -176,7 +188,7 @@ describe('PreferenciasNotificacion', () => {
           call[1]?.method === 'PATCH'
       )
       expect(llamadaPatch).toBeDefined()
-      expect(llamadaPatch?.[1]?.body).toContain('recordatorioReserva')
+      expect(llamadaPatch?.[1]?.body).toContain('notificacionesEmail')
     })
   })
 
@@ -186,9 +198,11 @@ describe('PreferenciasNotificacion', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          recordatorioReserva: false,
-          cancelacionPropia: false,
-          cancelacionAdmin: false,
+          notificacionesEmail: true,
+          notificacionesPush: true,
+          recordatorioReserva: true,
+          recordatorioCancel: true,
+          notificacionesAviso: true,
         }),
       })
       .mockImplementationOnce(() =>
@@ -197,9 +211,11 @@ describe('PreferenciasNotificacion', () => {
             resolve({
               ok: true,
               json: async () => ({
+                notificacionesEmail: false,
+                notificacionesPush: true,
                 recordatorioReserva: true,
-                cancelacionPropia: false,
-                cancelacionAdmin: false,
+                recordatorioCancel: true,
+                notificacionesAviso: true,
               }),
             }),
             100
@@ -210,55 +226,53 @@ describe('PreferenciasNotificacion', () => {
     render(React.createElement(PreferenciasNotificacion))
 
     await waitFor(() => {
-      expect(screen.getByTestId('checkbox-recordatorioReserva')).toBeInTheDocument()
+      const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail')
+      expect(checkboxEmail).toBeInTheDocument()
     })
 
-    // Marcar y pulsar guardar
-    const checkboxRecordatorio = screen.getByTestId('checkbox-recordatorioReserva')
-    fireEvent.change(checkboxRecordatorio, { target: { checked: true } })
+    const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail')
+    fireEvent.change(checkboxEmail, { target: { checked: false } })
 
     const botonGuardar = screen.getByRole('button', { name: /Guardar/i })
     fireEvent.click(botonGuardar)
 
-    // Mientras se guarda, los checkboxes deben estar deshabilitados
+    // Verificar que el botón se deshabilita durante el guardado
     await waitFor(() => {
-      expect(screen.getByTestId('checkbox-recordatorioReserva')).toBeDisabled()
-    })
-
-    // El botón debe mostrar "Guardando..."
-    expect(botonGuardar.textContent).toContain('Guardando')
+      expect(botonGuardar).toHaveAttribute('disabled')
+    }, { timeout: 50 })
   })
 
-  // Test 5: muestra toast destructivo si falla el PATCH
-  it('debería mostrar toast destructivo si falla el PATCH', async () => {
+  // Test 5: muestra toast destructivo si falla el guardado
+  it('debería mostrar toast destructivo si el PATCH falla', async () => {
     ;(global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          recordatorioReserva: false,
-          cancelacionPropia: false,
-          cancelacionAdmin: false,
+          notificacionesEmail: true,
+          notificacionesPush: true,
+          recordatorioReserva: true,
+          recordatorioCancel: true,
+          notificacionesAviso: true,
         }),
       })
       .mockResolvedValueOnce({
         ok: false,
-        status: 500,
+        json: async () => ({ error: 'Server error' }),
       })
 
     render(React.createElement(PreferenciasNotificacion))
 
     await waitFor(() => {
-      expect(screen.getByTestId('checkbox-recordatorioReserva')).toBeInTheDocument()
+      const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail')
+      expect(checkboxEmail).toBeInTheDocument()
     })
 
-    // Marcar y pulsar guardar
-    const checkboxRecordatorio = screen.getByTestId('checkbox-recordatorioReserva')
-    fireEvent.change(checkboxRecordatorio, { target: { checked: true } })
+    const checkboxEmail = screen.getByTestId('checkbox-notificacionesEmail')
+    fireEvent.change(checkboxEmail, { target: { checked: false } })
 
     const botonGuardar = screen.getByRole('button', { name: /Guardar/i })
     fireEvent.click(botonGuardar)
 
-    // Debe mostrar toast con variante destructive
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({

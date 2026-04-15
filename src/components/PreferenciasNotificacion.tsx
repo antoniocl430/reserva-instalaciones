@@ -8,11 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 
 interface PreferenciaNotificacionData {
-  recordatorioReserva?: boolean
-  cancelacionPropia?: boolean
-  cancelacionAdmin?: boolean
   notificacionesEmail?: boolean
   notificacionesPush?: boolean
+  recordatorioReserva?: boolean
+  recordatorioCancel?: boolean
   notificacionesAviso?: boolean
 }
 
@@ -23,17 +22,21 @@ interface PreferenciasNotificacionProps {
 /**
  * Componente para gestionar preferencias de notificación del usuario.
  * Permite activar/desactivar:
+ * - Notificaciones por email
+ * - Notificaciones push
  * - Recordatorio 1h antes de la reserva
- * - Aviso cuando cancelo mi reserva
- * - Aviso cuando admin cancela mi reserva
+ * - Aviso de cancelación (propia o por admin)
+ * - Avisos generales
  */
 export default function PreferenciasNotificacion({ onGuardado }: PreferenciasNotificacionProps) {
   const { toast } = useToast()
 
   // Estado de las preferencias
-  const [recordatorioReserva, setRecordatorioReserva] = useState(false)
-  const [cancelacionPropia, setCancelacionPropia] = useState(false)
-  const [cancelacionAdmin, setCancelacionAdmin] = useState(false)
+  const [notificacionesEmail, setNotificacionesEmail] = useState(true)
+  const [notificacionesPush, setNotificacionesPush] = useState(true)
+  const [recordatorioReserva, setRecordatorioReserva] = useState(true)
+  const [recordatorioCancel, setRecordatorioCancel] = useState(true)
+  const [notificacionesAviso, setNotificacionesAviso] = useState(true)
 
   // Estado de carga
   const [cargando, setCargando] = useState(true)
@@ -51,9 +54,11 @@ export default function PreferenciasNotificacion({ onGuardado }: PreferenciasNot
         throw new Error("Error al cargar preferencias")
       }
       const datos: PreferenciaNotificacionData = await respuesta.json()
-      setRecordatorioReserva(datos.recordatorioReserva ?? false)
-      setCancelacionPropia(datos.cancelacionPropia ?? false)
-      setCancelacionAdmin(datos.cancelacionAdmin ?? false)
+      setNotificacionesEmail(datos.notificacionesEmail ?? true)
+      setNotificacionesPush(datos.notificacionesPush ?? true)
+      setRecordatorioReserva(datos.recordatorioReserva ?? true)
+      setRecordatorioCancel(datos.recordatorioCancel ?? true)
+      setNotificacionesAviso(datos.notificacionesAviso ?? true)
     } catch (error) {
       console.error("Error al cargar preferencias:", error)
       toast({
@@ -74,9 +79,11 @@ export default function PreferenciasNotificacion({ onGuardado }: PreferenciasNot
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          notificacionesEmail,
+          notificacionesPush,
           recordatorioReserva,
-          cancelacionPropia,
-          cancelacionAdmin,
+          recordatorioCancel,
+          notificacionesAviso,
         }),
       })
 
@@ -112,6 +119,8 @@ export default function PreferenciasNotificacion({ onGuardado }: PreferenciasNot
         <Skeleton className="h-6 w-64" />
         <Skeleton className="h-6 w-64" />
         <Skeleton className="h-6 w-64" />
+        <Skeleton className="h-6 w-64" />
+        <Skeleton className="h-6 w-64" />
         <Skeleton className="h-10 w-32" />
       </div>
     )
@@ -119,7 +128,39 @@ export default function PreferenciasNotificacion({ onGuardado }: PreferenciasNot
 
   return (
     <div className="space-y-4">
-      {/* Checkbox 1: Recordatorio de reserva */}
+      {/* Checkbox 1: Notificaciones por email */}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="notificacionesEmail"
+          checked={notificacionesEmail}
+          onCheckedChange={(checked) => setNotificacionesEmail(checked === true)}
+          disabled={guardando}
+        />
+        <Label
+          htmlFor="notificacionesEmail"
+          className="text-sm font-medium text-gray-700 cursor-pointer"
+        >
+          Recibir notificaciones por email
+        </Label>
+      </div>
+
+      {/* Checkbox 2: Notificaciones push */}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="notificacionesPush"
+          checked={notificacionesPush}
+          onCheckedChange={(checked) => setNotificacionesPush(checked === true)}
+          disabled={guardando}
+        />
+        <Label
+          htmlFor="notificacionesPush"
+          className="text-sm font-medium text-gray-700 cursor-pointer"
+        >
+          Recibir notificaciones push
+        </Label>
+      </div>
+
+      {/* Checkbox 3: Recordatorio de reserva */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="recordatorioReserva"
@@ -135,35 +176,35 @@ export default function PreferenciasNotificacion({ onGuardado }: PreferenciasNot
         </Label>
       </div>
 
-      {/* Checkbox 2: Aviso de cancelación propia */}
+      {/* Checkbox 4: Aviso de cancelación */}
       <div className="flex items-center space-x-2">
         <Checkbox
-          id="cancelacionPropia"
-          checked={cancelacionPropia}
-          onCheckedChange={(checked) => setCancelacionPropia(checked === true)}
+          id="recordatorioCancel"
+          checked={recordatorioCancel}
+          onCheckedChange={(checked) => setRecordatorioCancel(checked === true)}
           disabled={guardando}
         />
         <Label
-          htmlFor="cancelacionPropia"
+          htmlFor="recordatorioCancel"
           className="text-sm font-medium text-gray-700 cursor-pointer"
         >
-          Aviso cuando cancelo mi reserva
+          Aviso cuando se cancela mi reserva
         </Label>
       </div>
 
-      {/* Checkbox 3: Aviso de cancelación admin */}
+      {/* Checkbox 5: Avisos generales */}
       <div className="flex items-center space-x-2">
         <Checkbox
-          id="cancelacionAdmin"
-          checked={cancelacionAdmin}
-          onCheckedChange={(checked) => setCancelacionAdmin(checked === true)}
+          id="notificacionesAviso"
+          checked={notificacionesAviso}
+          onCheckedChange={(checked) => setNotificacionesAviso(checked === true)}
           disabled={guardando}
         />
         <Label
-          htmlFor="cancelacionAdmin"
+          htmlFor="notificacionesAviso"
           className="text-sm font-medium text-gray-700 cursor-pointer"
         >
-          Aviso cuando admin cancela mi reserva
+          Avisos y comunicados importantes
         </Label>
       </div>
 

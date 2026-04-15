@@ -153,7 +153,7 @@ describe("Preferencias de Notificación API Routes", () => {
       expect(body.usuarioId).toBe("ciudadano-1")
       expect(body.notificacionesEmail).toBe(true)
       expect(prismaMock.preferenciaNotificacion.findUnique).toHaveBeenCalledWith({
-        where: { usuarioId: "ciudadano-1" },
+        where: { usuarioId_tenantId: { usuarioId: "ciudadano-1", tenantId: TENANT_ID } },
       })
     })
 
