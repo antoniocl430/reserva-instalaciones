@@ -210,4 +210,91 @@ describe('PATCH /api/reservas/[id]/cancelar', () => {
       })
     )
   })
+
+  it('cancelarGrupo: true → cancela reservas futuras y marca grupo inactivo', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    const reservaConGrupo = {
+      ...reservaActiva,
+      grupoRecurrenciaId: 'grupo-1',
+    }
+    prismaMock.reserva.findFirst.mockResolvedValue(reservaConGrupo)
+    prismaMock.reserva.update.mockResolvedValue({ ...reservaConGrupo, estado: 'CANCELADA' })
+    // Simular updateMany que cancela 4 futuras
+    prismaMock.reserva.updateMany.mockResolvedValue({ count: 4 })
+    prismaMock.grupoRecurrencia.update.mockResolvedValue({ id: 'grupo-1', activo: false })
+
+    // Request con body que contiene cancelarGrupo: true
+    const req = new NextRequest('http://localhost/api/reservas/reserva-1/cancelar', {
+      method: 'PATCH',
+      body: JSON.stringify({ cancelarGrupo: true }),
+    })
+
+    const res = await PATCH(req, crearParams('reserva-1'))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body).toHaveProperty('ok', true)
+    expect(body).toHaveProperty('reservasGrupoCanceladas', 4)
+    // Verificar que se actualizó el grupo a inactivo
+    expect(prismaMock.grupoRecurrencia.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'grupo-1' },
+        data: { activo: false },
+      })
+    )
+  })
+
+  it('cancelarGrupo: false → solo cancela reserva individual', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    const reservaConGrupo = {
+      ...reservaActiva,
+      grupoRecurrenciaId: 'grupo-1',
+    }
+    prismaMock.reserva.findFirst.mockResolvedValue(reservaConGrupo)
+    prismaMock.reserva.update.mockResolvedValue({ ...reservaConGrupo, estado: 'CANCELADA' })
+
+    // Request con body que contiene cancelarGrupo: false
+    const req = new NextRequest('http://localhost/api/reservas/reserva-1/cancelar', {
+      method: 'PATCH',
+      body: JSON.stringify({ cancelarGrupo: false }),
+    })
+
+    const res = await PATCH(req, crearParams('reserva-1'))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body).toMatchObject({ ok: true })
+    // No debe contener reservasGrupoCanceladas
+    expect(body).not.toHaveProperty('reservasGrupoCanceladas')
+    // No debe llamar a updateMany ni a grupoRecurrencia.update
+    expect(prismaMock.reserva.updateMany).not.toHaveBeenCalled()
+    expect(prismaMock.grupoRecurrencia.update).not.toHaveBeenCalled()
+  })
+
+  it('cancelarGrupo: true sin grupoRecurrenciaId → solo cancela individual', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    // Reserva SIN grupoRecurrenciaId
+    const reservaSinGrupo = {
+      ...reservaActiva,
+      grupoRecurrenciaId: null,
+    }
+    prismaMock.reserva.findFirst.mockResolvedValue(reservaSinGrupo)
+    prismaMock.reserva.update.mockResolvedValue({ ...reservaSinGrupo, estado: 'CANCELADA' })
+
+    const req = new NextRequest('http://localhost/api/reservas/reserva-1/cancelar', {
+      method: 'PATCH',
+      body: JSON.stringify({ cancelarGrupo: true }),
+    })
+
+    const res = await PATCH(req, crearParams('reserva-1'))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body).toMatchObject({ ok: true })
+    // No debe contener reservasGrupoCanceladas
+    expect(body).not.toHaveProperty('reservasGrupoCanceladas')
+    // No debe llamar a updateMany ni a grupoRecurrencia.update
+    expect(prismaMock.reserva.updateMany).not.toHaveBeenCalled()
+    expect(prismaMock.grupoRecurrencia.update).not.toHaveBeenCalled()
+  })
 })

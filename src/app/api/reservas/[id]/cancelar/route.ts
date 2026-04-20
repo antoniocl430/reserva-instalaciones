@@ -15,6 +15,10 @@ export async function PATCH(
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
+  // Leer parámetro cancelarGrupo del body
+  const body = await request.json().catch(() => ({}))
+  const cancelarGrupo = body?.cancelarGrupo === true
+
   // datosReserva se usa después del try/catch para enviar el email y el push
   let datosReserva: {
     usuarioId: string
@@ -27,6 +31,9 @@ export async function PATCH(
 
   // esAdminCancela se determina dentro de la transacción y se usa para las notificaciones post-transacción
   let esAdminCancela = false
+
+  // Variable para almacenar el count de reservas del grupo canceladas
+  let reservasGrupoCanceladas = 0
 
   try {
     // Toda la lógica de validación y el update se ejecutan dentro de la misma
@@ -60,14 +67,42 @@ export async function PATCH(
         throw new Error("YA_CANCELADA")
       }
 
+      const ahora = new Date()
+
       await tx.reserva.update({
         where: { id: params.id },
         data: {
           estado: "CANCELADA",
-          canceladoEn: new Date(),
+          canceladoEn: ahora,
           canceladoPor: sesion.user.id,
         },
       })
+
+      // Si cancelarGrupo y la reserva pertenece a un grupo: cancelar todas las futuras del grupo
+      if (cancelarGrupo && reserva.grupoRecurrenciaId) {
+        // Cancelar todas las reservas futuras del grupo
+        const futuras = await tx.reserva.updateMany({
+          where: {
+            grupoRecurrenciaId: reserva.grupoRecurrenciaId,
+            estado: "ACTIVA",
+            horaInicio: { gt: ahora },
+            id: { not: params.id }, // no la que ya se canceló
+          },
+          data: {
+            estado: "CANCELADA",
+            canceladoEn: ahora,
+            canceladoPor: sesion.user.id,
+          },
+        })
+
+        // Marcar el grupo como inactivo
+        await tx.grupoRecurrencia.update({
+          where: { id: reserva.grupoRecurrenciaId },
+          data: { activo: false },
+        })
+
+        reservasGrupoCanceladas = futuras.count
+      }
 
       // Registrar si quien cancela es admin para usarlo después de la transacción
       esAdminCancela = esAdmin
@@ -171,5 +206,8 @@ default:
     }
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({
+    ok: true,
+    ...(cancelarGrupo && reservasGrupoCanceladas > 0 ? { reservasGrupoCanceladas } : {}),
+  })
 }

@@ -239,16 +239,18 @@ Funcionalidad:
 
 ## PASO 8: API actualizada — PATCH /api/reservas/[id]/cancelar
 
-**Archivo:** `src/app/api/reservas/[id]/cancelar/route.ts` (MODIFICACIÓN)
+**Archivo:** `src/app/api/reservas/[id]/cancelar/route.ts` (MODIFICACIÓN) — ✅ COMPLETADO
 
 Cambios:
-1. Aceptar en body parámetro opcional `cancelarGrupo: boolean`
-2. Si `cancelarGrupo === true` y la reserva tiene `grupoRecurrenciaId`:
-   - Buscar todas las Reserva futuras (horaInicio > now()) del mismo grupo
-   - Actualizar esas a estado CANCELADA
-   - Actualizar `activo: false` en GrupoRecurrencia
-   - NO cancela la reserva actual, solo las futuras
-3. Devolver array de IDs de todas las reservas canceladas (incluyendo la actual)
+- [x] Aceptar en body parámetro opcional `cancelarGrupo: boolean`
+- [x] Si `cancelarGrupo === true` y la reserva tiene `grupoRecurrenciaId`:
+  - [x] Buscar todas las Reserva futuras (horaInicio > now()) del mismo grupo
+  - [x] Actualizar esas a estado CANCELADA
+  - [x] Actualizar `activo: false` en GrupoRecurrencia
+- [x] Devolver respuesta con `{ ok: true }` y `reservasGrupoCanceladas: N` si se cancelaron futuras
+- [x] Tests: 3 nuevos casos (cancelarGrupo true/false, sin grupoRecurrenciaId)
+- [x] Suite: 12/12 tests pasan (9 existentes + 3 nuevos)
+- [x] Sin regresiones: 291 tests Jest pasan, 151 Vitest pasan
 
 ---
 
