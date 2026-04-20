@@ -12,18 +12,22 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export default function PaginaRegistro() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [destino, setDestino] = useState("/dashboard")
 
-  // Leer y sanitizar callbackUrl desde query params
+  // Leer callbackUrl directamente de window.location (solución para bug de useSearchParams en Next.js)
   useEffect(() => {
-    const callbackUrl = searchParams.get("callbackUrl")
+    const params = new URLSearchParams(window.location.search)
+    const callbackUrl = params.get("callbackUrl")
+
     const esCallbackValido = callbackUrl &&
                              callbackUrl.startsWith("/") &&
                              !callbackUrl.startsWith("/login") &&
                              !callbackUrl.startsWith("/registro")
-    setDestino(esCallbackValido ? callbackUrl : "/dashboard")
-  }, [searchParams])
+    const dest = esCallbackValido ? callbackUrl : "/dashboard"
+
+    console.log("[REGISTRO] callbackUrl desde URL:", callbackUrl, "| destino final:", dest)
+    setDestino(dest)
+  }, [])
 
   useEffect(() => { document.title = "Crear cuenta" }, [])
 

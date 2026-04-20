@@ -13,11 +13,9 @@ import React from 'react'
 
 const mockPush = vi.fn()
 
-let mockSearchParams = new URLSearchParams()
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
-  useSearchParams: () => mockSearchParams,
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('next/link', () => ({
@@ -42,7 +40,9 @@ import PaginaLogin from '@/app/login/page'
 describe('PaginaLogin', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSearchParams = new URLSearchParams()
+    // Resetear window.location.search
+    delete (window as any).location
+    window.location = { search: '' } as any
   })
 
   it('debería redirigir a /dashboard cuando el login es exitoso con rol CIUDADANO', async () => {
@@ -124,7 +124,7 @@ describe('PaginaLogin', () => {
   })
 
   it('Si hay callbackUrl en params, redirige a esa URL tras login exitoso', async () => {
-    mockSearchParams.set('callbackUrl', '/mis-reservas')
+    window.location.search = '?callbackUrl=%2Fmis-reservas'
     mockSignIn.mockResolvedValue({ ok: true, error: null })
 
     render(<PaginaLogin />)
@@ -140,7 +140,7 @@ describe('PaginaLogin', () => {
 
   it('Si callbackUrl es URL externa o inválida, redirige a /dashboard en su lugar', async () => {
     // Caso 1: URL absoluta HTTP
-    mockSearchParams.set('callbackUrl', 'https://evil.com')
+    window.location.search = '?callbackUrl=https://evil.com'
     mockSignIn.mockResolvedValue({ ok: true, error: null })
 
     render(<PaginaLogin />)

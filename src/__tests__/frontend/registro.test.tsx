@@ -16,11 +16,10 @@ vi.mock('next-auth/react', () => ({
 }))
 
 const mockPush = vi.fn()
-let mockSearchParams = new URLSearchParams()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
-  useSearchParams: () => mockSearchParams,
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('next/link', () => ({
@@ -42,7 +41,9 @@ import PaginaRegistro from '@/app/registro/page'
 describe('PaginaRegistro', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSearchParams = new URLSearchParams()
+    // Resetear window.location.search
+    delete (window as any).location
+    window.location = { search: '' } as any
     global.fetch = vi.fn()
   })
 
@@ -108,7 +109,7 @@ describe('PaginaRegistro', () => {
   })
 
   it('Si hay callbackUrl en params, redirige a esa URL tras registro exitoso', async () => {
-    mockSearchParams.set('callbackUrl', '/pistas')
+    window.location.search = '?callbackUrl=%2Fpistas'
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
@@ -141,7 +142,7 @@ describe('PaginaRegistro', () => {
   })
 
   it('Si callbackUrl es inválida, redirige a /dashboard tras registro', async () => {
-    mockSearchParams.set('callbackUrl', 'https://evil.com')
+    window.location.search = '?callbackUrl=https://evil.com'
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,

@@ -11,18 +11,22 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export default function PaginaLogin() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [destino, setDestino] = useState("/dashboard")
 
-  // Leer y sanitizar callbackUrl desde query params
+  // Leer callbackUrl directamente de window.location (solución para bug de useSearchParams en Next.js)
   useEffect(() => {
-    const callbackUrl = searchParams.get("callbackUrl")
+    const params = new URLSearchParams(window.location.search)
+    const callbackUrl = params.get("callbackUrl")
+
     const esCallbackValido = callbackUrl &&
                              callbackUrl.startsWith("/") &&
                              !callbackUrl.startsWith("/login") &&
                              !callbackUrl.startsWith("/registro")
-    setDestino(esCallbackValido ? callbackUrl : "/dashboard")
-  }, [searchParams])
+    const dest = esCallbackValido ? callbackUrl : "/dashboard"
+
+    console.log("[LOGIN] callbackUrl desde URL:", callbackUrl, "| destino final:", dest)
+    setDestino(dest)
+  }, [])
 
   useEffect(() => { document.title = "Iniciar sesión" }, [])
   const [email, setEmail] = useState("")
@@ -49,7 +53,8 @@ export default function PaginaLogin() {
 
     if (result?.ok) {
       // Redirigir a callbackUrl si es válido, sino a /dashboard
-      router.push(destino)
+      console.log("[LOGIN] Redirigiendo a:", destino)
+      setTimeout(() => router.push(destino), 0)
     }
   }
 
