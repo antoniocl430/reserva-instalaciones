@@ -12,14 +12,17 @@ import { Card, CardContent } from "@/components/ui/card"
 export default function PaginaLogin() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [destino, setDestino] = useState("/dashboard")
 
   // Leer y sanitizar callbackUrl desde query params
-  const callbackUrl = searchParams.get("callbackUrl")
-  const esCallbackValido = callbackUrl &&
-                           callbackUrl.startsWith("/") &&
-                           !callbackUrl.startsWith("/login") &&
-                           !callbackUrl.startsWith("/registro")
-  const destino = esCallbackValido ? callbackUrl : "/dashboard"
+  useEffect(() => {
+    const callbackUrl = searchParams.get("callbackUrl")
+    const esCallbackValido = callbackUrl &&
+                             callbackUrl.startsWith("/") &&
+                             !callbackUrl.startsWith("/login") &&
+                             !callbackUrl.startsWith("/registro")
+    setDestino(esCallbackValido ? callbackUrl : "/dashboard")
+  }, [searchParams])
 
   useEffect(() => { document.title = "Iniciar sesión" }, [])
   const [email, setEmail] = useState("")
