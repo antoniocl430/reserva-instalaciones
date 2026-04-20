@@ -77,7 +77,16 @@ export default function PaginaRegistro() {
       redirect: false,
     })
 
-    router.push(destino)
+    // Leer destino en el momento del submit (no confiar en estado previo)
+    const params = new URLSearchParams(window.location.search)
+    const callbackUrl = params.get("callbackUrl")
+    const esCallbackValido = callbackUrl &&
+                             callbackUrl.startsWith("/") &&
+                             !callbackUrl.startsWith("/login") &&
+                             !callbackUrl.startsWith("/registro")
+    const destinoFinal = esCallbackValido ? callbackUrl : "/dashboard"
+
+    router.push(destinoFinal)
   }
 
   return (
