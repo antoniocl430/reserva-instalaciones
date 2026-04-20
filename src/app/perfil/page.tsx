@@ -72,7 +72,7 @@ export default function PaginaPerfil() {
   // Protección de ruta: si no hay sesión, redirigir a /login
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login")
+      router.push("/login?callbackUrl=/perfil")
     }
   }, [status, router])
 

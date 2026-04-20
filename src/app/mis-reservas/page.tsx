@@ -59,7 +59,7 @@ export default function PaginaMisReservas() {
     try {
       const res = await fetch("/api/reservas/mis-reservas")
       if (res.status === 401) {
-        router.push("/login")
+        router.push("/login?callbackUrl=/mis-reservas")
         return
       }
       if (!res.ok) throw new Error("Error al cargar las reservas")

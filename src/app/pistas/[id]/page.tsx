@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -41,6 +41,7 @@ interface Props {
 
 export default function PaginaDetallePista({ params }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
   const { data: sesion } = useSession()
   const { toast } = useToast()
   const { id } = params
@@ -116,7 +117,7 @@ export default function PaginaDetallePista({ params }: Props) {
   function seleccionarSlot(slot: Slot) {
     if (slot.estado !== "libre") return
     if (!sesion) {
-      router.push("/login")
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`)
       return
     }
     setSlotSeleccionado(slot)

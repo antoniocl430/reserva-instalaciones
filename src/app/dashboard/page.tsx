@@ -13,7 +13,7 @@ export default async function PaginaDashboard() {
   // Proteccion de ruta: si no hay sesion, redirige al login
   const sesion = await getServerSession(opcionesAuth)
   if (!sesion) {
-    redirect("/login")
+    redirect("/login?callbackUrl=/dashboard")
   }
 
   // Cargamos las reservas activas directamente desde Prisma en el servidor
