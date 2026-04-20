@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,15 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export default function PaginaRegistro() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Leer y sanitizar callbackUrl desde query params
+  const callbackUrl = searchParams.get("callbackUrl")
+  const esCallbackValido = callbackUrl &&
+                           callbackUrl.startsWith("/") &&
+                           !callbackUrl.startsWith("/login") &&
+                           !callbackUrl.startsWith("/registro")
+  const destino = esCallbackValido ? callbackUrl : "/dashboard"
 
   useEffect(() => { document.title = "Crear cuenta" }, [])
 
@@ -61,7 +70,7 @@ export default function PaginaRegistro() {
       redirect: false,
     })
 
-    router.push("/dashboard")
+    router.push(destino)
   }
 
   return (

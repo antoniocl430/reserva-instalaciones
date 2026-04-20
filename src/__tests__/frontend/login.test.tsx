@@ -13,8 +13,11 @@ import React from 'react'
 
 const mockPush = vi.fn()
 
+let mockSearchParams = new URLSearchParams()
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => mockSearchParams,
 }))
 
 vi.mock('next/link', () => ({
@@ -39,6 +42,7 @@ import PaginaLogin from '@/app/login/page'
 describe('PaginaLogin', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSearchParams = new URLSearchParams()
   })
 
   it('debería redirigir a /dashboard cuando el login es exitoso con rol CIUDADANO', async () => {
@@ -117,5 +121,37 @@ describe('PaginaLogin', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/dashboard')
     })
+  })
+
+  it('Si hay callbackUrl en params, redirige a esa URL tras login exitoso', async () => {
+    mockSearchParams.set('callbackUrl', '/mis-reservas')
+    mockSignIn.mockResolvedValue({ ok: true, error: null })
+
+    render(<PaginaLogin />)
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'ana@example.com' } })
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/mis-reservas')
+    })
+  })
+
+  it('Si callbackUrl es URL externa o inválida, redirige a /dashboard en su lugar', async () => {
+    // Caso 1: URL absoluta HTTP
+    mockSearchParams.set('callbackUrl', 'https://evil.com')
+    mockSignIn.mockResolvedValue({ ok: true, error: null })
+
+    render(<PaginaLogin />)
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'ana@example.com' } })
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /entrar/i }))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+    })
+    expect(mockPush).not.toHaveBeenCalledWith('https://evil.com')
   })
 })

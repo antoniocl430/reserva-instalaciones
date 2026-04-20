@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react'
 
 // --- Mocks ---
@@ -15,8 +15,12 @@ vi.mock('next-auth/react', () => ({
   signIn: vi.fn(),
 }))
 
+const mockPush = vi.fn()
+let mockSearchParams = new URLSearchParams()
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => mockSearchParams,
 }))
 
 vi.mock('next/link', () => ({
@@ -38,6 +42,7 @@ import PaginaRegistro from '@/app/registro/page'
 describe('PaginaRegistro', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSearchParams = new URLSearchParams()
     global.fetch = vi.fn()
   })
 
@@ -100,5 +105,70 @@ describe('PaginaRegistro', () => {
 
     const errorElement = await screen.findByRole('alert')
     expect(errorElement.textContent).toMatch(/8 caracteres/i)
+  })
+
+  it('Si hay callbackUrl en params, redirige a esa URL tras registro exitoso', async () => {
+    mockSearchParams.set('callbackUrl', '/pistas')
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ id: 'u123' }),
+      })
+    ) as any
+
+    render(React.createElement(PaginaRegistro))
+
+    // Rellenar formulario
+    fireEvent.change(screen.getByLabelText(/nombre completo/i), {
+      target: { value: 'Nuevo Usuario' },
+    })
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
+      target: { value: 'nuevo@example.com' },
+    })
+    fireEvent.change(document.querySelector('#password') as HTMLInputElement, {
+      target: { value: 'password123' },
+    })
+    fireEvent.change(document.querySelector('#confirmar') as HTMLInputElement, {
+      target: { value: 'password123' },
+    })
+    fireEvent.click(document.querySelector('#aceptaPrivacidad') as HTMLInputElement)
+
+    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/pistas')
+    })
+  })
+
+  it('Si callbackUrl es inválida, redirige a /dashboard tras registro', async () => {
+    mockSearchParams.set('callbackUrl', 'https://evil.com')
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ id: 'u123' }),
+      })
+    ) as any
+
+    render(React.createElement(PaginaRegistro))
+
+    fireEvent.change(screen.getByLabelText(/nombre completo/i), {
+      target: { value: 'Nuevo Usuario' },
+    })
+    fireEvent.change(screen.getByLabelText(/^email$/i), {
+      target: { value: 'nuevo@example.com' },
+    })
+    fireEvent.change(document.querySelector('#password') as HTMLInputElement, {
+      target: { value: 'password123' },
+    })
+    fireEvent.change(document.querySelector('#confirmar') as HTMLInputElement, {
+      target: { value: 'password123' },
+    })
+    fireEvent.click(document.querySelector('#aceptaPrivacidad') as HTMLInputElement)
+
+    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+    })
   })
 })

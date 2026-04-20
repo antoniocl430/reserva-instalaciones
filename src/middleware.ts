@@ -75,9 +75,10 @@ export async function middleware(request: NextRequest) {
   // ─── Rutas SUPERADMIN ──────────────────────────────────────────────────────
   const esRutaSuperadmin = RUTAS_SUPERADMIN.some((ruta) => pathname.startsWith(ruta))
   if (esRutaSuperadmin && !estaAutenticado) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = "/login"
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
   }
   if (esRutaSuperadmin && rol !== "SUPERADMIN") {
     const url = request.nextUrl.clone()
@@ -103,9 +104,10 @@ export async function middleware(request: NextRequest) {
   // ─── Rutas INSTRUCTOR ──────────────────────────────────────────────────────
   const esRutaInstructor = RUTAS_INSTRUCTOR.some((ruta) => pathname.startsWith(ruta))
   if (esRutaInstructor && !estaAutenticado) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = "/login"
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   if (esRutaInstructor && rol !== "INSTRUCTOR") {
@@ -119,9 +121,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(ruta)
   )
   if (esRutaProtegida && !estaAutenticado) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = "/login"
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Si ya tiene sesión e intenta ir a /login o /registro → /dashboard
