@@ -7,7 +7,7 @@ import { enviarRecordatorioReserva } from "@/lib/push"
  * Cron job que envía recordatorios Web Push a usuarios con reservas próximas.
  *
  * Protegido mediante el header Authorization: Bearer <CRON_SECRET>.
- * Se ejecuta periódicamente (ej. cada minuto en Vercel Cron).
+ * Se ejecuta periódicamente (cada 15 minutos via Cloudflare Cron Trigger).
  *
  * Lógica:
  * - Calcula la ventana: [ahora + 55 min, ahora + 75 min]

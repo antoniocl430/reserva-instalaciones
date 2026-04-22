@@ -1,0 +1,16 @@
+name = "reserva-instalaciones"
+type = "nodejs_compat"
+compatibility_date = "2024-12-01"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[r2_buckets]]
+binding = "AVATARS_BUCKET"
+bucket_name = "reserva-avatares"
+jurisdiction = "eu"
+
+[env.production]
+routes = [
+  { pattern = "ejemplo.com/*", zone_name = "ejemplo.com" }
+]

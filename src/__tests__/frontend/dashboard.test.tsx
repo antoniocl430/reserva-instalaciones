@@ -72,8 +72,8 @@ describe('PaginaDashboard', () => {
   it('debería redirigir a /login si no hay sesión', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(PaginaDashboard()).rejects.toThrow('NEXT_REDIRECT:/login')
-    expect(redirect).toHaveBeenCalledWith('/login')
+    await expect(PaginaDashboard()).rejects.toThrow('NEXT_REDIRECT:/login?callbackUrl=/dashboard')
+    expect(redirect).toHaveBeenCalledWith('/login?callbackUrl=/dashboard')
   })
 
   it('debería mostrar el nombre del usuario autenticado', async () => {

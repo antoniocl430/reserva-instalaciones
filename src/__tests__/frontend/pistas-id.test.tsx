@@ -18,6 +18,7 @@ const mockBack = vi.fn()
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
   useParams: () => ({ id: 'pista-1' }),
+  usePathname: () => '/pistas/pista-1',
 }))
 
 // Mock de next-auth/react para que useSession no requiera SessionProvider

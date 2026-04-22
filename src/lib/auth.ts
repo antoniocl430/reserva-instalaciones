@@ -10,13 +10,13 @@ const HASH_DUMMY = "$2a$12$dummy.hash.para.evitar.timing.attack.en.login.form"
 
 /**
  * Extrae la IP del cliente de los headers de la request.
- * Intenta primero x-forwarded-for (proxy), luego x-real-ip, finalmente "unknown".
+ * Intenta primero cf-connecting-ip (Cloudflare), luego x-forwarded-for (proxy), luego x-real-ip, finalmente "unknown".
  */
 function extraerIP(req: any): string {
-  // En Vercel, x-vercel-forwarded-for es la IP real del cliente y no puede ser falsificada
-  // por el cliente (la inyecta el proxy de Vercel). x-forwarded-for es manipulable.
-  const vercelIp = req.headers?.["x-vercel-forwarded-for"]
-  if (vercelIp) return vercelIp.split(",")[0].trim()
+  // En Cloudflare, cf-connecting-ip es la IP real del cliente y no puede ser falsificada
+  // por el cliente (la inyecta Cloudflare).
+  const cfIp = req.headers?.["cf-connecting-ip"]
+  if (cfIp) return cfIp.split(",")[0].trim()
 
   const forwarded = req.headers?.["x-forwarded-for"]
   if (forwarded) return forwarded.split(",")[0].trim()

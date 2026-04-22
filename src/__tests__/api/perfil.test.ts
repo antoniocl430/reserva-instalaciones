@@ -23,9 +23,12 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
-// Mock de @vercel/blob para tests de avatar
-jest.mock('@vercel/blob', () => ({
-  put: jest.fn().mockResolvedValue({ url: 'https://blob.vercel.com/test-avatar.jpg' }),
+// Mock de @aws-sdk/client-s3 para tests de avatar (Cloudflare R2)
+jest.mock('@aws-sdk/client-s3', () => ({
+  S3Client: jest.fn(() => ({
+    send: jest.fn().mockResolvedValue({}),
+  })),
+  PutObjectCommand: jest.fn((params) => params),
 }))
 
 import { NextRequest } from 'next/server'
