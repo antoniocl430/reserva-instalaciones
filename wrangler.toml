@@ -1,0 +1,16 @@
+name = "reserva-instalaciones"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+main = ".open-next/worker.js"
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[r2_buckets]]
+binding = "AVATARS_BUCKET"
+bucket_name = "reserva-avatares"
+jurisdiction = "eu"

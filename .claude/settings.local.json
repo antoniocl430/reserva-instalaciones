@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx next:*)",
+      "Skill(update-config)",
+      "Bash(npx shadcn@latest add button --yes)",
+      "Bash(npx shadcn@latest add badge --yes)",
+      "Bash(npx shadcn@latest add dialog --yes)",
+      "Bash(npx shadcn@latest add tabs --yes)",
+      "mcp__ide__getDiagnostics",
+      "WebSearch"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ],
+  "enableAllProjectMcpServers": true
+}

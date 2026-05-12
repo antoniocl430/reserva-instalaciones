@@ -1,0 +1,246 @@
+// Esquema de base de datos — Sistema de Reservas Deportivas Municipales
+// Multi-tenant: cada entidad pertenece a un Tenant (ayuntamiento)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Modelos ─────────────────────────────────────────────────────────────────
+// Nota: Los campos de tipo enum se almacenan como String con valores controlados por la app:
+//   rol           → "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+//   tipo          → "PADEL" | "PISCINA" (extensible)
+//   estado        → "ACTIVA" | "CANCELADA" (Reserva) | "ACTIVO" | "SUSPENDIDO" | "ELIMINADO" (Tenant)
+
+// Tenant: representa un ayuntamiento con su subdominio y configuración propios
+model Tenant {
+  id            String   @id @default(uuid())
+  slug          String   @unique // subdominio único: "sevilla", "malaga", "desarrollo"
+  nombre        String   // "Ayuntamiento de Sevilla"
+  municipio     String   // "Sevilla"
+  logoUrl       String?  // URL del logotipo corporativo
+  configuracion String?  // JSON serializado con configuración personalizable
+  estado        String   @default("ACTIVO") // "ACTIVO" | "SUSPENDIDO" | "ELIMINADO"
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones — todos los datos del ayuntamiento
+  usuarios                    Usuario[]
+  instalaciones               Instalacion[]
+  reservas                    Reserva[]
+  bloqueos                    Bloqueo[]
+  avisos                      Aviso[]
+  tokensRecuperacion          TokenRecuperacion[]
+  suscripcionesPush           SuscripcionPush[]
+  preferenciaNotificaciones   PreferenciaNotificacion[]
+  gruposRecurrencia           GrupoRecurrencia[]
+}
+
+// Usuario: ciudadanos y administradores del ayuntamiento
+// El email es único POR TENANT, no globalmente (un ciudadano puede estar en dos ayuntamientos)
+model Usuario {
+  id            String   @id @default(uuid())
+  tenantId      String?
+  email         String
+  nombre        String
+  passwordHash  String
+  rol           String   @default("CIUDADANO") // "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+  activo        Boolean  @default(true)
+  avatarUrl     String?  // URL de la foto de perfil del usuario (opcional)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  tenant                      Tenant?                     @relation(fields: [tenantId], references: [id])
+  reservas                    Reserva[]                   @relation("UsuarioReservas")
+  reservasCanceladas          Reserva[]                   @relation("CanceladorReservas")
+  bloqueosCreados             Bloqueo[]                   @relation("AdminBloqueos")
+  tokensRecuperacion          TokenRecuperacion[]
+  suscripcionesPush           SuscripcionPush[]
+  preferenciaNotificaciones   PreferenciaNotificacion[]
+  gruposRecurrencia           GrupoRecurrencia[]
+
+  // Email único dentro del mismo tenant (no globalmente)
+  // NOTA: tenantId es opcional para superadmins (sin tenant)
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+// Instalacion: cada pista de pádel o instalación del complejo deportivo
+model Instalacion {
+  id          String   @id @default(uuid())
+  tenantId    String
+  nombre      String
+  tipo        String   // "PADEL" | "PISCINA"
+  descripcion String?
+  horario     String   @default("Lun-Dom: 8:00-13:00 y 16:45-20:30")
+  activa      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  // Relaciones
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  reservas Reserva[]
+  bloqueos Bloqueo[]
+  gruposRecurrencia  GrupoRecurrencia[]
+
+  @@index([tenantId])
+}
+
+// Reserva: reserva de un ciudadano en una instalación para un slot de 75 minutos
+model Reserva {
+  id            String    @id @default(uuid())
+  tenantId      String
+  usuarioId     String
+  instalacionId String
+  fecha         DateTime
+  horaInicio    DateTime
+  horaFin       DateTime
+  estado        String    @default("ACTIVA") // "ACTIVA" | "CANCELADA"
+  creadoEn      DateTime  @default(now())
+  canceladoEn   DateTime?
+  canceladoPor  String?
+  grupoRecurrenciaId String?
+
+  // Relaciones
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  usuario     Usuario     @relation("UsuarioReservas", fields: [usuarioId], references: [id])
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id])
+  cancelador  Usuario?    @relation("CanceladorReservas", fields: [canceladoPor], references: [id])
+  grupoRecurrencia   GrupoRecurrencia? @relation(fields: [grupoRecurrenciaId], references: [id], onDelete: SetNull)
+
+  // Campo para evitar enviar el recordatorio push más de una vez por reserva
+  recordatorioEnviado Boolean @default(false)
+
+  // Índices para búsquedas frecuentes y control de duplicados
+  @@index([tenantId])
+  @@index([instalacionId, fecha, horaInicio])
+  @@index([usuarioId, estado])
+}
+
+// TokenRecuperacion: token de un solo uso para recuperar contraseña por email
+model TokenRecuperacion {
+  id        String   @id @default(uuid())
+  tenantId  String
+  token     String   @unique
+  usuarioId String
+  expiraEn  DateTime
+  usado     Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  // Relaciones
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([tenantId])
+}
+
+// Aviso: aviso del tablón de anuncios de la página principal
+model Aviso {
+  id            String   @id @default(cuid())
+  tenantId      String
+  titulo        String
+  descripcion   String
+  tipo          String   // "INFO" | "AVISO" | "CIERRE"
+  fecha         DateTime // Fecha del aviso (no del registro)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+// Bloqueo: bloqueo de instalación por admin (mantenimiento, festivo, cierre, etc.)
+model Bloqueo {
+  id            String   @id @default(uuid())
+  tenantId      String
+  instalacionId String
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  motivo        String
+  creadoPorId   String
+  creadoEn      DateTime @default(now())
+  activo        Boolean  @default(true)
+
+  // Relaciones
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id])
+  creadoPor   Usuario     @relation("AdminBloqueos", fields: [creadoPorId], references: [id])
+
+  @@index([tenantId])
+  @@index([instalacionId, fechaInicio, fechaFin])
+}
+
+// SuscripcionPush: suscripción Web Push de un usuario para recibir notificaciones nativas
+model SuscripcionPush {
+  id         String   @id @default(uuid())
+  tenantId   String
+  usuarioId  String
+  endpoint   String
+  p256dh     String
+  auth       String
+  activa     Boolean  @default(true)
+  creadoEn   DateTime @default(now())
+
+  // Relaciones
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  // Un usuario no puede suscribir el mismo endpoint dos veces
+  @@unique([usuarioId, endpoint])
+  @@index([tenantId])
+  @@index([usuarioId])
+}
+
+// PreferenciaNotificacion: preferencias de notificación planas por usuario
+model PreferenciaNotificacion {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  usuarioId           String
+  notificacionesEmail Boolean  @default(true)
+  notificacionesPush  Boolean  @default(true)
+  recordatorioReserva Boolean  @default(true)
+  recordatorioCancel  Boolean  @default(true)
+  notificacionesAviso Boolean  @default(true)
+  creadoEn            DateTime @default(now())
+  actualizadoEn       DateTime @updatedAt
+
+  // Relaciones
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  // Un usuario por tenant tiene una única fila de preferencias
+  @@unique([usuarioId, tenantId])
+  @@index([tenantId])
+  @@index([usuarioId])
+}
+
+// GrupoRecurrencia: agrupa reservas recurrentes de un instructor
+model GrupoRecurrencia {
+  id            String   @id @default(uuid())
+  tenantId      String
+  usuarioId     String
+  instalacionId String
+  horaInicio    String   // "08:00"
+  frecuencia    String   // "SEMANAL" | "QUINCENAL"
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id], onDelete: Cascade)
+  reservas    Reserva[]
+
+  @@index([tenantId])
+  @@index([usuarioId])
+  @@index([instalacionId])
+}
