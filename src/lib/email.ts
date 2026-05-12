@@ -1,6 +1,8 @@
 import { Resend } from "resend"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 /**
  * Devuelve el destinatario real del email.
@@ -37,7 +39,7 @@ export async function enviarEmailReserva(datos: DatosReserva): Promise<void> {
     return
   }
 
-  const resultado = await resend.emails.send({
+  const resultado = await getResend().emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
     to: resolverDestinatario(datos.emailUsuario),
     subject: `Reserva confirmada — ${datos.nombreInstalacion}`,
@@ -64,7 +66,7 @@ export async function enviarEmailCancelacion(
     ? `Tu reserva ha sido cancelada por el ayuntamiento — ${datos.nombreInstalacion}`
     : `Reserva cancelada — ${datos.nombreInstalacion}`
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
     to: resolverDestinatario(datos.emailUsuario),
     subject,
@@ -92,7 +94,7 @@ export async function enviarEmailNotificacionAdmins(
 
   await Promise.all(
     emailsAdmins.map((emailAdmin) =>
-      resend.emails.send({
+      getResend().emails.send({
         from: "Reservas Pádel <onboarding@resend.dev>",
         to: resolverDestinatario(emailAdmin),
         subject: `Nueva reserva — ${datos.nombreInstalacion}`,
@@ -122,7 +124,7 @@ export async function enviarEmailCancelacionAdmins(
 
   await Promise.all(
     emailsAdmins.map((emailAdmin) =>
-      resend.emails.send({
+      getResend().emails.send({
         from: "Reservas Pádel <onboarding@resend.dev>",
         to: resolverDestinatario(emailAdmin),
         subject: `Reserva cancelada — ${datos.nombreInstalacion}`,
@@ -306,7 +308,7 @@ export async function enviarEmailRecuperacion(
     return
   }
 
-  const resultado = await resend.emails.send({
+  const resultado = await getResend().emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
     to: resolverDestinatario(emailUsuario),
     subject: "Recupera tu contraseña — Reservas Pádel",
@@ -380,7 +382,7 @@ export async function enviarEmailConfirmacionGrupo(
     return
   }
 
-  const resultado = await resend.emails.send({
+  const resultado = await getResend().emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
     to: resolverDestinatario(emailInstructor),
     subject: `Clase Recurrente Creada: ${grupo.instalacion.nombre}`,
@@ -404,7 +406,7 @@ export async function enviarEmailCancelacionGrupo(
     return
   }
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
     to: resolverDestinatario(emailInstructor),
     subject: `Clase Recurrente Cancelada: ${grupo.instalacion.nombre}`,
@@ -427,7 +429,7 @@ export async function enviarEmailRecordatorioGrupo(
     return
   }
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: "Reservas Pádel <onboarding@resend.dev>",
     to: resolverDestinatario(emailInstructor),
     subject: `Recordatorio: Clase mañana en ${grupo.instalacion.nombre}`,
