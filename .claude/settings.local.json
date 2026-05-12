@@ -12,5 +12,9 @@
       "mcp__ide__getDiagnostics",
       "WebSearch"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ],
+  "enableAllProjectMcpServers": true
 }

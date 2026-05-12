@@ -13,7 +13,7 @@
 | Autenticación | NextAuth.js | Integración nativa con Next.js, gestión de sesiones y roles |
 | Validación | Zod | Estándar de facto en el ecosistema Next.js + TypeScript, validación en todas las API Routes |
 | Emails | Resend | API simple, buena entregabilidad, 3.000 emails/mes gratis |
-| Deploy | Vercel + Supabase | Deploy automático desde GitHub, SSL gratis, plan gratuito suficiente |
+| Deploy | Cloudflare Pages + Supabase | Deploy automático desde GitHub, SSL gratis, plan gratuito generoso |
 
 ---
 
@@ -65,14 +65,14 @@ Todas las API Routes del proyecto validan los datos de entrada con Zod antes de 
 Esto garantiza que los datos que llegan a la base de datos siempre tienen el formato correcto.
 
 ### Por qué rate limiting en memoria (Map) y no Upstash/Redis
-Para una instancia única de Vercel (plan gratuito), el rate limiter en memoria con `Map`
+Para una instancia única de Cloudflare Workers (plan gratuito), el rate limiter en memoria con `Map`
 es suficiente y no requiere infraestructura adicional. Se implementa en `src/lib/rate-limit.ts`:
 - Máximo 5 intentos fallidos por IP en ventana de 15 minutos
 - Reset automático tras login exitoso
 - Reset automático cuando expira la ventana de tiempo
 
-Si en el futuro se escalan a múltiples instancias, se puede migrar a `@upstash/ratelimit` + Redis
-sin cambiar la interfaz de uso.
+Nota: Cloudflare Workers puede tener múltiples instancias; si en el futuro se requiere rate limiting
+distribuido, se puede migrar a `@upstash/ratelimit` + Redis sin cambiar la interfaz de uso.
 
 ### Zona horaria: Europe/Madrid
 Todos los cálculos de slots horarios se realizan en la zona horaria `Europe/Madrid`.
@@ -149,7 +149,7 @@ Para convertir a app móvil en Fase 3:
 1. Instalar Capacitor en el proyecto Next.js existente
 2. Exportar la app como web estática
 3. Compilar para iOS (Xcode) y Android (Android Studio)
-4. El backend Next.js permanece en Vercel
+4. El backend Next.js permanece en Cloudflare
 
 ---
 
@@ -159,7 +159,7 @@ Para convertir a app móvil en Fase 3:
 |---|---|
 | Redux / Zustand | Overkill para este proyecto, useState + React Query es suficiente |
 | GraphQL | Innecesario, REST con Next.js API Routes es más simple |
-| Docker (por ahora) | Vercel y Supabase gestionan la infraestructura, no necesitamos contenedores |
+| Docker (por ahora) | Cloudflare y Supabase gestionan la infraestructura, no necesitamos contenedores |
 | Stripe / pagos | El servicio es gratuito |
 | MongoDB | NoSQL complica las relaciones entre entidades (Usuario → Reserva → Instalacion) |
 | SQLite | No está diseñado para múltiples usuarios simultáneos escribiendo a la vez |

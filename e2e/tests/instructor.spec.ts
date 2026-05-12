@@ -102,7 +102,7 @@ test.describe('Flujo instructor', () => {
 
     // Primero, limpiar cualquier grupo existente (DELETE de todos los grupos activos)
     const respListar = await page.request.get(`${BASE}/api/instructor/reservas-recurrentes`)
-    if (respListar.ok) {
+    if (respListar.ok()) {
       const { grupos } = await respListar.json()
       for (const grupo of grupos || []) {
         await page.request.delete(`${BASE}/api/instructor/reservas-recurrentes/${grupo.id}`)

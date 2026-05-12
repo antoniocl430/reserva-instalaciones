@@ -31,7 +31,7 @@
 - [x] Tests unitarios con Vitest (componentes/páginas) y Jest (API routes)
 - [x] TDD aplicado en frontend y backend
 - [x] Validación con Zod en todas las API Routes
-- [x] Deploy en producción (Vercel + Supabase)
+- [x] Deploy en producción (Cloudflare + Supabase)
 - [x] Diseño responsive mobile-first
 
 ---

@@ -21,7 +21,7 @@ export async function registrarServiceWorker(): Promise<ServiceWorkerRegistratio
 
 // Convierte una clave VAPID pública de base64url a Uint8Array
 // Necesario para subscribir al PushManager
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): BufferSource {
   // Añadir padding si es necesario
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -72,8 +72,8 @@ export async function suscribirAPush(): Promise<boolean> {
     if (!claveP256dh || !claveAuth) return false
 
     // Convertir claves a base64 para enviarlas al servidor
-    const p256dh = btoa(String.fromCharCode(...new Uint8Array(claveP256dh)))
-    const auth = btoa(String.fromCharCode(...new Uint8Array(claveAuth)))
+    const p256dh = btoa(String.fromCharCode(...Array.from(new Uint8Array(claveP256dh))))
+    const auth = btoa(String.fromCharCode(...Array.from(new Uint8Array(claveAuth))))
 
     // Guardar suscripción en la base de datos
     const respuesta = await fetch('/api/push/suscribir', {

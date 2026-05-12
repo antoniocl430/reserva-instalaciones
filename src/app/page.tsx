@@ -48,7 +48,7 @@ async function obtenerPistas(): Promise<Instalacion[]> {
     // URL absoluta necesaria en Server Components
     const baseUrl =
       process.env.APP_URL ??
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+      (process.env.CF_PAGES_URL ?? "http://localhost:3000")
 
     const respuesta = await fetch(`${baseUrl}/api/instalaciones`, {
       cache: "no-store",
@@ -74,7 +74,7 @@ async function obtenerAvisos(): Promise<Aviso[]> {
   try {
     const baseUrl =
       process.env.APP_URL ??
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+      (process.env.CF_PAGES_URL ?? "http://localhost:3000")
 
     const respuesta = await fetch(`${baseUrl}/api/avisos`, {
       cache: "no-store",
