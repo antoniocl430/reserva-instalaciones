@@ -342,6 +342,62 @@ function plantillaRecuperacion(nombreUsuario: string, urlReset: string): string 
 }
 
 // ---------------------------------------------------------------------------
+// Funciones de suspensión de cuenta
+// ---------------------------------------------------------------------------
+
+/**
+ * Envía email al ciudadano cuando su cuenta es suspendida (por no-show o manualmente).
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailSuspension(
+  emailUsuario: string,
+  nombreUsuario: string,
+  suspendidoHasta: Date,
+  motivo: string
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de suspensión omitido")
+    return
+  }
+
+  await getResend().emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailUsuario),
+    subject: "Tu cuenta ha sido suspendida temporalmente",
+    html: plantillaSuspension(nombreUsuario, suspendidoHasta, motivo),
+  })
+}
+
+function plantillaSuspension(nombreUsuario: string, suspendidoHasta: Date, motivo: string): string {
+  const fechaFinStr = suspendidoHasta.toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #b91c1c; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Cuenta suspendida temporalmente</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreUsuario}</strong>:</p>
+        <p>Tu cuenta ha sido suspendida temporalmente y no podrás realizar nuevas reservas hasta el:</p>
+        <p style="font-size: 18px; font-weight: bold; color: #b91c1c; margin: 16px 0;">${fechaFinStr}</p>
+        <p><strong>Motivo:</strong> ${motivo}</p>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Si crees que esto es un error, contacta con el ayuntamiento para más información.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
 // Funciones para grupos recurrentes
 // ---------------------------------------------------------------------------
 

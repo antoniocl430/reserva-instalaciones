@@ -8,10 +8,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
-    // Ejecutar tests de frontend y de componentes (los de API usan Jest)
+    // Ejecutar tests de frontend, componentes y lib (los de API usan Jest)
     include: [
       'src/__tests__/frontend/**/*.test.{ts,tsx}',
       'src/__tests__/components/**/*.test.{ts,tsx}',
+      'src/__tests__/lib/**/*.test.{ts,tsx}',
     ],
   },
   resolve: {

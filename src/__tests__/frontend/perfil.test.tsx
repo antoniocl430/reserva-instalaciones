@@ -174,6 +174,44 @@ vi.mock('@/components/ui/skeleton', () => ({
     React.createElement('div', { className, 'data-testid': 'skeleton' }),
 }))
 
+vi.mock('@/components/ui/badge', () => ({
+  Badge: ({
+    children,
+    variant,
+    className,
+  }: {
+    children: React.ReactNode
+    variant?: string
+    className?: string
+  }) =>
+    React.createElement(
+      'span',
+      { 'data-testid': 'badge', 'data-variant': variant, className },
+      children
+    ),
+}))
+
+vi.mock('@/components/ui/alert', () => ({
+  Alert: ({
+    children,
+    variant,
+    className,
+  }: {
+    children: React.ReactNode
+    variant?: string
+    className?: string
+  }) =>
+    React.createElement('div', { role: 'alert', 'data-variant': variant, className }, children),
+  AlertDescription: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', {}, children),
+}))
+
+// --- Mock de PreferenciasNotificacion ---
+vi.mock('@/components/PreferenciasNotificacion', () => ({
+  default: () =>
+    React.createElement('div', { 'data-testid': 'preferencias-notificacion' }, 'Preferencias mock'),
+}))
+
 // --- Mock de push-client ---
 const mockSuscribirAPush = vi.fn()
 const mockDesuscribirDePush = vi.fn()
@@ -214,6 +252,21 @@ describe('PaginaPerfil', () => {
         return Promise.resolve({
           ok: true,
           json: async () => ({ usuario: usuarioFicticio }),
+        })
+      }
+      if (url === '/api/perfil' && (!options?.method || options?.method === 'GET')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            id: 'user-1',
+            nombre: 'Ana García',
+            email: 'ana@test.com',
+            rol: 'CIUDADANO',
+            noShows: 0,
+            suspendidoHasta: null,
+            motivoSuspension: null,
+            creadoEn: '2026-01-01T00:00:00Z',
+          }),
         })
       }
       if (url === '/api/cuenta/preferencias-notificacion' && options?.method !== 'PATCH') {
@@ -446,25 +499,25 @@ describe('PaginaPerfil', () => {
 
   // --- Tests de la sección de notificaciones push ---
 
-  it('debería mostrar la sección "Notificaciones" con botón "Activar" cuando el estado es inactivo', async () => {
+  it('debería mostrar la sección "Notificaciones push" con botón "Activar notificaciones" cuando el estado es inactivo', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
 
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      expect(screen.getByText('Notificaciones')).toBeInTheDocument()
+      expect(screen.getByText(/Notificaciones push/i)).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('button', { name: /Activar/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Activar notificaciones/i })).toBeInTheDocument()
   })
 
-  it('debería mostrar botón "Desactivar" cuando las notificaciones están activas', async () => {
+  it('debería mostrar botón "Desactivar notificaciones" cuando las notificaciones están activas', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('activo')
 
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Desactivar/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Desactivar notificaciones/i })).toBeInTheDocument()
     })
   })
 
@@ -474,7 +527,7 @@ describe('PaginaPerfil', () => {
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      expect(screen.getByText(/Has bloqueado los permisos/i)).toBeInTheDocument()
+      expect(screen.getByText(/Debes permitir las notificaciones/i)).toBeInTheDocument()
     })
   })
 
@@ -488,34 +541,34 @@ describe('PaginaPerfil', () => {
     })
   })
 
-  it('debería llamar a suscribirAPush al pulsar "Activar" notificaciones', async () => {
+  it('debería llamar a suscribirAPush al pulsar "Activar notificaciones"', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('inactivo')
     mockSuscribirAPush.mockResolvedValue(true)
 
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Activar/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Activar notificaciones/i })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /Activar/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Activar notificaciones/i }))
 
     await waitFor(() => {
       expect(mockSuscribirAPush).toHaveBeenCalled()
     })
   })
 
-  it('debería llamar a desuscribirDePush al pulsar "Desactivar" notificaciones', async () => {
+  it('debería llamar a desuscribirDePush al pulsar "Desactivar notificaciones"', async () => {
     mockObtenerEstadoSuscripcion.mockResolvedValue('activo')
     mockDesuscribirDePush.mockResolvedValue(true)
 
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Desactivar/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Desactivar notificaciones/i })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /Desactivar/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Desactivar notificaciones/i }))
 
     await waitFor(() => {
       expect(mockDesuscribirDePush).toHaveBeenCalled()

@@ -34,6 +34,7 @@ jest.mock('@/lib/email', () => ({
 // Mockear el módulo de push (Bloque 11) para que los tests no dependan de VAPID ni suscripciones
 jest.mock('@/lib/push', () => ({
   enviarPushCancelacion: jest.fn().mockResolvedValue(undefined),
+  enviarPushReservaConfirmada: jest.fn().mockResolvedValue(undefined),
 }))
 
 // Evitar que web-push intente configurar VAPID al importar transitivamente push.ts

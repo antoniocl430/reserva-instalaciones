@@ -205,7 +205,7 @@ export default function PaginaMisReservas() {
                                 Activa
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-600 capitalize">
+                            <p className="text-sm text-gray-600">
                               {formatearFecha(reserva.fecha)}
                             </p>
                             <p className="text-sm text-gray-500">
@@ -249,7 +249,7 @@ export default function PaginaMisReservas() {
                               </p>
                               {badgeHistorial(reserva)}
                             </div>
-                            <p className="text-sm text-gray-500 capitalize">
+                            <p className="text-sm text-gray-500">
                               {formatearFecha(reserva.fecha)}
                             </p>
                             <p className="text-sm text-gray-400">
@@ -286,7 +286,7 @@ export default function PaginaMisReservas() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Fecha</span>
-                <span className="font-medium text-gray-800 capitalize">
+                <span className="font-medium text-gray-800">
                   {formatearFecha(reservaACancelar.fecha)}
                 </span>
               </div>

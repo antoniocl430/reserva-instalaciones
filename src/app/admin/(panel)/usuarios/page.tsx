@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { formatearFechaCorta } from "@/lib/formato"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,6 +31,28 @@ interface Usuario {
   email: string
   rol: string
   creadoEn: string
+  noShows: number
+  suspendidoHasta: string | null
+  motivoSuspension: string | null
+}
+
+/** Devuelve true si la fecha de suspensión es futura */
+function tieneSuspensionActiva(suspendidoHasta: string | null): boolean {
+  if (!suspendidoHasta) return false
+  return new Date(suspendidoHasta) > new Date()
+}
+
+/** Formatea una fecha ISO a DD/MM/AAAA */
+function formatearFechaDD(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
+}
+
+/** Calcula la fecha mínima para el input de fecha (mañana) */
+function fechaMinimaSuspension(): string {
+  const manana = new Date()
+  manana.setDate(manana.getDate() + 1)
+  return manana.toISOString().split("T")[0]
 }
 
 export default function PaginaUsuariosAdmin() {
@@ -49,6 +72,19 @@ export default function PaginaUsuariosAdmin() {
     rol: "ADMIN",
   })
   const [guardando, setGuardando] = useState(false)
+
+  // ── Estado de suspensión manual ───────────────────────────────────────────
+  const [dialogSuspender, setDialogSuspender] = useState(false)
+  const [usuarioParaSuspender, setUsuarioParaSuspender] = useState<Usuario | null>(null)
+  const [formSuspension, setFormSuspension] = useState({
+    suspendidoHasta: "",
+    motivoSuspension: "",
+  })
+  const [suspendiendo, setSuspendiendo] = useState(false)
+
+  const [dialogLevantarSuspension, setDialogLevantarSuspension] = useState(false)
+  const [usuarioParaLevantar, setUsuarioParaLevantar] = useState<Usuario | null>(null)
+  const [levantando, setLevantando] = useState(false)
 
   // Cargar usuarios
   async function cargarUsuarios() {
@@ -139,6 +175,71 @@ export default function PaginaUsuariosAdmin() {
     }
   }
 
+  // Suspender usuario manualmente
+  async function handleSuspender() {
+    if (!usuarioParaSuspender) return
+
+    if (!formSuspension.suspendidoHasta) {
+      setError("La fecha de fin es obligatoria")
+      return
+    }
+    if (!formSuspension.motivoSuspension.trim()) {
+      setError("El motivo es obligatorio")
+      return
+    }
+
+    try {
+      setSuspendiendo(true)
+      const res = await fetch(`/api/admin/usuarios/${usuarioParaSuspender.id}/suspender`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suspendidoHasta: new Date(formSuspension.suspendidoHasta).toISOString(),
+          motivoSuspension: formSuspension.motivoSuspension,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Error al suspender usuario")
+      }
+
+      setDialogSuspender(false)
+      setUsuarioParaSuspender(null)
+      setFormSuspension({ suspendidoHasta: "", motivoSuspension: "" })
+      cargarUsuarios()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al suspender")
+    } finally {
+      setSuspendiendo(false)
+    }
+  }
+
+  // Levantar suspensión
+  async function handleLevantarSuspension() {
+    if (!usuarioParaLevantar) return
+
+    try {
+      setLevantando(true)
+      const res = await fetch(`/api/admin/usuarios/${usuarioParaLevantar.id}/levantar-suspension`, {
+        method: "PATCH",
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Error al levantar la suspensión")
+      }
+
+      setDialogLevantarSuspension(false)
+      setUsuarioParaLevantar(null)
+      cargarUsuarios()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al levantar la suspensión")
+    } finally {
+      setLevantando(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -192,36 +293,85 @@ export default function PaginaUsuariosAdmin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {usuarios.map((usuario) => (
-                    <TableRow key={usuario.id}>
-                      <TableCell className="font-medium text-sm">
-                        {usuario.nombre}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {usuario.email}
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {usuario.rol}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {formatearFechaCorta(usuario.creadoEn)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {usuario.id !== session?.user?.id && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleEliminarUsuario(usuario.id)}
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {usuarios.map((usuario) => {
+                    const suspendido = tieneSuspensionActiva(usuario.suspendidoHasta)
+                    return (
+                      <TableRow key={usuario.id}>
+                        <TableCell className="font-medium text-sm">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{usuario.nombre}</span>
+                            {/* Badge de suspensión activa */}
+                            {suspendido && usuario.suspendidoHasta && (
+                              <Badge className="bg-red-100 text-red-700 text-xs whitespace-nowrap">
+                                Suspendido hasta {formatearFechaDD(usuario.suspendidoHasta)}
+                              </Badge>
+                            )}
+                            {/* Badge de no-shows */}
+                            {usuario.noShows > 0 && (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs whitespace-nowrap">
+                                {usuario.noShows} no-shows
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {usuario.email}
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {usuario.rol}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {formatearFechaCorta(usuario.creadoEn)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-1">
+                            {/* Botón suspender / levantar suspensión */}
+                            {usuario.id !== session?.user?.id && (
+                              <>
+                                {suspendido ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={() => {
+                                      setUsuarioParaLevantar(usuario)
+                                      setDialogLevantarSuspension(true)
+                                    }}
+                                  >
+                                    Levantar suspensión
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                    onClick={() => {
+                                      setUsuarioParaSuspender(usuario)
+                                      setFormSuspension({ suspendidoHasta: "", motivoSuspension: "" })
+                                      setError(null)
+                                      setDialogSuspender(true)
+                                    }}
+                                  >
+                                    Suspender
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleEliminarUsuario(usuario.id)}
+                                >
+                                  Eliminar
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -318,6 +468,101 @@ export default function PaginaUsuariosAdmin() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {guardando ? "Creando..." : "Crear usuario"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de suspensión manual */}
+      <Dialog open={dialogSuspender} onOpenChange={setDialogSuspender}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Suspender usuario</DialogTitle>
+            <DialogDescription>
+              {usuarioParaSuspender
+                ? `Indica el período de suspensión para ${usuarioParaSuspender.nombre}`
+                : "Configura la suspensión del usuario"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="suspension-fecha-fin">Fecha fin</Label>
+              <Input
+                id="suspension-fecha-fin"
+                type="date"
+                min={fechaMinimaSuspension()}
+                value={formSuspension.suspendidoHasta}
+                onChange={(e) =>
+                  setFormSuspension({ ...formSuspension, suspendidoHasta: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="suspension-motivo">Motivo</Label>
+              <Input
+                id="suspension-motivo"
+                type="text"
+                placeholder="Motivo de la suspensión"
+                value={formSuspension.motivoSuspension}
+                onChange={(e) =>
+                  setFormSuspension({ ...formSuspension, motivoSuspension: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogSuspender(false)
+                setUsuarioParaSuspender(null)
+              }}
+              disabled={suspendiendo}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleSuspender}
+              disabled={suspendiendo}
+            >
+              {suspendiendo ? "Suspendiendo..." : "Confirmar suspensión"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de levantar suspensión */}
+      <Dialog open={dialogLevantarSuspension} onOpenChange={setDialogLevantarSuspension}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Levantar suspensión</DialogTitle>
+            <DialogDescription>
+              {usuarioParaLevantar
+                ? `¿Confirmas que deseas levantar la suspensión de ${usuarioParaLevantar.nombre}?`
+                : "¿Confirmas que deseas levantar la suspensión?"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogLevantarSuspension(false)
+                setUsuarioParaLevantar(null)
+              }}
+              disabled={levantando}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleLevantarSuspension}
+              disabled={levantando}
+            >
+              {levantando ? "Procesando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>

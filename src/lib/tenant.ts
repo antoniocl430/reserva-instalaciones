@@ -22,6 +22,26 @@ export interface ConfiguracionTenant {
     title?: string
     description?: string
   }
+  /** Configuración de slots de reserva para este tenant */
+  slots?: {
+    /** Duración de cada slot en minutos. Por defecto: 75 */
+    duracionMinutos: number
+    /** Franjas horarias en las que se generan slots */
+    franjas: Array<{ inicio: string; fin: string }>
+  }
+  /** Configuración del sistema de penalizaciones por no-show */
+  penalizaciones?: {
+    /** Número máximo de no-shows antes de suspender al usuario. Por defecto: 3 */
+    maxNoShows: number
+    /** Días de suspensión al alcanzar el límite. Por defecto: 14 */
+    diasSuspension: number
+  }
+  /**
+   * Número máximo de reservas ACTIVAS simultáneas que puede tener un CIUDADANO.
+   * No aplica a ADMIN ni INSTRUCTOR.
+   * Por defecto: 2
+   */
+  limiteReservasActivas?: number
 }
 
 // ─── Helpers de configuración ─────────────────────────────────────────────────
@@ -75,6 +95,16 @@ export function mergearConfiguracion(
       override.metadata !== undefined
         ? { ...base.metadata, ...override.metadata }
         : base.metadata,
+    // Merge profundo del subobjeto slots (reemplaza completo si se envía)
+    slots:
+      override.slots !== undefined
+        ? override.slots
+        : base.slots,
+    // Merge profundo del subobjeto penalizaciones
+    penalizaciones:
+      override.penalizaciones !== undefined
+        ? { ...base.penalizaciones, ...override.penalizaciones }
+        : base.penalizaciones,
   }
 }
 

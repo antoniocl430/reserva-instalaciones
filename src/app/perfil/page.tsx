@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,7 @@ import { AvatarUsuario } from "@/components/AvatarUsuario"
 import PreferenciasNotificacion from "@/components/PreferenciasNotificacion"
 import { useToast } from "@/hooks/use-toast"
 import {
+  registrarServiceWorker,
   suscribirAPush,
   desuscribirDePush,
   obtenerEstadoSuscripcion,
@@ -33,6 +36,18 @@ interface DatosUsuario {
   email: string
   rol: string
   avatarUrl: string | null
+  creadoEn: string
+}
+
+// Datos extendidos de penalizaciones cargados desde /api/perfil
+interface DatosPerfil {
+  id: string
+  nombre: string
+  email: string
+  rol: string
+  noShows: number
+  suspendidoHasta: string | null
+  motivoSuspension: string | null
   creadoEn: string
 }
 
@@ -69,6 +84,16 @@ export default function PaginaPerfil() {
   // Estado de las notificaciones push
   const [estadoPush, setEstadoPush] = useState<'activo' | 'inactivo' | 'no-soportado' | 'denegado'>('inactivo')
 
+  // Estado del formulario de cambio de contraseña
+  const [passwordActual, setPasswordActual] = useState("")
+  const [passwordNueva, setPasswordNueva] = useState("")
+  const [confirmarPassword, setConfirmarPassword] = useState("")
+  const [errorPassword, setErrorPassword] = useState("")
+  const [cambiandoPassword, setCambiandoPassword] = useState(false)
+
+  // Estado de datos de penalizaciones (cargados desde /api/perfil)
+  const [datosPerfil, setDatosPerfil] = useState<DatosPerfil | null>(null)
+
   // Protección de ruta: si no hay sesión, redirigir a /login
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -86,6 +111,18 @@ export default function PaginaPerfil() {
         setAvatarUrl(data.usuario.avatarUrl)
       })
       .finally(() => setCargandoDatos(false))
+  }, [])
+
+  // Cargar datos extendidos de perfil (penalizaciones, rol, etc.)
+  useEffect(() => {
+    fetch("/api/perfil")
+      .then((r) => r.json())
+      .then((data: DatosPerfil) => {
+        setDatosPerfil(data)
+      })
+      .catch(() => {
+        // Si el endpoint no está disponible, no bloqueamos la página
+      })
   }, [])
 
   // Cargar estado actual de las notificaciones push al montar
@@ -188,9 +225,48 @@ export default function PaginaPerfil() {
     }
   }
 
+  // Cambiar la contraseña del usuario
+  async function alCambiarPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setErrorPassword("")
+
+    // Validación frontend: nueva y confirmación deben coincidir
+    if (passwordNueva !== confirmarPassword) {
+      setErrorPassword("Las contraseñas no coinciden. Revisa los campos e inténtalo de nuevo.")
+      return
+    }
+
+    setCambiandoPassword(true)
+    try {
+      const respuesta = await fetch("/api/perfil", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passwordActual, passwordNueva }),
+      })
+
+      if (!respuesta.ok) {
+        const datos = await respuesta.json()
+        // Mensaje de error inline si la contraseña actual es incorrecta
+        setErrorPassword(datos.error ?? "Error al cambiar la contraseña. Inténtalo de nuevo.")
+        return
+      }
+
+      // Limpiar formulario tras éxito
+      setPasswordActual("")
+      setPasswordNueva("")
+      setConfirmarPassword("")
+      toast({ title: "Contraseña actualizada", description: "Tu contraseña ha sido cambiada correctamente." })
+    } catch {
+      setErrorPassword("Error al cambiar la contraseña. Inténtalo de nuevo.")
+    } finally {
+      setCambiandoPassword(false)
+    }
+  }
+
   // Activar o desactivar notificaciones push
   async function toggleNotificaciones() {
     if (estadoPush === 'activo') {
+      // Desactivar: desuscribir del servicio push
       const exito = await desuscribirDePush()
       if (exito) {
         setEstadoPush('inactivo')
@@ -203,6 +279,8 @@ export default function PaginaPerfil() {
         })
       }
     } else {
+      // Activar: primero registrar el service worker y luego suscribir
+      await registrarServiceWorker()
       const exito = await suscribirAPush()
       if (exito) {
         setEstadoPush('activo')
@@ -376,49 +454,175 @@ export default function PaginaPerfil() {
           </form>
         </div>
 
-        {/* Sección notificaciones */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Notificaciones</h2>
+        {/* Sección cambio de contraseña */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <h2 className="text-base font-semibold text-gray-800 mb-4">Cambiar contraseña</h2>
 
-          {/* Notificaciones push */}
-          <div className="mb-6 pb-6 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Notificaciones push</p>
-                <p className="text-sm text-gray-500">
-                  Recibe avisos de reservas y cancelaciones en tu dispositivo
-                </p>
-              </div>
-              <Button
-                onClick={toggleNotificaciones}
-                variant={estadoPush === 'activo' ? 'destructive' : 'default'}
-                size="sm"
-              >
-                {estadoPush === 'activo' ? 'Desactivar' : 'Activar'}
-              </Button>
+          <form onSubmit={alCambiarPassword} className="space-y-4">
+            {/* Contraseña actual */}
+            <div className="space-y-1">
+              <Label htmlFor="password-actual">Contraseña actual</Label>
+              <Input
+                id="password-actual"
+                type="password"
+                value={passwordActual}
+                onChange={(e) => setPasswordActual(e.target.value)}
+                placeholder="Tu contraseña actual"
+                autoComplete="current-password"
+              />
             </div>
-            {estadoPush === 'denegado' && (
-              <p className="mt-2 text-xs text-red-500">
-                Has bloqueado los permisos. Actívalos desde la configuración de tu navegador.
+
+            {/* Nueva contraseña */}
+            <div className="space-y-1">
+              <Label htmlFor="password-nueva">Nueva contraseña</Label>
+              <Input
+                id="password-nueva"
+                type="password"
+                value={passwordNueva}
+                onChange={(e) => setPasswordNueva(e.target.value)}
+                placeholder="Nueva contraseña"
+                autoComplete="new-password"
+              />
+            </div>
+
+            {/* Confirmar nueva contraseña */}
+            <div className="space-y-1">
+              <Label htmlFor="confirmar-password">Confirmar nueva contraseña</Label>
+              <Input
+                id="confirmar-password"
+                type="password"
+                value={confirmarPassword}
+                onChange={(e) => setConfirmarPassword(e.target.value)}
+                placeholder="Repite la nueva contraseña"
+                autoComplete="new-password"
+              />
+            </div>
+
+            {/* Error inline de contraseñas */}
+            {errorPassword && (
+              <p className="text-sm text-red-600" role="alert">
+                {errorPassword}
               </p>
             )}
-            {estadoPush === 'no-soportado' && (
-              <p className="mt-2 text-xs text-gray-500">
-                Tu navegador no soporta notificaciones push.
+
+            {/* Botón cambiar contraseña */}
+            <Button
+              type="submit"
+              disabled={cambiandoPassword}
+              className="w-full sm:w-auto flex items-center gap-2"
+            >
+              {cambiandoPassword ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cambiando...
+                </>
+              ) : "Cambiar contraseña"}
+            </Button>
+          </form>
+        </div>
+
+        {/* Sección penalizaciones — solo visible para CIUDADANO */}
+        {datosPerfil?.rol === "CIUDADANO" && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">Penalizaciones</h2>
+
+            {/* Sin penalizaciones */}
+            {datosPerfil.noShows === 0 && !datosPerfil.suspendidoHasta && (
+              <p className="text-sm text-gray-500">No tienes penalizaciones registradas.</p>
+            )}
+
+            {/* Badge de no-shows cuando hay alguno */}
+            {datosPerfil.noShows > 0 && (
+              <Badge variant="destructive" className="mb-3">
+                {datosPerfil.noShows} no-shows acumulados
+              </Badge>
+            )}
+
+            {/* Alerta de suspensión activa (fecha futura) */}
+            {datosPerfil.suspendidoHasta && new Date(datosPerfil.suspendidoHasta) > new Date() && (
+              <Alert variant="destructive" className="mt-3">
+                <AlertDescription>
+                  Tu cuenta está suspendida hasta{" "}
+                  {new Date(datosPerfil.suspendidoHasta).toLocaleDateString("es-ES", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                  {datosPerfil.motivoSuspension && (
+                    <>. Motivo: {datosPerfil.motivoSuspension}</>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Suspensión ya finalizada (fecha pasada) */}
+            {datosPerfil.suspendidoHasta && new Date(datosPerfil.suspendidoHasta) <= new Date() && (
+              <p className="text-sm text-gray-400 mt-2">
+                Última suspensión finalizada el{" "}
+                {new Date(datosPerfil.suspendidoHasta).toLocaleDateString("es-ES", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
               </p>
             )}
           </div>
+        )}
 
-          {/* Preferencias de notificación */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-800 mb-4">Tipos de notificaciones</h3>
+        {/* Sección notificaciones push — solo visible para CIUDADANO */}
+        {datosPerfil?.rol === "CIUDADANO" && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-base font-semibold text-gray-800">Notificaciones push</h2>
+              <Badge
+                variant={estadoPush === 'activo' ? 'default' : 'secondary'}
+              >
+                {estadoPush === 'activo' ? 'Activa' : 'Inactiva'}
+              </Badge>
+            </div>
+
+            {/* Aviso si el navegador no soporta push */}
+            {estadoPush === 'no-soportado' ? (
+              <p className="text-sm text-gray-500 mb-4">
+                Tu navegador no soporta notificaciones push.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-4">
+                  Recibirás avisos de reservas confirmadas, recordatorios y cancelaciones
+                  directamente en este dispositivo.
+                </p>
+
+                {/* Aviso si el permiso está denegado */}
+                {estadoPush === 'denegado' && (
+                  <p className="text-sm text-amber-600 mb-4">
+                    Debes permitir las notificaciones en tu navegador.
+                  </p>
+                )}
+
+                <Button
+                  onClick={toggleNotificaciones}
+                  variant={estadoPush === 'activo' ? 'destructive' : 'default'}
+                  size="sm"
+                >
+                  {estadoPush === 'activo' ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Sección preferencias de notificación — solo visible para CIUDADANO */}
+        {datosPerfil?.rol === "CIUDADANO" && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">Preferencias de notificación</h2>
             <PreferenciasNotificacion
               onGuardado={() => {
                 toast({ title: "Preferencias guardadas" })
               }}
             />
           </div>
-        </div>
+        )}
 
         {/* Tarjeta de exportación de datos (RGPD) */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">

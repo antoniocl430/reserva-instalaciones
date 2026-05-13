@@ -73,6 +73,7 @@ const avisoMock = {
   tipo: "AVISO",
   fecha: new Date("2026-04-01T10:00:00.000Z"),
   activo: true,
+  caducaEn: null,
   creadoEn: new Date("2026-03-26T09:00:00.000Z"),
   actualizadoEn: new Date("2026-03-26T09:00:00.000Z"),
 }
@@ -83,6 +84,11 @@ const bodyAvisoValido = {
   tipo: "AVISO",
   fecha: "2026-04-01",
 }
+
+// Fecha en el futuro (año 2099 garantiza que no caduca en tests)
+const FECHA_FUTURA = new Date("2099-12-31T23:59:59.000Z")
+// Fecha en el pasado
+const FECHA_PASADA = new Date("2020-01-01T00:00:00.000Z")
 
 // ─── Helper para construir requests ──────────────────────────────────────────
 
@@ -121,10 +127,17 @@ describe("Avisos API Routes — Tablón de anuncios", () => {
       expect(body).toHaveLength(1)
       expect(body[0].id).toBe("aviso-1")
 
-      // Debe haber consultado solo los avisos activos del tenant
+      // Debe haber consultado solo los avisos activos y no caducados del tenant
       expect(prismaMock.aviso.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { tenantId: TENANT_ID, activo: true },
+          where: expect.objectContaining({
+            tenantId: TENANT_ID,
+            activo: true,
+            OR: expect.arrayContaining([
+              { caducaEn: null },
+              { caducaEn: expect.objectContaining({ gt: expect.any(Date) }) },
+            ]),
+          }),
           orderBy: { fecha: "desc" },
         })
       )
@@ -412,6 +425,194 @@ describe("Avisos API Routes — Tablón de anuncios", () => {
         expect.objectContaining({
           where: { id: "aviso-1" },
           data: expect.objectContaining({ activo: false }),
+        })
+      )
+    })
+  })
+
+  // ==========================================================================
+  // Caducidad automática — GET /api/avisos (ruta pública)
+  // ==========================================================================
+
+  describe("GET /api/avisos — filtro de caducidad", () => {
+    it("debería devolver aviso sin caducaEn (siempre visible)", async () => {
+      // caducaEn: null → sin fecha límite → siempre visible
+      const avisoSinCaducidad = { ...avisoMock, caducaEn: null }
+      prismaMock.aviso.findMany.mockResolvedValueOnce([avisoSinCaducidad])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      const response = await GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body).toHaveLength(1)
+    })
+
+    it("debería devolver aviso con caducaEn en el futuro (todavía vigente)", async () => {
+      // caducaEn en el futuro → el aviso aún no ha caducado
+      const avisoFuturo = { ...avisoMock, caducaEn: FECHA_FUTURA }
+      prismaMock.aviso.findMany.mockResolvedValueOnce([avisoFuturo])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      const response = await GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body).toHaveLength(1)
+    })
+
+    it("debería excluir aviso con caducaEn en el pasado (ya caducado)", async () => {
+      // Cuando hay un aviso caducado, la query no debe devolverlo (array vacío)
+      prismaMock.aviso.findMany.mockResolvedValueOnce([])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      const response = await GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body).toHaveLength(0)
+
+      // Verificar que el WHERE incluye el filtro de caducidad
+      expect(prismaMock.aviso.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              { caducaEn: null },
+              { caducaEn: expect.objectContaining({ gt: expect.any(Date) }) },
+            ]),
+          }),
+        })
+      )
+    })
+
+    it("debería excluir aviso con caducaEn pasado aunque activo sea false", async () => {
+      // Doble condición: ni activo ni vigente → no aparece
+      prismaMock.aviso.findMany.mockResolvedValueOnce([])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      const response = await GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body).toHaveLength(0)
+    })
+
+    it("debería usar el filtro correcto de caducidad en la query Prisma", async () => {
+      prismaMock.aviso.findMany.mockResolvedValueOnce([avisoMock])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      await GET(request)
+
+      // El WHERE debe incluir: activo: true + OR[caducaEn null | caducaEn futuro]
+      expect(prismaMock.aviso.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            tenantId: TENANT_ID,
+            activo: true,
+            OR: expect.arrayContaining([
+              { caducaEn: null },
+              { caducaEn: expect.objectContaining({ gt: expect.any(Date) }) },
+            ]),
+          }),
+        })
+      )
+    })
+  })
+
+  // ==========================================================================
+  // Caducidad automática — POST /api/avisos y PATCH /api/avisos/[id]
+  // ==========================================================================
+
+  describe("POST /api/avisos — campo caducaEn", () => {
+    it("debería crear aviso con caducaEn cuando se proporciona una fecha ISO válida", async () => {
+      mockGetServerSession.mockResolvedValueOnce(sesionAdmin)
+      const avisoConCaducidad = { ...avisoMock, caducaEn: FECHA_FUTURA }
+      prismaMock.aviso.create.mockResolvedValueOnce(avisoConCaducidad)
+
+      const bodyConCaducidad = {
+        ...bodyAvisoValido,
+        caducaEn: "2099-12-31T23:59:59.000Z",
+      }
+      const request = crearRequest("http://localhost:3000/api/avisos", "POST", bodyConCaducidad)
+      const response = await POST(request)
+
+      expect(response.status).toBe(201)
+      // La ruta debe haber pasado caducaEn a prisma.aviso.create
+      expect(prismaMock.aviso.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            caducaEn: expect.any(Date),
+          }),
+        })
+      )
+    })
+
+    it("debería crear aviso sin caducaEn cuando no se proporciona (null en BD)", async () => {
+      mockGetServerSession.mockResolvedValueOnce(sesionAdmin)
+      prismaMock.aviso.create.mockResolvedValueOnce(avisoMock) // caducaEn: null
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "POST", bodyAvisoValido)
+      const response = await POST(request)
+
+      expect(response.status).toBe(201)
+      // caducaEn no debe pasarse al create (o pasar null) — no se lanza error
+      const body = await response.json()
+      expect(body.caducaEn).toBeNull()
+    })
+
+    it("debería devolver 400 cuando caducaEn no es una fecha válida", async () => {
+      mockGetServerSession.mockResolvedValueOnce(sesionAdmin)
+
+      const bodyFechaInvalida = { ...bodyAvisoValido, caducaEn: "no-es-una-fecha" }
+      const request = crearRequest("http://localhost:3000/api/avisos", "POST", bodyFechaInvalida)
+      const response = await POST(request)
+
+      expect(response.status).toBe(400)
+      const body = await response.json()
+      expect(body.error).toBeDefined()
+    })
+  })
+
+  describe("PATCH /api/avisos/[id] — campo caducaEn", () => {
+    it("debería actualizar caducaEn cuando se proporciona en el body", async () => {
+      mockGetServerSession.mockResolvedValueOnce(sesionAdmin)
+      prismaMock.aviso.findFirst.mockResolvedValueOnce(avisoMock)
+      const avisoActualizado = { ...avisoMock, caducaEn: FECHA_FUTURA }
+      prismaMock.aviso.update.mockResolvedValueOnce(avisoActualizado)
+
+      const request = crearRequest(
+        "http://localhost:3000/api/avisos/aviso-1",
+        "PATCH",
+        { caducaEn: "2099-12-31T23:59:59.000Z" }
+      )
+      const response = await PATCH(request, { params: { id: "aviso-1" } })
+
+      expect(response.status).toBe(200)
+      expect(prismaMock.aviso.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            caducaEn: expect.any(Date),
+          }),
+        })
+      )
+    })
+
+    it("debería permitir limpiar caducaEn enviando null", async () => {
+      mockGetServerSession.mockResolvedValueOnce(sesionAdmin)
+      prismaMock.aviso.findFirst.mockResolvedValueOnce({ ...avisoMock, caducaEn: FECHA_FUTURA })
+      prismaMock.aviso.update.mockResolvedValueOnce({ ...avisoMock, caducaEn: null })
+
+      const request = crearRequest(
+        "http://localhost:3000/api/avisos/aviso-1",
+        "PATCH",
+        { caducaEn: null }
+      )
+      const response = await PATCH(request, { params: { id: "aviso-1" } })
+
+      expect(response.status).toBe(200)
+      expect(prismaMock.aviso.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ caducaEn: null }),
         })
       )
     })

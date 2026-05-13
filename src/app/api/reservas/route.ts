@@ -3,45 +3,10 @@ import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { enviarEmailReserva } from "@/lib/email"
+import { enviarPushReservaConfirmada } from "@/lib/push"
 import { schemaCrearReserva } from "@/lib/validaciones"
-
-/**
- * Crea un objeto Date cuyo instante UTC corresponde a la hora y minutos indicados
- * en la zona horaria Europe/Madrid (UTC+1 invierno / UTC+2 verano).
- *
- * Ejemplo (horario de invierno, UTC+1):
- *   crearHoraEnMadrid("2026-03-25", 11, 45) → 2026-03-25T10:45:00.000Z
- *   Formateado con timeZone "Europe/Madrid" → "11:45" ✓
- */
-function crearHoraEnMadrid(fechaStr: string, hora: number, minutos: number = 0): Date {
-  // Crear instante provisional asumiendo que la hora es UTC
-  const base = new Date(`${fechaStr}T${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:00.000Z`)
-  // Averiguar qué hora muestra Madrid para ese instante UTC provisional
-  const horaMadrid = parseInt(
-    base.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "numeric",
-      hour12: false,
-    })
-  )
-  // diff = cuántas horas está Madrid por delante de UTC en ese momento
-  let diff = horaMadrid - hora
-  if (diff > 12) diff -= 24
-  if (diff < -12) diff += 24
-  // Restamos el offset para que Madrid muestre exactamente 'hora:minutos'
-  return new Date(base.getTime() - diff * 60 * 60 * 1000)
-}
-
-// Slots válidos — deben coincidir con los de /api/disponibilidad/route.ts
-const SLOTS_VALIDOS: Record<string, string> = {
-  "08:00": "09:15",
-  "09:15": "10:30",
-  "10:30": "11:45",
-  "11:45": "13:00",
-  "16:45": "18:00",
-  "18:00": "19:15",
-  "19:15": "20:30",
-}
+import { crearHoraEnMadrid, generarMapaSlots, SLOTS_CONFIG_DEFAULT } from "@/lib/slots"
+import { parsearConfiguracion } from "@/lib/tenant"
 
 // POST /api/reservas — crea una reserva con todas las validaciones de negocio
 export async function POST(request: NextRequest) {
@@ -64,8 +29,16 @@ export async function POST(request: NextRequest) {
 
   const { instalacionId, fecha, horaInicio } = resultado.data
 
-  // Obtener la hora fin desde SLOTS_VALIDOS
-  const horaFin = SLOTS_VALIDOS[horaInicio]
+  // Cargar la configuración de slots del tenant desde BD
+  const tenantData = await prisma.tenant.findUnique({
+    where: { id: sesion.user.tenantId },
+    select: { configuracion: true },
+  })
+  const configTenant = parsearConfiguracion(tenantData?.configuracion ?? null)
+  const slotsValidos = generarMapaSlots(configTenant.slots ?? SLOTS_CONFIG_DEFAULT)
+
+  // Obtener la hora fin desde el mapa de slots del tenant
+  const horaFin = slotsValidos[horaInicio]
   if (!horaFin) {
     // Esto no debería ocurrir si Zod validó correctamente, pero para seguridad
     return NextResponse.json(
@@ -74,12 +47,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const [horas, minutos] = horaInicio.split(":").map(Number)
-  const [horasFin, minutosFin] = horaFin.split(":").map(Number)
-
   // Construir fechas UTC del slot usando hora local española (Europe/Madrid)
-  const horaInicioDate = crearHoraEnMadrid(fecha, horas, minutos)
-  const horaFinDate = crearHoraEnMadrid(fecha, horasFin, minutosFin)
+  const horaInicioDate = crearHoraEnMadrid(fecha, horaInicio)
+  const horaFinDate = crearHoraEnMadrid(fecha, horaFin)
 
   // Validar que el slot es futuro (mínimo 1 minuto de margen)
   if (horaInicioDate.getTime() <= Date.now() + 60_000) {
@@ -95,6 +65,22 @@ export async function POST(request: NextRequest) {
   })
   if (!instalacion || !instalacion.activa) {
     return NextResponse.json({ error: "Instalación no disponible" }, { status: 404 })
+  }
+
+  // Verificar si el ciudadano tiene una suspensión vigente
+  if (sesion.user.rol === "CIUDADANO") {
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: sesion.user.id },
+      select: { suspendidoHasta: true, motivoSuspension: true },
+    })
+    if (usuario?.suspendidoHasta && usuario.suspendidoHasta > new Date()) {
+      return NextResponse.json(
+        {
+          error: `Tu cuenta está suspendida hasta el ${usuario.suspendidoHasta.toLocaleDateString("es-ES")}. Motivo: ${usuario.motivoSuspension ?? ""}`,
+        },
+        { status: 403 }
+      )
+    }
   }
 
   // Verificar bloqueo activo del tenant que cubra este slot (fuera de transacción: solo lectura)
@@ -114,26 +100,28 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Leer el límite de reservas activas del tenant (configurable).
+  // Por defecto es 2 si no está configurado en el JSON del tenant.
+  const limiteReservasActivas = configTenant.limiteReservasActivas ?? 2
+
   // Crear reserva en transacción.
   // El conteo de reservas activas del ciudadano se realiza DENTRO de la transacción
-  // para evitar que dos peticiones simultáneas superen el límite de 2 reservas (BUG-03).
+  // para evitar que dos peticiones simultáneas superen el límite configurado (BUG-03).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let reserva: any
   try {
     reserva = await prisma.$transaction(async (tx) => {
-      // Verificar límite de 1 reserva activa por tipo de instalación (solo ciudadanos).
-      // Un ciudadano puede tener una reserva de pádel Y una de tenis simultáneamente,
-      // pero no puede tener dos reservas del mismo tipo a la vez.
+      // Verificar límite de reservas activas simultáneas (solo ciudadanos).
+      // El límite es configurable por tenant mediante `limiteReservasActivas` en la config JSON.
       if (sesion.user.rol === "CIUDADANO") {
-        const reservasActivasMismoTipo = await tx.reserva.count({
+        const reservasActivas = await tx.reserva.count({
           where: {
             usuarioId: sesion.user.id,
             estado: "ACTIVA",
             horaInicio: { gte: new Date() },
-            instalacion: { tipo: instalacion.tipo },
           },
         })
-        if (reservasActivasMismoTipo >= 1) {
+        if (reservasActivas >= limiteReservasActivas) {
           throw new Error("LIMITE_RESERVAS")
         }
       }
@@ -156,7 +144,7 @@ export async function POST(request: NextRequest) {
           tenantId: sesion.user.tenantId!,
           usuarioId: sesion.user.id,
           instalacionId,
-          fecha: crearHoraEnMadrid(fecha, 0),
+          fecha: new Date(fecha + "T00:00:00.000Z"),
           horaInicio: horaInicioDate,
           horaFin: horaFinDate,
           estado: "ACTIVA",
@@ -167,7 +155,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (err instanceof Error && err.message === "LIMITE_RESERVAS") {
       return NextResponse.json(
-        { error: "Ya tienes una reserva activa de este tipo. Cancélala antes de hacer otra del mismo tipo" },
+        { error: `No puedes tener más de ${limiteReservasActivas} reservas activas simultáneas` },
         { status: 409 }
       )
     }
@@ -195,6 +183,16 @@ export async function POST(request: NextRequest) {
     console.error("[Email] Error al enviar confirmación de reserva:", err)
   )
 
+  // Enviar push de confirmación de forma asíncrona (el fallo no bloquea la respuesta)
+  // La fecha se formatea como DD/MM/YYYY para el mensaje al usuario
+  const [anio, mes, dia] = fecha.split("-")
+  const fechaFormateada = `${dia}/${mes}/${anio}`
+  enviarPushReservaConfirmada(reserva.usuarioId, {
+    instalacion: reserva.instalacion.nombre,
+    fecha: fechaFormateada,
+    horaInicio: horaInicioStr,
+    horaFin: horaFinStr,
+  }).catch(() => {}) // ignorar errores de push para no romper el flujo
 
   return NextResponse.json({ reserva }, { status: 201 })
 }

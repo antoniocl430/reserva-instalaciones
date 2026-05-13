@@ -1,12 +1,10 @@
 /**
- * Tests para el perfil de usuario
+ * Tests para GET /api/perfil y PATCH /api/perfil
  * TDD: tests escritos ANTES de la implementación (fase RED)
  *
  * Cubre:
- *   - GET /api/cuenta — devuelve perfil del usuario autenticado
- *   - PATCH /api/cuenta — actualiza nombre del usuario
- *   - POST /api/cuenta/avatar — sube foto de perfil
- *   - schemaActualizarPerfil — validación del schema
+ *   - GET /api/perfil — devuelve perfil del usuario autenticado sin passwordHash
+ *   - PATCH /api/perfil — actualiza nombre y/o contraseña del usuario autenticado
  */
 
 // eslint-disable-next-line no-var
@@ -23,21 +21,20 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
-// Mock de @aws-sdk/client-s3 para tests de avatar (Cloudflare R2)
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn(() => ({
-    send: jest.fn().mockResolvedValue({}),
-  })),
-  PutObjectCommand: jest.fn((params) => params),
+// bcryptjs se mockeará individualmente en cada bloque donde haga falta
+jest.mock('bcryptjs', () => ({
+  compare: jest.fn(),
+  hash: jest.fn(),
 }))
 
 import { NextRequest } from 'next/server'
-import { GET, PATCH } from '@/app/api/cuenta/route'
-import { POST as POST_AVATAR } from '@/app/api/cuenta/avatar/route'
+import { GET, PATCH } from '@/app/api/perfil/route'
 import { getServerSession } from 'next-auth'
-import { schemaActualizarPerfil } from '@/lib/validaciones'
+import bcrypt from 'bcryptjs'
 
 const mockGetServerSession = getServerSession as jest.Mock
+const mockBcryptCompare = bcrypt.compare as jest.Mock
+const mockBcryptHash = bcrypt.hash as jest.Mock
 
 const TENANT_ID = 'tenant-test'
 const USUARIO_ID = 'usuario-ciudadano-1'
@@ -57,24 +54,27 @@ const usuarioEnBD = {
   tenantId: TENANT_ID,
   nombre: 'Ciudadano Test',
   email: 'ciudadano@test.com',
+  passwordHash: '$2a$12$hash.almacenado.en.bd',
   rol: 'CIUDADANO',
-  avatarUrl: null,
+  noShows: 0,
+  suspendidoHasta: null,
+  motivoSuspension: null,
   creadoEn: new Date('2026-01-01T10:00:00Z'),
 }
 
 // =============================================================================
-// GET /api/cuenta
+// GET /api/perfil
 // =============================================================================
 
-describe('GET /api/cuenta', () => {
+describe('GET /api/perfil', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.resetAllMocks()
   })
 
   it('debería devolver 401 si no hay sesión', async () => {
     mockGetServerSession.mockResolvedValue(null)
 
-    const request = new NextRequest('http://localhost/api/cuenta')
+    const request = new NextRequest('http://localhost/api/perfil')
     const response = await GET(request)
 
     expect(response.status).toBe(401)
@@ -82,29 +82,33 @@ describe('GET /api/cuenta', () => {
     expect(body.error).toBeDefined()
   })
 
-  it('debería devolver el perfil del usuario sin passwordHash', async () => {
+  it('debería devolver los datos del usuario sin passwordHash', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
     prismaMock.usuario.findUnique.mockResolvedValue(usuarioEnBD)
 
-    const request = new NextRequest('http://localhost/api/cuenta')
+    const request = new NextRequest('http://localhost/api/perfil')
     const response = await GET(request)
 
     expect(response.status).toBe(200)
     const body = await response.json()
 
-    expect(body.usuario).toBeDefined()
-    expect(body.usuario.nombre).toBe('Ciudadano Test')
-    expect(body.usuario.email).toBe('ciudadano@test.com')
-    expect(body.usuario.avatarUrl).toBeNull()
-    // No debe exponer el passwordHash
-    expect(body.usuario.passwordHash).toBeUndefined()
+    expect(body.id).toBe(USUARIO_ID)
+    expect(body.nombre).toBe('Ciudadano Test')
+    expect(body.email).toBe('ciudadano@test.com')
+    expect(body.rol).toBe('CIUDADANO')
+    expect(body.noShows).toBe(0)
+    expect(body.suspendidoHasta).toBeNull()
+    expect(body.motivoSuspension).toBeNull()
+    expect(body.creadoEn).toBeDefined()
+    // NO debe incluir passwordHash
+    expect(body.passwordHash).toBeUndefined()
   })
 
   it('debería devolver 404 si el usuario no existe en BD', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
     prismaMock.usuario.findUnique.mockResolvedValue(null)
 
-    const request = new NextRequest('http://localhost/api/cuenta')
+    const request = new NextRequest('http://localhost/api/perfil')
     const response = await GET(request)
 
     expect(response.status).toBe(404)
@@ -114,18 +118,18 @@ describe('GET /api/cuenta', () => {
 })
 
 // =============================================================================
-// PATCH /api/cuenta
+// PATCH /api/perfil
 // =============================================================================
 
-describe('PATCH /api/cuenta', () => {
+describe('PATCH /api/perfil', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.resetAllMocks()
   })
 
   it('debería devolver 401 si no hay sesión', async () => {
     mockGetServerSession.mockResolvedValue(null)
 
-    const request = new NextRequest('http://localhost/api/cuenta', {
+    const request = new NextRequest('http://localhost/api/perfil', {
       method: 'PATCH',
       body: JSON.stringify({ nombre: 'Nuevo Nombre' }),
       headers: { 'Content-Type': 'application/json' },
@@ -137,12 +141,12 @@ describe('PATCH /api/cuenta', () => {
     expect(body.error).toBeDefined()
   })
 
-  it('debería devolver 400 si el nombre tiene menos de 2 caracteres', async () => {
+  it('debería devolver 400 si el nombre está vacío', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
 
-    const request = new NextRequest('http://localhost/api/cuenta', {
+    const request = new NextRequest('http://localhost/api/perfil', {
       method: 'PATCH',
-      body: JSON.stringify({ nombre: 'A' }),
+      body: JSON.stringify({ nombre: '' }),
       headers: { 'Content-Type': 'application/json' },
     })
     const response = await PATCH(request)
@@ -152,16 +156,13 @@ describe('PATCH /api/cuenta', () => {
     expect(body.error).toBeDefined()
   })
 
-  it('debería actualizar el nombre correctamente y devolver el usuario actualizado', async () => {
+  it('debería actualizar el nombre correctamente y devolver 200', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
 
-    const usuarioActualizado = {
-      ...usuarioEnBD,
-      nombre: 'Nombre Actualizado',
-    }
+    const usuarioActualizado = { id: USUARIO_ID, nombre: 'Nombre Actualizado', email: 'ciudadano@test.com' }
     prismaMock.usuario.update.mockResolvedValue(usuarioActualizado)
 
-    const request = new NextRequest('http://localhost/api/cuenta', {
+    const request = new NextRequest('http://localhost/api/perfil', {
       method: 'PATCH',
       body: JSON.stringify({ nombre: 'Nombre Actualizado' }),
       headers: { 'Content-Type': 'application/json' },
@@ -170,142 +171,83 @@ describe('PATCH /api/cuenta', () => {
 
     expect(response.status).toBe(200)
     const body = await response.json()
-    expect(body.usuario).toBeDefined()
+    expect(body.ok).toBe(true)
     expect(body.usuario.nombre).toBe('Nombre Actualizado')
   })
 
-  it('debería filtrar por tenantId al actualizar (no puede modificar usuario de otro tenant)', async () => {
+  it('debería devolver 400 si se envía passwordNueva sin passwordActual', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
 
-    const usuarioActualizado = { ...usuarioEnBD, nombre: 'Nuevo Nombre' }
-    prismaMock.usuario.update.mockResolvedValue(usuarioActualizado)
-
-    const request = new NextRequest('http://localhost/api/cuenta', {
+    const request = new NextRequest('http://localhost/api/perfil', {
       method: 'PATCH',
-      body: JSON.stringify({ nombre: 'Nuevo Nombre' }),
+      body: JSON.stringify({ passwordNueva: 'NuevoPass1' }),
       headers: { 'Content-Type': 'application/json' },
     })
-    await PATCH(request)
+    const response = await PATCH(request)
 
-    // La actualización debe filtrar por id Y tenantId
+    expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body.error).toBeDefined()
+  })
+
+  it('debería devolver 400 si la contraseña actual no coincide', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.usuario.findUnique.mockResolvedValue(usuarioEnBD)
+    mockBcryptCompare.mockResolvedValue(false)
+
+    const request = new NextRequest('http://localhost/api/perfil', {
+      method: 'PATCH',
+      body: JSON.stringify({ passwordActual: 'ContraseñaErronea', passwordNueva: 'NuevoPass1' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await PATCH(request)
+
+    expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body.error).toContain('incorrecta')
+  })
+
+  it('debería cambiar la contraseña correctamente y devolver 200', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.usuario.findUnique.mockResolvedValue(usuarioEnBD)
+    mockBcryptCompare.mockResolvedValue(true)
+    mockBcryptHash.mockResolvedValue('$2a$12$nuevo.hash.generado')
+
+    const usuarioActualizado = { id: USUARIO_ID, nombre: 'Ciudadano Test', email: 'ciudadano@test.com' }
+    prismaMock.usuario.update.mockResolvedValue(usuarioActualizado)
+
+    const request = new NextRequest('http://localhost/api/perfil', {
+      method: 'PATCH',
+      body: JSON.stringify({ passwordActual: 'ContraseñaCorrecta', passwordNueva: 'NuevoPass1' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await PATCH(request)
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.ok).toBe(true)
+
+    // Verificar que se guardó el nuevo hash en BD
     expect(prismaMock.usuario.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          id: USUARIO_ID,
-        }),
+        where: expect.objectContaining({ id: USUARIO_ID }),
+        data: expect.objectContaining({ passwordHash: '$2a$12$nuevo.hash.generado' }),
       })
     )
-    // Verificar que el tenantId forma parte del where
-    const llamadaUpdate = prismaMock.usuario.update.mock.calls[0][0]
-    expect(llamadaUpdate.where.tenantId ?? llamadaUpdate.where.id).toBeTruthy()
-  })
-})
-
-// =============================================================================
-// POST /api/cuenta/avatar
-// =============================================================================
-
-describe('POST /api/cuenta/avatar', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    // Limpiar la variable de entorno BLOB_READ_WRITE_TOKEN para tests
-    delete process.env.BLOB_READ_WRITE_TOKEN
   })
 
-  it('debería devolver 401 si no hay sesión', async () => {
-    mockGetServerSession.mockResolvedValue(null)
-
-    const formData = new FormData()
-    const request = new NextRequest('http://localhost/api/cuenta/avatar', {
-      method: 'POST',
-      body: formData,
-    })
-    const response = await POST_AVATAR(request)
-
-    expect(response.status).toBe(401)
-    const body = await response.json()
-    expect(body.error).toBeDefined()
-  })
-
-  it('debería devolver 400 si no se envía archivo', async () => {
+  it('debería devolver 400 si no se envía ningún campo válido para actualizar', async () => {
     mockGetServerSession.mockResolvedValue(sesionCiudadano)
 
-    const formData = new FormData()
-    // No añadimos ningún archivo
-    const request = new NextRequest('http://localhost/api/cuenta/avatar', {
-      method: 'POST',
-      body: formData,
+    const request = new NextRequest('http://localhost/api/perfil', {
+      method: 'PATCH',
+      body: JSON.stringify({}),
+      headers: { 'Content-Type': 'application/json' },
     })
-    const response = await POST_AVATAR(request)
+    const response = await PATCH(request)
 
     expect(response.status).toBe(400)
     const body = await response.json()
     expect(body.error).toBeDefined()
-  })
-
-  it('debería devolver 400 si el tipo de archivo no está permitido (application/pdf)', async () => {
-    mockGetServerSession.mockResolvedValue(sesionCiudadano)
-
-    const archivoInvalido = new File(['contenido pdf'], 'documento.pdf', {
-      type: 'application/pdf',
-    })
-    const formData = new FormData()
-    formData.append('avatar', archivoInvalido)
-
-    const request = new NextRequest('http://localhost/api/cuenta/avatar', {
-      method: 'POST',
-      body: formData,
-    })
-    const response = await POST_AVATAR(request)
-
-    expect(response.status).toBe(400)
-    const body = await response.json()
-    expect(body.error).toContain('Formato')
-  })
-
-  it('debería devolver 400 si el archivo supera 2MB', async () => {
-    mockGetServerSession.mockResolvedValue(sesionCiudadano)
-
-    // Crear un archivo de más de 2MB
-    const contenidoGrande = new Uint8Array(2 * 1024 * 1024 + 1) // 2MB + 1 byte
-    const archivoGrande = new File([contenidoGrande], 'imagen-grande.jpg', {
-      type: 'image/jpeg',
-    })
-    const formData = new FormData()
-    formData.append('avatar', archivoGrande)
-
-    const request = new NextRequest('http://localhost/api/cuenta/avatar', {
-      method: 'POST',
-      body: formData,
-    })
-    const response = await POST_AVATAR(request)
-
-    expect(response.status).toBe(400)
-    const body = await response.json()
-    expect(body.error).toContain('2MB')
-  })
-})
-
-// =============================================================================
-// schemaActualizarPerfil
-// =============================================================================
-
-describe('schemaActualizarPerfil', () => {
-  it('debería validar un nombre válido', () => {
-    const resultado = schemaActualizarPerfil.safeParse({ nombre: 'Juan García' })
-    expect(resultado.success).toBe(true)
-  })
-
-  it('debería rechazar un nombre con menos de 2 caracteres', () => {
-    const resultado = schemaActualizarPerfil.safeParse({ nombre: 'A' })
-    expect(resultado.success).toBe(false)
-    if (!resultado.success) {
-      expect(resultado.error.issues[0].message).toContain('2 caracteres')
-    }
-  })
-
-  it('debería permitir objeto vacío (todos los campos son opcionales)', () => {
-    const resultado = schemaActualizarPerfil.safeParse({})
-    expect(resultado.success).toBe(true)
   })
 })

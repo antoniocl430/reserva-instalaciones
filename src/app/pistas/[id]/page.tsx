@@ -266,7 +266,7 @@ export default function PaginaDetallePista({ params }: Props) {
             className="w-full sm:w-auto rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           {fecha && (
-            <p className="text-xs text-gray-500 mt-1 capitalize">
+            <p className="text-xs text-gray-500 mt-1">
               {formatearFechaLocal(fecha)}
             </p>
           )}
@@ -363,7 +363,7 @@ export default function PaginaDetallePista({ params }: Props) {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Fecha</span>
-                <span className="font-medium text-gray-800 capitalize">{formatearFechaLocal(fecha)}</span>
+                <span className="font-medium text-gray-800">{formatearFechaLocal(fecha)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Hora</span>

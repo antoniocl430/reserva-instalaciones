@@ -1,7 +1,11 @@
 import { z } from "zod"
+import { SLOTS_CONFIG_DEFAULT, generarSlots } from "@/lib/slots"
 
-// Slots válidos disponibles para reservar
-const SLOTS_VALIDOS = ["08:00", "09:15", "10:30", "11:45", "16:45", "18:00", "19:15"]
+// Slots válidos para validación Zod — generados a partir de la config por defecto.
+// Los schemas Zod usan z.enum en tiempo de carga, por lo que se derivan de la
+// configuración por defecto. Los endpoints que usen config de tenant diferente
+// deberán validar el slot manualmente usando generarMapaSlots(config).
+const SLOTS_VALIDOS = generarSlots(SLOTS_CONFIG_DEFAULT).map((s) => s.horaInicio)
 
 // Regex para validar formato de fecha YYYY-MM-DD
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/
@@ -169,6 +173,13 @@ export type ResetearPasswordInput = z.infer<typeof schemaResetearPassword>
 // Tipos válidos para los avisos del tablón
 const TIPOS_AVISO_VALIDOS = ["INFO", "AVISO", "CIERRE"] as const
 
+// Valida que una cadena sea una fecha ISO 8601 parseable
+// Acepta formatos como "2026-12-31T23:59:59.000Z" o "2026-12-31"
+function esFechaIsoValida(valor: string): boolean {
+  const fecha = new Date(valor)
+  return !isNaN(fecha.getTime())
+}
+
 /**
  * Schema para crear un aviso del tablón de anuncios
  */
@@ -185,6 +196,11 @@ export const schemaCrearAviso = z.object({
     error: () => ({ message: "El tipo debe ser INFO, AVISO o CIERRE" }),
   }),
   fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  // Fecha opcional de caducidad: si se proporciona, debe ser una fecha ISO válida
+  caducaEn: z
+    .string()
+    .refine(esFechaIsoValida, "La fecha de caducidad no es una fecha válida")
+    .optional(),
 })
 
 export type CrearAvisoInput = z.infer<typeof schemaCrearAviso>
@@ -211,6 +227,12 @@ export const schemaActualizarAviso = z
       .optional(),
     fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)").optional(),
     activo: z.boolean().optional(),
+    // Permite establecer o limpiar la fecha de caducidad (null elimina la caducidad)
+    caducaEn: z
+      .string()
+      .refine(esFechaIsoValida, "La fecha de caducidad no es una fecha válida")
+      .nullable()
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "Se debe proporcionar al menos un campo para actualizar",
@@ -235,6 +257,29 @@ export const schemaColores = z.object({
 export type ColoresInput = z.infer<typeof schemaColores>
 
 /**
+ * Schema para validar una franja horaria en formato HH:MM
+ */
+const REGEX_HORA = /^\d{2}:\d{2}$/
+
+const schemaFranja = z.object({
+  inicio: z.string().regex(REGEX_HORA, "Formato de hora inválido (HH:MM)"),
+  fin: z.string().regex(REGEX_HORA, "Formato de hora inválido (HH:MM)"),
+})
+
+/**
+ * Schema para la configuración de slots del tenant
+ */
+const schemaSlotsConfig = z.object({
+  duracionMinutos: z
+    .number({ message: "duracionMinutos debe ser un número" })
+    .int("duracionMinutos debe ser un entero")
+    .positive("duracionMinutos debe ser positivo"),
+  franjas: z
+    .array(schemaFranja)
+    .min(1, "Debe haber al menos una franja horaria"),
+})
+
+/**
  * Schema para la configuración personalizable de un tenant
  */
 export const schemaConfiguracionTenant = z.object({
@@ -246,6 +291,8 @@ export const schemaConfiguracionTenant = z.object({
       description: z.string().max(300).optional(),
     })
     .optional(),
+  /** Configuración de slots de reserva (opcional — usa defaults si no se especifica) */
+  slots: schemaSlotsConfig.optional(),
 })
 
 export type ConfiguracionTenantInput = z.infer<typeof schemaConfiguracionTenant>

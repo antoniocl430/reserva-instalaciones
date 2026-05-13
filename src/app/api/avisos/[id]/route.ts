@@ -62,7 +62,7 @@ export async function PATCH(
     }
 
     // 5. Construir los datos de actualización
-    const { titulo, descripcion, tipo, fecha, activo } = resultado.data
+    const { titulo, descripcion, tipo, fecha, activo, caducaEn } = resultado.data
     const datosActualizacion: Record<string, unknown> = {}
 
     if (titulo !== undefined) datosActualizacion.titulo = titulo
@@ -70,6 +70,10 @@ export async function PATCH(
     if (tipo !== undefined) datosActualizacion.tipo = tipo
     if (fecha !== undefined) datosActualizacion.fecha = new Date(fecha)
     if (activo !== undefined) datosActualizacion.activo = activo
+    // caducaEn puede ser null (eliminar caducidad) o un string ISO (nueva fecha)
+    if (caducaEn !== undefined) {
+      datosActualizacion.caducaEn = caducaEn === null ? null : new Date(caducaEn)
+    }
 
     // 6. Actualizar el aviso
     const avisoActualizado = await prisma.aviso.update({

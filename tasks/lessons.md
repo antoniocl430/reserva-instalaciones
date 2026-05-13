@@ -190,3 +190,21 @@ Revisar este archivo al inicio de cada sesión.
 **Diagnóstico:** Verificar con `nslookup aws-1-eu-west-1.pooler.supabase.com` (DNS OK) y `nc/telnet` al puerto 6543 (puerto abierto). Si ambos pasan pero Prisma falla, el proyecto Supabase fue eliminado.
 **Corrección:** Crear un nuevo proyecto en Supabase y actualizar `DATABASE_URL` y `DIRECT_URL` en `.env` y `.env.local` con las nuevas credenciales.
 **Regla:** Cuando el seed o cualquier operación Prisma falla con `ENOTFOUND tenant/user` y el DNS/red están OK, el problema es que el proyecto Supabase no existe. Actualizar las variables de entorno es la única solución.
+
+### LESSON-030: Los mocks de @/lib/tenant deben incluir TODAS las funciones importadas por la ruta bajo test
+**Contexto:** Al añadir `parsearConfiguracion` a `disponibilidad/route.ts` (importado de `@/lib/tenant`), el mock de ese módulo en `disponibilidad.test.ts` solo declaraba `obtenerTenantIdPorSlug` y `extraerSlugDelHost`.
+**Error:** Jest reemplaza el módulo entero con el mock. Las funciones no declaradas en el mock quedan como `undefined`. El handler captura el TypeError y devuelve 500.
+**Corrección:** Añadir `parsearConfiguracion: jest.fn().mockReturnValue({})` al mock del módulo en el test.
+**Regla:** Cuando se añade un import de una función nueva a una ruta que ya tiene un mock de ese módulo en tests, añadir la función al mock en el mismo commit. Si el mock no cubre todas las funciones importadas, la ruta devolverá 500 en tests.
+
+### LESSON-032: clearAllMocks no limpia retornos acumulados de mockResolvedValueOnce entre describes
+**Contexto:** En tests de `levantar-suspension`, el `beforeEach` usaba `jest.clearAllMocks()`. Un test anterior (401) registraba `mockResolvedValueOnce(null)` que no se consumía porque la ruta retornaba antes de llamar a `findFirst`. Ese null se acumulaba y se consumía en el siguiente test, invirtiendo los resultados esperados.
+**Error:** Tests con `clearAllMocks()` en `beforeEach` pueden tener mocks `mockResolvedValueOnce` no consumidos de tests anteriores que interfieren en el siguiente test, especialmente cuando la ruta retorna tempranamente sin llegar a llamar al método mockeado.
+**Corrección:** Usar `jest.resetAllMocks()` en lugar de `jest.clearAllMocks()` en el `beforeEach` de describes que pueden tener retornos tempranos. `resetAllMocks()` elimina tanto las llamadas registradas como las implementaciones/retornos acumulados.
+**Regla:** Para describes donde algunos tests registran `mockResolvedValueOnce` pero la ruta puede retornar antes de consumirlos, usar `jest.resetAllMocks()` (no `clearAllMocks()`) para garantizar limpieza completa entre tests.
+
+### LESSON-031: Los tests de Vitest en carpetas nuevas bajo src/__tests__/ deben excluirse de Jest
+**Contexto:** Al crear `src/__tests__/lib/slots.test.ts` usando `import { describe } from "vitest"`, Jest también recogía ese archivo porque `testMatch` era `src/__tests__/**/*.test.ts`.
+**Error:** Jest intenta ejecutar el test y falla con "Vitest cannot be imported in a CommonJS module using require()".
+**Corrección:** Actualizar `jest.config.js` para limitar `testMatch` a solo `api/**` y `backend/**`, las carpetas que usan Jest. Las carpetas `frontend/`, `components/` y `lib/` son Vitest.
+**Regla:** Al crear una nueva carpeta de tests bajo `src/__tests__/` que use Vitest, verificar que `jest.config.js` NO la incluye en `testMatch`. Las carpetas de Vitest deben estar en `vitest.config.ts` y excluidas de Jest.

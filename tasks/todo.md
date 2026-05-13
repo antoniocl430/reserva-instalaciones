@@ -1,6 +1,210 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
-## Estado actual del proyecto — 2026-05-12
+## Caducidad automática de avisos (COMPLETADO — 2026-05-13)
+
+### Objetivo
+Añadir campo `caducaEn DateTime?` al modelo `Aviso` para que los avisos puedan caducar automáticamente sin intervención del admin.
+
+### Cambios realizados
+
+- [x] PASO 1 (RED): Tests nuevos escritos en `avisos.test.ts` — 6 tests fallando confirmados
+- [x] PASO 2: Schema Prisma — campo `caducaEn DateTime?` añadido al modelo `Aviso`
+- [x] PASO 3: Migración `20260513142537_add_aviso_caduca_en` aplicada a Supabase
+- [x] PASO 4: `prisma generate` — Prisma Client regenerado con el nuevo campo
+- [x] PASO 5: `src/lib/validaciones.ts` — campo `caducaEn` añadido a `schemaCrearAviso` y `schemaActualizarAviso`
+- [x] PASO 6: `GET /api/avisos` — filtro de caducidad con `OR[caducaEn null | caducaEn gt ahora]`; admin (con `?todos=true`) ve todos sin filtro
+- [x] PASO 7: `POST /api/avisos` — acepta y persiste `caducaEn`
+- [x] PASO 8: `PATCH /api/avisos/[id]` — acepta `caducaEn` (string ISO o null para limpiar)
+- [x] PASO 9 (GREEN): 30/30 tests de avisos pasan — incluidos 6 nuevos
+- [x] PASO 10 (REFACTOR): Suite completa sin regresiones
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Jest nuevos | 6 |
+| Tests Jest totales | 317 (313 pasan, 4 preexistentes fallidos en tenant.test.ts) |
+| Tests Vitest totales | 232/232 |
+| Archivos creados | 0 |
+| Archivos modificados | 4 (schema.prisma, validaciones.ts, avisos/route.ts, avisos/[id]/route.ts) |
+| Migración BD | 20260513142537_add_aviso_caduca_en |
+| Regresiones | 0 |
+
+---
+
+## Gaps sistema de notificaciones push (COMPLETADO — 2026-05-13)
+
+### Gap 1 — Preferencias respetadas en `enviarPushUsuario`
+- [x] Añadir `deberiasEnviarPush()` en `src/lib/push.ts`: consulta `PreferenciaNotificacion` vía `findFirst`
+- [x] Si no existe registro → asumir defaults (true) → enviar
+- [x] Si `notificacionesPush === false` → no enviar
+- [x] Si tipo `"recordatorio"` y `recordatorioReserva === false` → no enviar
+- [x] Si tipo `"cancelacion"` y `recordatorioCancel === false` → no enviar
+- [x] `enviarPushUsuario` acepta parámetro opcional `tipoPush?: "recordatorio" | "cancelacion"`
+- [x] `enviarRecordatorioReserva` pasa tipo `"recordatorio"`
+- [x] `enviarPushCancelacion` pasa tipo `"cancelacion"`
+
+### Gap 2 — Push al confirmar reserva
+- [x] Añadir `enviarPushReservaConfirmada()` en `src/lib/push.ts`
+  - Título: "Reserva confirmada"
+  - Cuerpo: "Tu reserva en [instalacion] el [fecha DD/MM/YYYY] a las [horaInicio] está confirmada"
+  - Usa preferencia `recordatorioReserva` (tipo "recordatorio")
+- [x] Integrar en `POST /api/reservas/route.ts` como fire-and-forget con `.catch(() => {})`
+- [x] Fecha formateada como DD/MM/YYYY antes de pasar al push
+
+### Tests TDD
+- [x] RED: 5 tests nuevos confirmados fallando antes de implementar
+- [x] GREEN: 14/14 tests en push-lib.test.ts pasan
+- [x] Mocks de `@/lib/push` y `web-push` añadidos a `reservas.test.ts` (LESSON-021)
+- [x] Mock de `enviarPushReservaConfirmada` añadido a `email-notificaciones.test.ts`
+- [x] Suite completa: 300/304 pasan (4 pre-existentes en tenant.test.ts sin cambio)
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Jest nuevos | 7 (5 preferencias + 2 enviarPushReservaConfirmada) |
+| Tests Jest totales | 304 (300 pasan, 4 pre-existentes fallidos) |
+| Archivos creados | 0 |
+| Archivos modificados | 4 (push.ts, reservas/route.ts, push-lib.test.ts, reservas.test.ts, email-notificaciones.test.ts) |
+| Regresiones | 0 |
+
+---
+
+## Sección penalizaciones y cambio de contraseña en /perfil (COMPLETADO — 2026-05-13)
+
+### Cambios realizados
+
+- [x] PASO 1 (RED): `src/__tests__/frontend/perfil-penalizaciones.test.tsx` escrito — 11 tests fallando
+- [x] PASO 2 (GREEN): Modificado `src/app/perfil/page.tsx` con:
+  - Sección "Cambiar contraseña" con campos passwordActual, passwordNueva, confirmarPassword
+  - Validación frontend: nueva y confirmación deben coincidir (error inline)
+  - PATCH a `/api/perfil` con `{ passwordActual, passwordNueva }`
+  - Sección "Penalizaciones" (solo `rol === "CIUDADANO"`)
+    - Fetch a `/api/perfil` para leer noShows, suspendidoHasta, motivoSuspension
+    - Mensaje "No tienes penalizaciones" si noShows === 0
+    - Badge de no-shows cuando noShows > 0
+    - Alerta roja de suspensión activa (fecha futura)
+    - Texto gris si suspensión ya finalizó
+- [x] PASO 3: Creado `src/components/ui/alert.tsx` (faltaba en shadcn/ui)
+- [x] PASO 4 (REFACTOR): 208/208 tests Vitest pasan, sin regresiones
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Vitest nuevos | 11 |
+| Tests Vitest totales | 208/208 |
+| Archivos creados | 2 (perfil-penalizaciones.test.tsx, alert.tsx) |
+| Archivos modificados | 1 (perfil/page.tsx) |
+| Regresiones | 0 |
+
+---
+
+## Estado actual del proyecto — 2026-05-13
+
+**Último bloque completado:** UI sistema de penalizaciones en panel de administración (2026-05-13)
+
+**Tests en verde:**
+- Jest (API/backend): 297/301 pasando (4 preexistentes fallidos en tenant.test.ts — no relacionados)
+- Vitest (frontend/componentes/lib): 197/197 pasan (+12 nuevos)
+- Playwright E2E: 3/3 pasan (instructor.spec.ts)
+
+---
+
+## UI Sistema de penalizaciones — Panel Admin (COMPLETADO — 2026-05-13)
+
+### Objetivo
+Añadir la capa visual del sistema de penalizaciones en el panel de administración.
+
+### Cambios realizados
+
+- [x] PASO 1 (RED): Tests `admin-no-show.test.tsx` + `admin-suspension.test.tsx` escritos — confirmado fallo (11/12 fallando)
+- [x] PASO 2 (GREEN): Implementados los tres archivos
+  - [x] `src/app/admin/(panel)/reservas/page.tsx` — botón "No presentado", badge "No presentado", dialog de confirmación, alerta de suspensión automática
+  - [x] `src/app/admin/(panel)/usuarios/page.tsx` — badges de suspensión/no-shows, botón "Suspender" con dialog de fecha+motivo, botón "Levantar suspensión" con dialog de confirmación
+  - [x] `src/app/admin/(panel)/configuracion/page.tsx` — sección "Penalizaciones por no-show" con maxNoShows, diasSuspension, ejemplo explicativo; incluidos en payload del PATCH
+- [x] PASO 3 (REFACTOR): Suite completa en verde, sin regresiones
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Vitest nuevos | 12 (5 no-show + 7 suspension) |
+| Tests Vitest totales | 197/197 |
+| Tests Jest | 297/301 (4 fallos pre-existentes sin cambio) |
+| Archivos creados | 2 (admin-no-show.test.tsx, admin-suspension.test.tsx) |
+| Archivos modificados | 3 (reservas/page.tsx, usuarios/page.tsx, configuracion/page.tsx) |
+| Regresiones | 0 |
+
+---
+
+## Sistema de penalizaciones no-show y suspensión de usuarios (COMPLETADO — 2026-05-13)
+
+### Objetivo
+Implementar el sistema de penalizaciones por no-show y bloqueo manual de usuarios.
+
+### Cambios realizados
+
+- [x] PASO 1: Schema Prisma — añadido `noShow Boolean` a `Reserva`, añadidos `noShows`, `suspendidoHasta`, `motivoSuspension` a `Usuario`
+- [x] PASO 2: Migración ejecutada: `20260513113019_add_noshows_suspension`
+- [x] PASO 3: `ConfiguracionTenant` en `tenant.ts` — añadido subobjeto `penalizaciones` con `maxNoShows` y `diasSuspension`
+- [x] PASO 4: `mergearConfiguracion` actualizado para merge profundo de `penalizaciones`
+- [x] PASO 5: `enviarEmailSuspension` añadida en `src/lib/email.ts`
+- [x] PASO 6: Endpoint `PATCH /api/admin/reservas/[id]/no-show` creado
+- [x] PASO 7: Endpoint `PATCH /api/admin/usuarios/[id]/suspender` creado
+- [x] PASO 8: Endpoint `PATCH /api/admin/usuarios/[id]/levantar-suspension` creado
+- [x] PASO 9: `POST /api/reservas/route.ts` — verificación de suspensión activa antes de crear reserva
+- [x] PASO 10: `POST /api/instructor/reservas-recurrentes/route.ts` — mismo check de suspensión
+- [x] PASO 11 (RED): Tests `no-show.test.ts` + `suspension.test.ts` escritos — confirmado fallo
+- [x] PASO 12 (GREEN): Endpoints implementados — 17/17 tests pasan
+- [x] PASO 13 (REFACTOR): Sin regresiones en suite completa
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Jest | 297/301 (4 fallos pre-existentes en tenant.test.ts) |
+| Tests Vitest | 185/185 |
+| Tests nuevos | 17 (8 no-show + 9 suspension) |
+| Archivos creados | 5 (no-show/route, suspender/route, levantar-suspension/route, no-show.test, suspension.test) |
+| Archivos modificados | 4 (schema.prisma, tenant.ts, email.ts, reservas/route.ts, instructor/reservas-recurrentes/route.ts) |
+| Regresiones | 0 |
+
+---
+
+## Slots configurables por tenant (EN CURSO → COMPLETADO)
+
+### Objetivo
+Reemplazar los slots hardcodeados duplicados en 5 archivos por una función centralizada
+que genera los slots a partir de la configuración del tenant almacenada en BD.
+
+### Plan verificable
+
+- [x] PASO 0: Leer todos los archivos afectados (hecho antes de tocar código)
+- [x] PASO 1 (RED): Escribir `src/__tests__/lib/slots.test.ts` con 7 tests — confirmar que fallan
+- [x] PASO 2 (GREEN): Crear `src/lib/slots.ts` con `generarSlots`, `generarMapaSlots`, `crearHoraEnMadrid`
+- [x] PASO 3: Ampliar `ConfiguracionTenant` en `src/lib/tenant.ts` con la propiedad `slots`
+- [x] PASO 4: Actualizar `mergearConfiguracion` para merge profundo de `slots`
+- [x] PASO 5: Actualizar `src/lib/validaciones.ts` — reemplazar `SLOTS_VALIDOS` hardcodeado
+- [x] PASO 6: Actualizar `src/app/api/disponibilidad/route.ts`
+- [x] PASO 7: Actualizar `src/app/api/reservas/route.ts`
+- [x] PASO 8: Actualizar `src/app/api/admin/reservas/route.ts`
+- [x] PASO 9: Actualizar `src/app/api/instructor/reservas-recurrentes/route.ts`
+- [x] PASO 10: Actualizar `src/app/api/admin/configuracion/route.ts` — validar `slots` en PUT
+- [x] PASO 11: Añadir `src/__tests__/lib/slots.test.ts` a `vitest.config.ts` include
+- [x] PASO 12: Ejecutar `npx vitest run src/__tests__/lib/slots.test.ts` — todos pasan
+- [x] PASO 13: Ejecutar `npx vitest run` completo — sin regresiones
+- [x] PASO 14: Ejecutar `npm test` (Jest) — sin regresiones
+
+### Resultado final
+- Tests lib/slots: 7/7 pasan
+- Tests Vitest totales: 155+7 = 162 pasan
+- Tests Jest totales: 291 pasan (sin regresiones)
+
+---
+
+## Estado anterior del proyecto — 2026-05-12
 
 **Último bloque completado:** Bloque 12 — Rol INSTRUCTOR + Reservas Recurrentes (2026-04-20)
 

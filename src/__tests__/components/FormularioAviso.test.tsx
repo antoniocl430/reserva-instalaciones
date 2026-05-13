@@ -144,7 +144,8 @@ describe('FormularioAviso', () => {
   it('debería renderizar el campo de fecha', () => {
     render(React.createElement(FormularioAviso, { onGuardar: vi.fn(), onCancelar: vi.fn() }))
 
-    expect(screen.getByLabelText(/fecha/i)).toBeInTheDocument()
+    // Usar el id del input para evitar ambigüedad con "Fecha de caducidad"
+    expect(screen.getByLabelText(/^Fecha$/i)).toBeInTheDocument()
   })
 
   it('debería renderizar el campo de tipo', () => {
@@ -174,6 +175,7 @@ describe('FormularioAviso', () => {
       tipo: 'INFO' as const,
       fecha: '2026-04-15',
       activo: true,
+      caducaEn: null,
     }
 
     render(
@@ -253,7 +255,7 @@ describe('FormularioAviso', () => {
     fireEvent.change(screen.getByLabelText(/descripción/i), {
       target: { value: datosAvisoValido.descripcion },
     })
-    fireEvent.change(screen.getByLabelText(/fecha/i), {
+    fireEvent.change(screen.getByLabelText(/^Fecha$/i), {
       target: { value: datosAvisoValido.fecha },
     })
 

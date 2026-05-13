@@ -114,6 +114,40 @@ barra lateral de navegación y cabecera con el nombre del admin.
 
 ---
 
+## Pantallas del instructor
+
+El área de instructor usa el layout del ciudadano con acceso restringido por rol (`INSTRUCTOR`).
+Las rutas redirigen a `/login` si no hay sesión, y muestran "Acceso denegado" si el rol no es INSTRUCTOR.
+
+```
+/instructor → DashboardInstructor
+├── Contador "Grupos activos" (grupos con activo=true)
+├── Contador "Próximas sesiones" (reservas ACTIVA futuras dentro de todos sus grupos)
+├── Botón "Crear nueva clase" → /pistas (crea una reserva recurrente desde el calendario)
+├── Botón "Gestionar mis clases" → /instructor/mis-clases
+└── Sección "Clases recientes": lista de hasta 3 grupos recurrentes activos
+    ├── Por cada grupo: nombre de instalación + horario (horaInicio) + frecuencia
+    └── Estado vacío: "No tienes clases programadas aún"
+
+/instructor/mis-clases → MisClases
+├── Lista de todos los grupos de recurrencia del instructor (activos e inactivos)
+│   └── Por cada grupo: tarjeta expandible
+│       ├── Cabecera (click para expandir/colapsar):
+│       │   ├── Nombre de la instalación
+│       │   ├── Badge de frecuencia: "Semanal" (verde) | "Quincenal" (azul)
+│       │   ├── Hora de inicio (ej. 08:00)
+│       │   └── Rango de fechas: dd/mm/aaaa – dd/mm/aaaa
+│       └── Cuerpo (visible al expandir):
+│           ├── Lista de sesiones individuales con fecha y estado (ACTIVA / CANCELADA)
+│           └── Botón "Cancelar grupo" → dialog de confirmación
+│               ├── Mensaje: "¿Cancelar todas las sesiones activas de este grupo?"
+│               ├── Botón "Confirmar" → DELETE /api/instructor/grupos/[id] → recarga lista
+│               └── Botón "Volver"
+└── Estado vacío: "No hay clases creadas"
+```
+
+---
+
 ## Pantallas del superadmin
 
 El panel superadmin usa un layout propio en `/superadmin/(panel)/` con sidebar oscuro.
@@ -143,6 +177,11 @@ El panel superadmin usa un layout propio en `/superadmin/(panel)/` con sidebar o
 ### Cabecera (ciudadano logueado)
 ```
 [Nombre del servicio] | Pistas | Mis reservas | [Nombre usuario] | Cerrar sesión
+```
+
+### Cabecera (instructor logueado)
+```
+[Nombre del servicio] | Mis clases | [Nombre instructor] | Cerrar sesión
 ```
 
 ### Cabecera (admin logueado)

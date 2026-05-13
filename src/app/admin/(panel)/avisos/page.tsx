@@ -39,6 +39,8 @@ interface Aviso {
   tipo: "INFO" | "AVISO" | "CIERRE"
   fecha: string
   activo: boolean
+  /** Fecha de caducidad ISO o null si el aviso no caduca */
+  caducaEn: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,6 +71,33 @@ function fechaParaFormulario(fechaIso: string): string {
     return new Date(fechaIso).toISOString().split("T")[0]
   } catch {
     return ""
+  }
+}
+
+/**
+ * Determina el estado de caducidad de un aviso respecto a la fecha actual.
+ * Devuelve:
+ *   "caducado"  — caducaEn no es null y ya pasó
+ *   "futuro"    — caducaEn no es null y aún no ha pasado
+ *   "sin"       — caducaEn es null
+ */
+function estadoCaducidad(caducaEn: string | null): "caducado" | "futuro" | "sin" {
+  if (!caducaEn) return "sin"
+  const ahora = new Date()
+  const fechaCaducidad = new Date(caducaEn)
+  return fechaCaducidad < ahora ? "caducado" : "futuro"
+}
+
+// Formatea una fecha ISO a formato DD/MM/AAAA
+function formatearFechaCorta(fechaIso: string): string {
+  try {
+    const d = new Date(fechaIso)
+    const dia = String(d.getUTCDate()).padStart(2, "0")
+    const mes = String(d.getUTCMonth() + 1).padStart(2, "0")
+    const anio = d.getUTCFullYear()
+    return `${dia}/${mes}/${anio}`
+  } catch {
+    return fechaIso
   }
 }
 
@@ -136,6 +165,8 @@ export default function PaginaAdminAvisos() {
       tipo: aviso.tipo,
       fecha: fechaParaFormulario(aviso.fecha),
       activo: aviso.activo,
+      // Si tiene caducaEn, convertir a YYYY-MM-DD; si es null, enviar ""
+      caducaEn: aviso.caducaEn ? fechaParaFormulario(aviso.caducaEn) : null,
     })
     setErrorGuardar(null)
     setDialogAbierto(true)
@@ -395,7 +426,20 @@ function FilaAviso({ aviso, onEditar, onEliminar, onToggle, toggleando }: FilaAv
           )}
         </div>
         <p className="text-xs text-gray-500 line-clamp-1">{aviso.descripcion}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{formatearFecha(aviso.fecha)}</p>
+        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+          <p className="text-xs text-gray-400">{formatearFecha(aviso.fecha)}</p>
+          {/* Indicador de caducidad */}
+          {estadoCaducidad(aviso.caducaEn) === "caducado" && (
+            <Badge className="bg-red-100 text-red-700 text-xs font-medium">
+              Caducado
+            </Badge>
+          )}
+          {estadoCaducidad(aviso.caducaEn) === "futuro" && aviso.caducaEn && (
+            <span className="text-xs text-gray-400">
+              Caduca {formatearFechaCorta(aviso.caducaEn)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Acciones */}

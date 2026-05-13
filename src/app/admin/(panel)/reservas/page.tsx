@@ -29,6 +29,7 @@ interface Reserva {
   horaInicio: string
   horaFin: string
   estado: string
+  noShow: boolean
   usuario: {
     nombre: string
     email: string
@@ -47,6 +48,17 @@ interface Ciudadano {
 interface Pista {
   id: string
   nombre: string
+}
+
+/** Devuelve true si la fecha de la reserva es anterior a ahora mismo */
+function esReservaPasada(horaInicio: string): boolean {
+  return new Date(horaInicio) < new Date()
+}
+
+/** Formatea una fecha ISO a DD/MM/AAAA */
+function formatearFechaDD(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
 export default function PaginaReservasAdmin() {
@@ -72,6 +84,13 @@ export default function PaginaReservasAdmin() {
   const [fechaNuevaReserva, setFechaNuevaReserva] = useState("")
   const [horaNuevaReserva, setHoraNuevaReserva] = useState("")
   const [creandoReserva, setCreandoReserva] = useState(false)
+
+  // Dialog de no-show
+  const [dialogNoShow, setDialogNoShow] = useState(false)
+  const [reservaNoShow, setReservaNoShow] = useState<Reserva | null>(null)
+  const [marcandoNoShow, setMarcandoNoShow] = useState(false)
+  // Mensaje tras respuesta de suspensión automática
+  const [mensajeSuspension, setMensajeSuspension] = useState<string | null>(null)
 
   const SLOTS_DISPONIBLES = ["08:00", "09:15", "10:30", "11:45", "16:45", "18:00", "19:15"]
 
@@ -198,6 +217,41 @@ export default function PaginaReservasAdmin() {
     }
   }
 
+  // Marcar como no-show
+  async function handleNoShow() {
+    if (!reservaNoShow) return
+
+    try {
+      setMarcandoNoShow(true)
+      const res = await fetch(`/api/admin/reservas/${reservaNoShow.id}/no-show`, {
+        method: "PATCH",
+      })
+
+      if (!res.ok) {
+        throw new Error("Error al registrar no-show")
+      }
+
+      const data = await res.json()
+
+      setDialogNoShow(false)
+      setReservaNoShow(null)
+
+      // Si el usuario fue suspendido automáticamente, mostrar aviso
+      if (data.suspendido && data.suspendidoHasta) {
+        const fechaFormateada = formatearFechaDD(data.suspendidoHasta)
+        setMensajeSuspension(
+          `El usuario ha sido suspendido automáticamente hasta ${fechaFormateada}`
+        )
+      }
+
+      cargarReservas()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al registrar no-show")
+    } finally {
+      setMarcandoNoShow(false)
+    }
+  }
+
   const badgeColorPorEstado = {
     ACTIVA: "bg-green-100 text-green-700",
     CANCELADA: "bg-gray-100 text-gray-700",
@@ -275,11 +329,24 @@ export default function PaginaReservasAdmin() {
           </div>
         )}
 
+        {/* Alerta de suspensión automática */}
+        {mensajeSuspension && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between gap-3">
+            <span>{mensajeSuspension}</span>
+            <button
+              onClick={() => setMensajeSuspension(null)}
+              className="text-amber-600 hover:text-amber-800 font-medium text-xs shrink-0"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
         {/* Tabla */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {cargando ? (
             <div className="p-8 text-center text-gray-500">
-              
+
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
@@ -320,34 +387,60 @@ export default function PaginaReservasAdmin() {
                         {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          className={
-                            badgeColorPorEstado[
-                              reserva.estado as keyof typeof badgeColorPorEstado
-                            ] || "bg-gray-100 text-gray-700"
-                          }
-                        >
-                          {reserva.estado === "ACTIVA"
-                            ? "Activa"
-                            : reserva.estado === "CANCELADA"
-                            ? "Cancelada"
-                            : "Completada"}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge
+                            className={
+                              badgeColorPorEstado[
+                                reserva.estado as keyof typeof badgeColorPorEstado
+                              ] || "bg-gray-100 text-gray-700"
+                            }
+                          >
+                            {reserva.estado === "ACTIVA"
+                              ? "Activa"
+                              : reserva.estado === "CANCELADA"
+                              ? "Cancelada"
+                              : "Completada"}
+                          </Badge>
+                          {/* Badge no-show si ya está marcado */}
+                          {reserva.noShow && (
+                            <Badge className="bg-red-100 text-red-700 text-xs">
+                              No presentado
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {reserva.estado === "ACTIVA" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => {
-                              setReservaSeleccionada(reserva)
-                              setDialogCancelar(true)
-                            }}
-                          >
-                            Cancelar
-                          </Button>
-                        )}
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-1">
+                          {reserva.estado === "ACTIVA" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                setReservaSeleccionada(reserva)
+                                setDialogCancelar(true)
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          )}
+                          {/* Botón no-show: solo si es pasada y noShow es false */}
+                          {esReservaPasada(reserva.horaInicio) &&
+                            !reserva.noShow &&
+                            (reserva.estado === "ACTIVA" || reserva.estado === "CANCELADA") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                onClick={() => {
+                                  setReservaNoShow(reserva)
+                                  setDialogNoShow(true)
+                                }}
+                              >
+                                No presentado
+                              </Button>
+                            )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -398,6 +491,52 @@ export default function PaginaReservasAdmin() {
               disabled={cancelando}
             >
               {cancelando ? "Cancelando..." : "Sí, cancelar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmación de no-show */}
+      <Dialog open={dialogNoShow} onOpenChange={setDialogNoShow}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Registrar no-show</DialogTitle>
+            <DialogDescription>
+              ¿Confirmas que el usuario no se presentó a esta reserva? Esta acción puede generar
+              una suspensión automática si el usuario acumula suficientes no-shows.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reservaNoShow && (
+            <div className="space-y-2 text-sm">
+              <p>
+                <span className="font-medium">Pista:</span> {reservaNoShow.instalacion.nombre}
+              </p>
+              <p>
+                <span className="font-medium">Usuario:</span> {reservaNoShow.usuario.nombre}
+              </p>
+              <p>
+                <span className="font-medium">Fecha:</span>{" "}
+                {formatearFechaCorta(reservaNoShow.horaInicio)}
+              </p>
+              <p>
+                <span className="font-medium">Hora:</span>{" "}
+                {formatearHora(reservaNoShow.horaInicio)} –{" "}
+                {formatearHora(reservaNoShow.horaFin)}
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogNoShow(false)} disabled={marcandoNoShow}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleNoShow}
+              disabled={marcandoNoShow}
+            >
+              {marcandoNoShow ? "Registrando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>

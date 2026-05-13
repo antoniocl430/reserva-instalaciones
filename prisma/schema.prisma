@@ -2,8 +2,7 @@
 // Multi-tenant: cada entidad pertenece a un Tenant (ayuntamiento)
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -43,16 +42,19 @@ model Tenant {
 // Usuario: ciudadanos y administradores del ayuntamiento
 // El email es único POR TENANT, no globalmente (un ciudadano puede estar en dos ayuntamientos)
 model Usuario {
-  id            String   @id @default(uuid())
-  tenantId      String?
-  email         String
-  nombre        String
-  passwordHash  String
-  rol           String   @default("CIUDADANO") // "CIUDADANO" | "ADMIN" | "SUPERADMIN"
-  activo        Boolean  @default(true)
-  avatarUrl     String?  // URL de la foto de perfil del usuario (opcional)
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  id               String    @id @default(uuid())
+  tenantId         String?
+  email            String
+  nombre           String
+  passwordHash     String
+  rol              String    @default("CIUDADANO") // "CIUDADANO" | "ADMIN" | "SUPERADMIN"
+  activo           Boolean   @default(true)
+  avatarUrl        String?   // URL de la foto de perfil del usuario (opcional)
+  noShows          Int       @default(0)           // Contador de veces que no se presentó a una reserva
+  suspendidoHasta  DateTime?                        // Si está suspendido, fecha hasta la que dura la suspensión
+  motivoSuspension String?                          // Motivo de la suspensión activa
+  creadoEn         DateTime  @default(now())
+  actualizadoEn    DateTime  @updatedAt
 
   // Relaciones
   tenant                      Tenant?                     @relation(fields: [tenantId], references: [id])
@@ -92,17 +94,18 @@ model Instalacion {
 
 // Reserva: reserva de un ciudadano en una instalación para un slot de 75 minutos
 model Reserva {
-  id            String    @id @default(uuid())
-  tenantId      String
-  usuarioId     String
-  instalacionId String
-  fecha         DateTime
-  horaInicio    DateTime
-  horaFin       DateTime
-  estado        String    @default("ACTIVA") // "ACTIVA" | "CANCELADA"
-  creadoEn      DateTime  @default(now())
-  canceladoEn   DateTime?
-  canceladoPor  String?
+  id                 String    @id @default(uuid())
+  tenantId           String
+  usuarioId          String
+  instalacionId      String
+  fecha              DateTime
+  horaInicio         DateTime
+  horaFin            DateTime
+  estado             String    @default("ACTIVA") // "ACTIVA" | "CANCELADA"
+  noShow             Boolean   @default(false)    // true si el ciudadano no se presentó
+  creadoEn           DateTime  @default(now())
+  canceladoEn        DateTime?
+  canceladoPor       String?
   grupoRecurrenciaId String?
 
   // Relaciones
@@ -140,15 +143,16 @@ model TokenRecuperacion {
 
 // Aviso: aviso del tablón de anuncios de la página principal
 model Aviso {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   tenantId      String
   titulo        String
   descripcion   String
-  tipo          String   // "INFO" | "AVISO" | "CIERRE"
-  fecha         DateTime // Fecha del aviso (no del registro)
-  activo        Boolean  @default(true)
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  tipo          String    // "INFO" | "AVISO" | "CIERRE"
+  fecha         DateTime  // Fecha del aviso (no del registro)
+  activo        Boolean   @default(true)
+  caducaEn      DateTime? // Fecha a partir de la cual el aviso deja de mostrarse (null = no caduca)
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime  @updatedAt
 
   // Relaciones
   tenant Tenant @relation(fields: [tenantId], references: [id])
