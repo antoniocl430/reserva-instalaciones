@@ -2,7 +2,7 @@
  * Tests E2E — Flujo del instructor
  *
  * Prerequisitos:
- *   - El servidor Next.js debe estar corriendo en http://localhost:3000
+ *   - El servidor Next.js debe estar corriendo en el puerto configurado
  *   - El usuario instructor debe existir en la base de datos con:
  *       email:    instructor@test.es
  *       password: Instructor123
@@ -24,7 +24,6 @@ import { test, expect, Page } from '@playwright/test'
 
 const INSTRUCTOR_EMAIL = 'instructor@test.es'
 const INSTRUCTOR_PASSWORD = 'Instructor123'
-const BASE = 'http://localhost:3000'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -59,7 +58,7 @@ async function cerrarCookies(page: Page) {
  * El formulario /login redirige siempre a /dashboard tras autenticación exitosa.
  */
 async function loginInstructor(page: Page) {
-  await page.goto(`${BASE}/login`)
+  await page.goto('/login')
   await page.waitForLoadState('domcontentloaded')
   await cerrarCookies(page)
 
@@ -101,17 +100,17 @@ test.describe('Flujo instructor', () => {
     const fechaFinISO = fin.toISOString().split('T')[0]
 
     // Primero, limpiar cualquier grupo existente (DELETE de todos los grupos activos)
-    const respListar = await page.request.get(`${BASE}/api/instructor/reservas-recurrentes`)
+    const respListar = await page.request.get('/api/instructor/reservas-recurrentes')
     if (respListar.ok()) {
       const { grupos } = await respListar.json()
       for (const grupo of grupos || []) {
-        await page.request.delete(`${BASE}/api/instructor/reservas-recurrentes/${grupo.id}`)
+        await page.request.delete(`/api/instructor/reservas-recurrentes/${grupo.id}`)
       }
       console.log(`Limpiados ${(grupos || []).length} grupos anteriores`)
     }
 
     // Crear la reserva recurrente
-    const respCrear = await page.request.post(`${BASE}/api/instructor/reservas-recurrentes`, {
+    const respCrear = await page.request.post('/api/instructor/reservas-recurrentes', {
       data: {
         instalacionId: '246318d6-9a40-4000-8c54-53d42fc1ab5c',
         horaInicio: '10:30',
@@ -128,7 +127,7 @@ test.describe('Flujo instructor', () => {
     expect(resultadoCrear.reservas?.length).toBeGreaterThan(0)
 
     // Navegar a /instructor/mis-clases para verificar que el grupo aparece
-    await page.goto(`${BASE}/instructor/mis-clases`)
+    await page.goto('/instructor/mis-clases')
     await page.waitForLoadState('networkidle')
     // Esperar a que la animación de carga complete
     await page.waitForTimeout(800)
@@ -151,7 +150,7 @@ test.describe('Flujo instructor', () => {
     const errores = capturarErrores(page)
 
     await loginInstructor(page)
-    await page.goto(`${BASE}/instructor/mis-clases`)
+    await page.goto('/instructor/mis-clases')
     await page.waitForLoadState('networkidle')
     // Esperar a que la animación de carga complete
     await page.waitForTimeout(800)
@@ -188,7 +187,7 @@ test.describe('Flujo instructor', () => {
     const errores = capturarErrores(page)
 
     await loginInstructor(page)
-    await page.goto(`${BASE}/instructor/mis-clases`)
+    await page.goto('/instructor/mis-clases')
     await page.waitForLoadState('networkidle')
     // Esperar a que la animación de carga complete
     await page.waitForTimeout(800)

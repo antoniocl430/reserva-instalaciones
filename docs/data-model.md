@@ -48,7 +48,7 @@ Representa tanto a ciudadanos como a administradores. Único por email **dentro 
 | email | String | Email — único por tenant (`@@unique([tenantId, email])`) |
 | nombre | String | Nombre completo |
 | passwordHash | String | Contraseña encriptada con bcrypt |
-| rol | String | `"CIUDADANO"` \| `"ADMIN"` \| `"SUPERADMIN"` |
+| rol | String | `"CIUDADANO"` \| `"ADMIN"` \| `"INSTRUCTOR"` \| `"SUPERADMIN"` |
 | activo | Boolean | Si la cuenta está activa (default: true) |
 | creadoEn | DateTime | Fecha de registro |
 | actualizadoEn | DateTime | Última modificación |
@@ -58,6 +58,9 @@ Representa tanto a ciudadanos como a administradores. Único por email **dentro 
 >
 > El rol `SUPERADMIN` no pertenece a ningún tenant (`tenantId` = null) y tiene acceso
 > al panel `/superadmin` con visibilidad global.
+>
+> El rol `INSTRUCTOR` es creado por un admin del tenant. Tiene acceso al panel
+> `/instructor` y puede crear reservas recurrentes (grupos de clases).
 
 ---
 
@@ -90,6 +93,8 @@ Una reserva de un ciudadano en una instalación para un slot horario.
 | horaInicio | DateTime | Inicio del slot |
 | horaFin | DateTime | Fin del slot (horaInicio + duración del slot) |
 | estado | String | `"ACTIVA"` \| `"CANCELADA"` |
+| grupoRecurrenciaId | String? | FK → GrupoRecurrencia (si es parte de un grupo) |
+| recordatorioEnviado | Boolean | Si ya se envió el push de recordatorio (default: false) |
 | creadoEn | DateTime | Cuándo se hizo la reserva |
 | canceladoEn | DateTime? | Cuándo se canceló (si aplica) |
 | canceladoPor | String? | FK → Usuario (quién canceló) |
@@ -130,6 +135,62 @@ Aviso publicado en el tablón de anuncios de la página principal.
 
 ---
 
+### GrupoRecurrencia
+Agrupa un conjunto de reservas periódicas creadas por un INSTRUCTOR.
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | String (uuid) | Identificador único |
+| tenantId | String | FK → Tenant |
+| usuarioId | String | FK → Usuario (el instructor propietario) |
+| instalacionId | String | FK → Instalacion |
+| horaInicio | String | Hora del slot (ej: `"10:30"`) |
+| frecuencia | String | `"SEMANAL"` \| `"QUINCENAL"` |
+| fechaInicio | DateTime | Primera sesión |
+| fechaFin | DateTime | Última sesión posible |
+| activo | Boolean | Si el grupo sigue activo (default: true) |
+| creadoEn | DateTime | Cuándo se creó |
+
+> Máximo 52 instancias por grupo. Al cancelar un grupo, todas las Reservas futuras
+> con `estado: ACTIVA` de ese grupo se cancelan en cascada.
+
+---
+
+### SuscripcionPush
+Suscripción de un usuario a notificaciones web push.
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | String (uuid) | Identificador único |
+| tenantId | String | FK → Tenant |
+| usuarioId | String | FK → Usuario |
+| endpoint | String | URL del endpoint push del navegador |
+| p256dh | String | Clave pública de cifrado |
+| auth | String | Token de autenticación |
+| activa | Boolean | Si la suscripción está activa (default: true) |
+| creadoEn | DateTime | Cuándo se creó |
+| actualizadoEn | DateTime | Última modificación |
+
+---
+
+### PreferenciaNotificacion
+Preferencias de notificación de un usuario (una fila por usuario/tenant).
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | String (uuid) | Identificador único |
+| tenantId | String | FK → Tenant |
+| usuarioId | String | FK → Usuario — único por tenant (`@@unique([usuarioId, tenantId])`) |
+| notificacionesEmail | Boolean | Emails activados (default: true) |
+| notificacionesPush | Boolean | Push activado (default: true) |
+| recordatorioReserva | Boolean | Recordatorio 1h antes (default: true) |
+| recordatorioCancel | Boolean | Aviso al cancelar (default: true) |
+| notificacionesAviso | Boolean | Avisos del tablón (default: true) |
+| creadoEn | DateTime | Cuándo se creó |
+| actualizadoEn | DateTime | Última modificación |
+
+---
+
 ### TokenRecuperacion
 Token de un solo uso para recuperación de contraseña por email.
 
@@ -154,12 +215,20 @@ Tenant          1 ──── N    Reserva
 Tenant          1 ──── N    Bloqueo
 Tenant          1 ──── N    Aviso
 Tenant          1 ──── N    TokenRecuperacion
+Tenant          1 ──── N    GrupoRecurrencia
+Tenant          1 ──── N    SuscripcionPush
+Tenant          1 ──── N    PreferenciaNotificacion
 
 Usuario         1 ──── N    Reserva
+Usuario         1 ──── N    GrupoRecurrencia (instructor propietario)
+Usuario         1 ──── N    SuscripcionPush
+Usuario         1 ──── 1    PreferenciaNotificacion (por tenant)
 Instalacion     1 ──── N    Reserva
 Instalacion     1 ──── N    Bloqueo
+Instalacion     1 ──── N    GrupoRecurrencia
 Usuario         1 ──── N    Bloqueo (creadoPor)
 Usuario         1 ──── N    TokenRecuperacion
+GrupoRecurrencia 1 ──── N   Reserva
 ```
 
 ---

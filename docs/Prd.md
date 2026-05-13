@@ -37,8 +37,16 @@ Actualmente las reservas se gestionan por teléfono o en persona, lo que genera:
 - Acceso completo al panel de administración de su tenant
 - Puede cancelar cualquier reserva, gestionar instalaciones, bloqueos, usuarios y avisos
 - Puede crear reservas manualmente a nombre de ciudadanos registrados
+- Puede crear usuarios con rol INSTRUCTOR desde el panel de usuarios
 
-### 3.3 Superadmin
+### 3.3 Instructor
+- Rol intermedio creado por el admin del ayuntamiento
+- Acceso al panel `/instructor` con su área de gestión propia
+- Puede crear **reservas recurrentes** (SEMANAL o QUINCENAL) para impartir clases
+- Puede ver y cancelar sus propios grupos de reservas recurrentes
+- No tiene acceso al panel de administración completo
+
+### 3.4 Superadmin
 - Gestiona todos los ayuntamientos (tenants) desde un panel centralizado en `/superadmin`
 - Puede crear, configurar y suspender tenants
 - Ve métricas agregadas de todos los tenants
@@ -77,7 +85,9 @@ crea 3 pistas de pádel. Los tipos disponibles son extensibles por configuració
 - [x] Recibir email de confirmación al reservar
 - [x] Recibir email de confirmación al cancelar (propia)
 - [x] Página principal con tablón de instalaciones y avisos (sin banner de login si hay sesión activa)
-- [ ] Recibir email cuando el administrador cancela su reserva (con mensaje diferenciado)
+- [x] Recibir email cuando el administrador cancela su reserva (con mensaje diferenciado)
+- [x] Notificaciones web push (recordatorio 1h antes, aviso de cancelación)
+- [x] Gestión de preferencias de notificación desde el perfil
 
 ### Administrador
 - [x] Login al panel de administración
@@ -89,8 +99,17 @@ crea 3 pistas de pádel. Los tipos disponibles son extensibles por configuració
 - [x] Gestión de cuentas de administrador (crear, desactivar)
 - [x] Gestión de avisos del tablón de anuncios (crear, editar, eliminar)
 - [x] Configuración visual del tenant (nombre, colores, SEO)
-- [ ] Recibir email cuando un ciudadano realiza una nueva reserva
-- [ ] Recibir email cuando un ciudadano cancela una reserva
+- [x] Recibir email cuando un ciudadano realiza una nueva reserva
+- [x] Recibir email cuando un ciudadano cancela una reserva
+- [x] Crear usuarios con rol INSTRUCTOR
+
+### Instructor
+- [x] Rol INSTRUCTOR creado por admin del ayuntamiento
+- [x] Reservas recurrentes SEMANAL / QUINCENAL (hasta 52 instancias por grupo)
+- [x] Panel `/instructor/mis-clases` con tabla expandible de grupos y sesiones
+- [x] Cancelación de grupo completo (cancela todas las reservas futuras activas)
+- [x] Emails de confirmación y cancelación de grupos recurrentes
+- [x] Validación de conflictos al crear grupo (rollback si hay solapamiento)
 
 ### Multi-tenant
 - [x] Subdominio propio por ayuntamiento
@@ -139,8 +158,11 @@ crea 3 pistas de pádel. Los tipos disponibles son extensibles por configuració
 - App nativa iOS/Android (se descarta — se apuesta por PWA)
 - Integración con sede electrónica del ayuntamiento
 - Sistema de penalizaciones por no presentarse
-- Reservas recurrentes o por temporada
 - Exportación CSV
 - Festivos predefinidos por calendario oficial
+- Horarios y slots configurables por tenant desde el panel
 - Base de datos dedicada por tenant
 - Facturación por uso (SaaS pricing)
+
+> **Nota:** Las reservas recurrentes están implementadas para el rol INSTRUCTOR (Bloque 12).
+> Las reservas recurrentes para ciudadanos normales siguen fuera de alcance.

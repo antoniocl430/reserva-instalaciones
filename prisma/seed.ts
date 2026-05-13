@@ -1,8 +1,16 @@
 // Script de seed — crea el tenant inicial, las 3 pistas de pádel y un admin por defecto
 import { PrismaClient } from "@prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
+import { config } from "dotenv"
+import { resolve } from "path"
 import bcrypt from "bcryptjs"
 
-const prisma = new PrismaClient()
+config({ path: resolve(process.cwd(), ".env") })
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 // ID fijo para el tenant de desarrollo — debe coincidir con la migración
 const TENANT_DESARROLLO_ID = "tenant-desarrollo-0000-0000-000000000001"
@@ -33,13 +41,11 @@ async function main() {
   ]
 
   for (const inst of instalaciones) {
-    // Buscar por nombre dentro del tenant de desarrollo
     const existente = await prisma.instalacion.findFirst({
       where: { nombre: inst.nombre, tenantId: tenant.id },
     })
 
     if (existente) {
-      // Ya existe en el tenant correcto — no hacer nada
       console.log(`  ~ Instalación ya existe: ${inst.nombre}`)
     } else {
       await prisma.instalacion.create({
@@ -91,16 +97,41 @@ async function main() {
         nombre: "Super Administrador",
         passwordHash: superadminHash,
         rol: "SUPERADMIN",
-        tenantId: tenant.id, // Asignado al tenant de desarrollo
+        tenantId: tenant.id,
       },
     })
     console.log(`✓ Superadmin creado: ${superadmin.email} (contraseña: ${superadminPassword})`)
+  }
+
+  // ─── Instructor de prueba (para tests E2E) ──────────────────────────────────
+  const instructorEmail = "instructor@test.es"
+  const instructorPassword = "Instructor123"
+  const instructorHash = await bcrypt.hash(instructorPassword, 12)
+
+  const instructorExistente = await prisma.usuario.findFirst({
+    where: { email: instructorEmail, tenantId: tenant.id },
+  })
+
+  if (instructorExistente) {
+    console.log(`✓ Instructor ya existe: ${instructorExistente.email}`)
+  } else {
+    const instructor = await prisma.usuario.create({
+      data: {
+        email: instructorEmail,
+        nombre: "Instructor de prueba",
+        passwordHash: instructorHash,
+        rol: "INSTRUCTOR",
+        tenantId: tenant.id,
+      },
+    })
+    console.log(`✓ Instructor creado: ${instructor.email} (contraseña: ${instructorPassword})`)
   }
 
   console.log("\nBase de datos lista.")
   console.log("\n── Credenciales ──")
   console.log(`Admin:      admin@ayuntamiento.es / admin123`)
   console.log(`Superadmin: ${superadminEmail} / ${superadminPassword}`)
+  console.log(`Instructor: ${instructorEmail} / ${instructorPassword}`)
 }
 
 main()
@@ -110,4 +141,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect()
+    await pool.end()
   })

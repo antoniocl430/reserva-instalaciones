@@ -62,25 +62,26 @@
 
 ---
 
-## Fase 3 — Experiencia móvil (en curso)
+## Fase 3 — Experiencia móvil ✅
 
 El objetivo es que la aplicación funcione de forma excelente en cualquier dispositivo
 móvil desde el navegador, sin necesidad de app nativa. PWA, gestos táctiles y UX
 optimizada para pantallas pequeñas.
 
-### Bloque 8: Sistema de notificaciones por email
-- [ ] Email al ciudadano cuando el admin cancela su reserva (plantilla diferenciada, con motivo)
-- [ ] Email a todos los admins activos del tenant cuando un ciudadano hace una nueva reserva
-- [ ] Email a todos los admins activos del tenant cuando un ciudadano cancela una reserva
-- [ ] Refactorizar `email.ts`: añadir parámetro `canceladoPorAdmin` en `enviarEmailCancelacion` para adaptar el copy
-- [ ] Añadir función `enviarEmailNotificacionAdmins` que consulta los admins activos del tenant y les envía el aviso
-- [ ] Tests unitarios de las nuevas plantillas y funciones
+### Bloque 8: Sistema de notificaciones por email ✅
+- [x] Email al ciudadano cuando el admin cancela su reserva (plantilla diferenciada)
+- [x] Email a todos los admins activos del tenant cuando un ciudadano hace una nueva reserva
+- [x] Email a todos los admins activos del tenant cuando un ciudadano cancela una reserva
+- [x] Parámetro `canceladoPorAdmin` en `enviarEmailCancelacion` para adaptar el copy
+- [x] Función `enviarEmailNotificacionAdmins` que consulta admins activos y les notifica
+- [x] Tests unitarios de las nuevas funciones
 
 ### Bloque 9: Mejoras de UX y flujos de usuario ✅
 - [x] Revisar y pulir todos los flujos ciudadano en mobile (reserva, mis reservas, cancelación)
 - [x] Mejorar navegación entre páginas (breadcrumbs, botones de volver)
 - [x] Feedback visual claro en acciones (toasts, estados de carga, confirmaciones)
 - [x] Formularios optimizados para teclado móvil (tipos de input correctos, autocomplete)
+- [x] Redirección inteligente post-login/registro con `callbackUrl` (validación seguridad)
 
 ### Bloque 10: PWA — instalable desde el navegador ✅
 - [x] Configurar `manifest.ts` dinámico con nombre, iconos y colores por tenant
@@ -91,15 +92,32 @@ optimizada para pantallas pequeñas.
 
 ### Bloque 11: Notificaciones web push ✅
 - [x] Integración con Web Push API (sin app nativa)
-- [x] Recordatorio 1h antes de cada reserva
-- [ ] Notificación al cancelar una reserva (propia o por el admin)
-- [ ] Gestión de preferencias de notificación por usuario
+- [x] Recordatorio 1h antes de cada reserva (cron `/api/cron/recordatorios`)
+- [x] Notificación push al cancelar una reserva (propia o por el admin)
+- [x] Gestión de preferencias de notificación por usuario (5 tipos: email, push, recordatorio, cancelaciones, avisos)
+- [x] Componente `PreferenciasNotificacion` en `/perfil`
+- [x] Tabla `SuscripcionPush` y `PreferenciaNotificacion` en Prisma
 
 ---
 
-## Fase 4 — Funcionalidades avanzadas (backlog)
+## Fase 4 — Funcionalidades avanzadas
 
-- [ ] Reservas recurrentes (ej: todos los martes a las 10h)
+### Bloque 12: Rol INSTRUCTOR + Reservas Recurrentes ✅
+- [x] Nuevo rol `INSTRUCTOR` en el sistema (middleware, NextAuth, tipos)
+- [x] Modelo `GrupoRecurrencia` en Prisma con relaciones a Tenant, Usuario, Instalacion, Reserva
+- [x] API `POST /api/instructor/reservas-recurrentes` — crear grupo con frecuencia SEMANAL/QUINCENAL
+- [x] API `GET /api/instructor/reservas-recurrentes` — listar grupos del instructor
+- [x] API `DELETE /api/instructor/reservas-recurrentes/[grupoId]` — cancelar grupo y futuras reservas
+- [x] PATCH `/api/reservas/[id]/cancelar` — opción `cancelarGrupo: true` para cancelar grupo completo
+- [x] Panel `/instructor/mis-clases` con tabla expandible de grupos y sesiones
+- [x] Emails de confirmación y cancelación para grupos recurrentes
+- [x] Admin puede crear usuarios con rol INSTRUCTOR desde `/admin/usuarios`
+- [x] Tests: 9 tests backend + 3 tests cancelación + tests E2E (3/3 pasan)
+
+---
+
+## Backlog (pendiente)
+
 - [ ] Sistema de penalizaciones por no presentarse
 - [ ] Festivos predefinidos por calendario oficial
 - [ ] Estadísticas avanzadas de uso por instalación
