@@ -5,7 +5,6 @@
  * También incluye helpers para parsear y mergear la configuración JSON del tenant.
  */
 
-import { prisma } from "./prisma"
 import type { Tenant } from "@prisma/client"
 
 // ─── Tipos de configuración ───────────────────────────────────────────────────
@@ -128,6 +127,7 @@ export function extraerSlugDelHost(host: string): string {
  * @returns     El Tenant si existe y está activo, null en caso contrario
  */
 export async function obtenerTenantPorSlug(slug: string): Promise<Tenant | null> {
+  const { prisma } = await import("./prisma")
   return prisma.tenant.findFirst({
     where: { slug, estado: "ACTIVO" },
   })
@@ -141,6 +141,7 @@ export async function obtenerTenantPorSlug(slug: string): Promise<Tenant | null>
  * @returns     El ID del tenant si existe y está activo, null en caso contrario
  */
 export async function obtenerTenantIdPorSlug(slug: string): Promise<string | null> {
+  const { prisma } = await import("./prisma")
   const tenant = await prisma.tenant.findFirst({
     where: { slug, estado: "ACTIVO" },
     select: { id: true },

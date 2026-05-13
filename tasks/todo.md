@@ -1,5 +1,20 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
+## Estado actual del proyecto — 2026-05-12
+
+**Último bloque completado:** Bloque 12 — Rol INSTRUCTOR + Reservas Recurrentes (2026-04-20)
+
+**Tests en verde:**
+- Jest (API/backend): 291/291 ✅
+- Vitest (frontend/componentes): 155/155 ✅
+- Playwright E2E: 3/3 ✅ (instructor.spec.ts)
+
+**Próxima tarea pendiente:** Ver sección de próximos pasos en docs/ROADMAP.md (Backlog)
+
+**Rama activa:** `develop`
+
+---
+
 ## Bloque 10 — PWA (COMPLETADO)
 
 ### Objetivo
@@ -1252,55 +1267,6 @@ Los tests de preferencias-notificacion fallaban con 500 porque el modelo Prisma 
 - API endpoints corregidos y simplificados (una transacción por usuario)
 - Componente actualizado con 5 campos funcionales
 - Tests actualizados y pasando
-
----
-
-## Tarea Nueva — Soporte de `callbackUrl` en login/registro (EN PROGRESO)
-
-### Objetivo
-Implementar redirección inteligente post-login/registro: si el usuario vino desde una ruta específica, redirigir allá después de autenticarse. Con validaciones de seguridad para evitar abuso (solo rutas internas, no loops).
-
-### Plan TDD
-
-#### PASO 1: Tests en login.test.tsx (RED)
-- [ ] Test 1: "Si hay callbackUrl en params, redirige a esa URL tras login exitoso"
-  - Renderizar con `?callbackUrl=%2Fmis-reservas`
-  - Mock de `useRouter` para capturar el `push`
-  - Verificar: tras login exitoso, `router.push` se llamó con `/mis-reservas`
-- [ ] Test 2: "Si callbackUrl es URL externa o inválida, redirige a /dashboard en su lugar"
-  - Renderizar con `?callbackUrl=https://evil.com`
-  - Verificar: tras login, `router.push` se llamó con `/dashboard` (NOT la URL maliciosa)
-  - Casos: `https://evil.com`, `//evil.com`, `/login`, `/registro`
-
-#### PASO 2: Tests en registro.test.tsx (RED)
-- [ ] Test 3: "Si hay callbackUrl en params, redirige a esa URL tras registro exitoso"
-  - Renderizar con `?callbackUrl=%2Fpistas`
-  - Verificar: tras registro exitoso, `router.push` se llamó con `/pistas`
-- [ ] Test 4: "Si callbackUrl es inválida, redirige a /dashboard tras registro"
-  - Renderizar con `?callbackUrl=/admin` (ruta que ciudadano no debería acceder)
-  - Verificar: `router.push` se llamó con `/dashboard`
-
-#### PASO 3: Implementación en login/page.tsx
-- [ ] Importar `useSearchParams` de `next/navigation`
-- [ ] Leer `callbackUrl` de `searchParams.get("callbackUrl")`
-- [ ] Sanitizar: validar que empieza con `/` y NO es `/login` o `/registro`
-- [ ] Usar `destino` en `router.push()` tras login exitoso
-- [ ] Fallback a `/dashboard` si callbackUrl es inválido
-
-#### PASO 4: Implementación en registro/page.tsx
-- [ ] Mismo patrón que login
-- [ ] Leer `callbackUrl`, sanitizar, usar en `router.push()` tras registro
-
-#### PASO 5: Verificación
-- [ ] `npx vitest run` — tests de login/registro pasan (todos los nuevos + existentes)
-- [ ] `npm test` — suite Jest sin cambios, 284 tests siguen en verde
-- [ ] Manual: `/pistas` sin sesión → redirige a `/login?callbackUrl=%2Fpistas` → login → termina en `/pistas`
-
-### Detalles técnicos
-- `useSearchParams()` es hook Client Component (ambas páginas tienen `"use client"`)
-- `callbackUrl.startsWith("/")` rechaza URLs absolutas como `http://` y `//`
-- Excluir `/login` y `/registro` previene loops infinitos
-- Defaultear a `/dashboard` es seguro — es ruta protegida que todos pueden acceder
 
 ---
 

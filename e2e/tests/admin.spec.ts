@@ -2,7 +2,6 @@ import { test, expect, Page } from '@playwright/test'
 
 const ADMIN_EMAIL = 'admin@ayuntamiento.es'
 const ADMIN_PASSWORD = 'admin123'
-const BASE = 'http://localhost:3000'
 
 function capturarErrores(page: Page): string[] {
   const errores: string[] = []
@@ -28,7 +27,7 @@ async function cerrarCookies(page: Page) {
 
 // Login de admin reutilizable — espera navegación real a /admin
 async function loginAdmin(page: Page) {
-  await page.goto(`${BASE}/admin/login`)
+  await page.goto('/admin/login')
   await cerrarCookies(page)
   await page.locator('input[type="email"]').fill(ADMIN_EMAIL)
   await page.locator('input[type="password"]').fill(ADMIN_PASSWORD)
@@ -41,7 +40,7 @@ test.describe('Flujo administrador', () => {
 
   test('01 — Login admin carga correctamente', async ({ page }) => {
     const errores = capturarErrores(page)
-    await page.goto(`${BASE}/admin/login`)
+    await page.goto('/admin/login')
     await cerrarCookies(page)
     await expect(page.locator('input[type="email"]')).toBeVisible()
     await expect(page.locator('input[type="password"]')).toBeVisible()
@@ -74,7 +73,7 @@ test.describe('Flujo administrador', () => {
   test('04 — Panel reservas admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/reservas`)
+    await page.goto('/admin/reservas')
     await page.waitForLoadState('networkidle')
     console.log(`URL reservas admin: ${page.url()}`)
     expect(page.url()).toContain('/admin/reservas')
@@ -85,7 +84,7 @@ test.describe('Flujo administrador', () => {
   test('05 — Panel pistas admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/pistas`)
+    await page.goto('/admin/pistas')
     await page.waitForLoadState('networkidle')
     console.log(`URL pistas admin: ${page.url()}`)
     expect(page.url()).toContain('/admin/pistas')
@@ -96,7 +95,7 @@ test.describe('Flujo administrador', () => {
   test('06 — Panel usuarios admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/usuarios`)
+    await page.goto('/admin/usuarios')
     await page.waitForLoadState('networkidle')
     console.log(`URL usuarios admin: ${page.url()}`)
     expect(page.url()).toContain('/admin/usuarios')
@@ -107,7 +106,7 @@ test.describe('Flujo administrador', () => {
   test('07 — Panel bloqueos admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/bloqueos`)
+    await page.goto('/admin/bloqueos')
     await page.waitForLoadState('networkidle')
     console.log(`URL bloqueos admin: ${page.url()}`)
     expect(page.url()).toContain('/admin/bloqueos')
@@ -118,7 +117,7 @@ test.describe('Flujo administrador', () => {
   test('08 — Panel configuración admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/configuracion`)
+    await page.goto('/admin/configuracion')
     await page.waitForLoadState('networkidle')
     console.log(`URL configuracion admin: ${page.url()}`)
     expect(page.url()).toContain('/admin/configuracion')
@@ -129,7 +128,7 @@ test.describe('Flujo administrador', () => {
   test('09 — Panel avisos admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/avisos`)
+    await page.goto('/admin/avisos')
     await page.waitForLoadState('networkidle')
     console.log(`URL avisos admin: ${page.url()}`)
     expect(page.url()).toContain('/admin/avisos')
@@ -140,7 +139,7 @@ test.describe('Flujo administrador', () => {
   test('10 — Botón crear bloqueo existe en panel', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/bloqueos`)
+    await page.goto('/admin/bloqueos')
     await page.waitForLoadState('networkidle')
 
     const nuevoBtn = page.locator('button:has-text("Nuevo"), button:has-text("Añadir"), button:has-text("Crear")').first()
@@ -158,7 +157,7 @@ test.describe('Flujo administrador', () => {
   test('11 — Lista de reservas en panel admin', async ({ page }) => {
     const errores = capturarErrores(page)
     await loginAdmin(page)
-    await page.goto(`${BASE}/admin/reservas`)
+    await page.goto('/admin/reservas')
     await page.waitForLoadState('networkidle')
 
     const contenido = page.locator('table, [class*="reserva"], [class*="lista"]')
@@ -169,7 +168,7 @@ test.describe('Flujo administrador', () => {
 
   test('12 — Protección de rutas admin (sin sesión)', async ({ page }) => {
     const errores = capturarErrores(page)
-    await page.goto(`${BASE}/admin`)
+    await page.goto('/admin')
     await page.waitForLoadState('networkidle')
     const url = page.url()
     console.log(`URL acceso admin sin sesión: ${url}`)
@@ -181,7 +180,7 @@ test.describe('Flujo administrador', () => {
 
   test('13 — Protección de rutas ciudadano (sin sesión)', async ({ page }) => {
     const errores = capturarErrores(page)
-    await page.goto(`${BASE}/mis-reservas`)
+    await page.goto('/mis-reservas')
     await page.waitForLoadState('networkidle')
     const url = page.url()
     console.log(`URL acceso mis-reservas sin sesión: ${url}`)
@@ -195,7 +194,7 @@ test.describe('Flujo administrador', () => {
     // El superadmin usa el login ciudadano, no el admin,
     // porque su rol !== "ADMIN" y el formulario de admin/login
     // redirige con window.location.href = "/admin" lo que rompe el flujo.
-    await page.goto(`${BASE}/login`)
+    await page.goto('/login')
     await cerrarCookies(page)
     await page.locator('input[type="email"]').fill('superadmin@reservas.dev')
     await page.locator('input[type="password"]').fill('SuperAdmin123!')
@@ -204,7 +203,7 @@ test.describe('Flujo administrador', () => {
     await page.waitForURL('**/dashboard', { timeout: 15000 })
 
     // Navegar directamente al panel de superadmin
-    await page.goto(`${BASE}/superadmin`)
+    await page.goto('/superadmin')
     await page.waitForLoadState('networkidle')
     console.log(`URL superadmin: ${page.url()}`)
     expect(page.url()).toContain('/superadmin')

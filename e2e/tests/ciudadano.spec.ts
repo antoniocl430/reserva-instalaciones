@@ -3,7 +3,6 @@ import { test, expect, Page } from '@playwright/test'
 // ── Credenciales de prueba ──────────────────────────────────────────────────
 const CITIZEN_EMAIL = `ciudadano_e2e_${Date.now()}@test.com`
 const CITIZEN_PASSWORD = 'Test1234!'
-const BASE = 'http://localhost:3000'
 
 // Captura errores de consola JS en cada test
 function capturarConsola(page: Page): string[] {
@@ -31,7 +30,7 @@ async function cerrarCookies(page: Page) {
 
 // Login de ciudadano reutilizable
 async function loginCiudadano(page: Page) {
-  await page.goto(`${BASE}/login`)
+  await page.goto('/login')
   await cerrarCookies(page)
   await page.locator('input#email, input[type="email"]').first().fill(CITIZEN_EMAIL)
   await page.locator('input#password, input[type="password"]').first().fill(CITIZEN_PASSWORD)
@@ -43,7 +42,7 @@ test.describe('Flujo ciudadano', () => {
 
   test('01 — Página de inicio carga correctamente', async ({ page }) => {
     const errores = capturarConsola(page)
-    await page.goto(BASE)
+    await page.goto('/')
     await page.waitForLoadState('networkidle')
     await cerrarCookies(page)
     // La home usa h2 para el encabezado principal de instalaciones
@@ -58,7 +57,7 @@ test.describe('Flujo ciudadano', () => {
 
   test('02 — Página de registro carga correctamente', async ({ page }) => {
     const errores = capturarConsola(page)
-    await page.goto(`${BASE}/registro`)
+    await page.goto('/registro')
     await cerrarCookies(page)
     await expect(page.locator('input#nombre')).toBeVisible()
     await expect(page.locator('input#email')).toBeVisible()
@@ -68,7 +67,7 @@ test.describe('Flujo ciudadano', () => {
 
   test('03 — Registro de nuevo ciudadano', async ({ page }) => {
     const errores = capturarConsola(page)
-    await page.goto(`${BASE}/registro`)
+    await page.goto('/registro')
     await cerrarCookies(page)
 
     // Selector correcto por id
@@ -90,7 +89,7 @@ test.describe('Flujo ciudadano', () => {
 
   test('04 — Login como ciudadano', async ({ page }) => {
     const errores = capturarConsola(page)
-    await page.goto(`${BASE}/login`)
+    await page.goto('/login')
     await cerrarCookies(page)
 
     await page.locator('input#email, input[type="email"]').first().fill(CITIZEN_EMAIL)
@@ -107,7 +106,7 @@ test.describe('Flujo ciudadano', () => {
   test('05 — Ver listado de pistas', async ({ page }) => {
     const errores = capturarConsola(page)
     await loginCiudadano(page)
-    await page.goto(`${BASE}/pistas`)
+    await page.goto('/pistas')
     await cerrarCookies(page)
     await page.waitForLoadState('networkidle')
 
@@ -122,7 +121,7 @@ test.describe('Flujo ciudadano', () => {
   test('06 — Ver detalle de pista y disponibilidad', async ({ page }) => {
     const errores = capturarConsola(page)
     await loginCiudadano(page)
-    await page.goto(`${BASE}/pistas`)
+    await page.goto('/pistas')
     await cerrarCookies(page)
 
     const primerEnlace = page.locator('a[href*="/pistas/"]').first()
@@ -144,7 +143,7 @@ test.describe('Flujo ciudadano', () => {
     await loginCiudadano(page)
 
     // Ir al detalle de la primera pista disponible
-    await page.goto(`${BASE}/pistas`)
+    await page.goto('/pistas')
     await cerrarCookies(page)
     await page.locator('a[href*="/pistas/"]').first().click()
     await page.waitForURL('**/pistas/**', { timeout: 10000 })
@@ -182,7 +181,7 @@ test.describe('Flujo ciudadano', () => {
   test('08 — Ver mis reservas', async ({ page }) => {
     const errores = capturarConsola(page)
     await loginCiudadano(page)
-    await page.goto(`${BASE}/mis-reservas`)
+    await page.goto('/mis-reservas')
     await page.waitForLoadState('networkidle')
     console.log(`URL mis-reservas: ${page.url()}`)
     expect(page.url()).toContain('/mis-reservas')
@@ -193,7 +192,7 @@ test.describe('Flujo ciudadano', () => {
   test('09 — Cancelar una reserva (si existe)', async ({ page }) => {
     const errores = capturarConsola(page)
     await loginCiudadano(page)
-    await page.goto(`${BASE}/mis-reservas`)
+    await page.goto('/mis-reservas')
     await page.waitForLoadState('networkidle')
 
     const cancelarBtn = page.locator('button:has-text("Cancelar")').first()
@@ -215,7 +214,7 @@ test.describe('Flujo ciudadano', () => {
   test('10 — Ver perfil de usuario', async ({ page }) => {
     const errores = capturarConsola(page)
     await loginCiudadano(page)
-    await page.goto(`${BASE}/perfil`)
+    await page.goto('/perfil')
     await page.waitForLoadState('networkidle')
     console.log(`URL perfil: ${page.url()}`)
     expect(page.url()).toContain('/perfil')
@@ -225,7 +224,7 @@ test.describe('Flujo ciudadano', () => {
 
   test('11 — Página recuperar contraseña carga', async ({ page }) => {
     const errores = capturarConsola(page)
-    await page.goto(`${BASE}/recuperar-password`)
+    await page.goto('/recuperar-password')
     await cerrarCookies(page)
     await expect(page.locator('input[type="email"]').first()).toBeVisible()
     const erroresFiltrados = errores.filter(e => !e.includes('CLIENT_FETCH_ERROR') && !e.includes('/api/auth/session'))

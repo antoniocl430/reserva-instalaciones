@@ -177,3 +177,16 @@ Revisar este archivo al inicio de cada sesión.
 **Error:** Tests no eran idempotentes. La segunda ejecución encontraba grupos de la ejecución anterior, causando conflictos.
 **Corrección:** (1) En el test que crea datos, llamar primero a un DELETE/cleanup: `const respListar = await page.request.get('/api/instructor/reservas-recurrentes'); for (const grupo of grupos) await page.request.delete(/api/.../grupo.id)`. (2) Usar fechas/horas variadas (semana 7+ en el futuro) para evitar solapamientos entre runs.
 **Regla:** Tests E2E que crean datos compartidos deben limpiar estado anterior al inicio. Alternativa: usar identifiers únicos por ejecución (timestamps, UUIDs) para evitar colisiones.
+
+### LESSON-028: Los usuarios de prueba E2E deben estar en el seed, nunca solo en la fixture del test
+**Contexto:** El spec de instructor.spec.ts requería `instructor@test.es` con rol INSTRUCTOR. El usuario no estaba en el seed y el spec asumía que lo creaba Prisma en setup.
+**Error:** Sin el usuario en la BD, el login E2E devolvía "Credenciales incorrectas" y todos los tests del spec fallaban.
+**Corrección:** Añadir el usuario al `prisma/seed.ts` con upsert/findFirst + create, siguiendo la misma estructura que admin y superadmin.
+**Regla:** Todo usuario necesario para los tests E2E debe estar en `prisma/seed.ts`. No depender de que el spec lo cree en tiempo de ejecución.
+
+### LESSON-029: El error "FATAL: (ENOTFOUND) tenant/user X not found" de Supabase es de credenciales, no de red
+**Contexto:** `npx prisma db seed` fallaba con `FATAL: (ENOTFOUND) tenant/user postgres.njxddgmppvzrkwqohgux not found` incluso cuando el DNS resolvía y el puerto 6543 era alcanzable.
+**Error:** El mensaje de error de Supabase imita un error DNS pero en realidad indica que el proyecto Supabase con ese ID no existe (fue eliminado o las credenciales expiraron).
+**Diagnóstico:** Verificar con `nslookup aws-1-eu-west-1.pooler.supabase.com` (DNS OK) y `nc/telnet` al puerto 6543 (puerto abierto). Si ambos pasan pero Prisma falla, el proyecto Supabase fue eliminado.
+**Corrección:** Crear un nuevo proyecto en Supabase y actualizar `DATABASE_URL` y `DIRECT_URL` en `.env` y `.env.local` con las nuevas credenciales.
+**Regla:** Cuando el seed o cualquier operación Prisma falla con `ENOTFOUND tenant/user` y el DNS/red están OK, el problema es que el proyecto Supabase no existe. Actualizar las variables de entorno es la única solución.
