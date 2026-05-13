@@ -2,7 +2,8 @@
 // Multi-tenant: cada entidad pertenece a un Tenant (ayuntamiento)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
