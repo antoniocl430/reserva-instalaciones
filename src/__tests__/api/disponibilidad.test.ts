@@ -60,9 +60,11 @@ const instalacionActiva = {
 describe('GET /api/disponibilidad', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    // El route ahora consulta prisma.tenant.findUnique para cargar la config de slots.
-    // Devolvemos un tenant sin configuración especial para usar los slots por defecto.
+    // El route consulta prisma.tenant.findUnique para cargar la config de slots.
     prismaMock.tenant.findUnique.mockResolvedValue({ configuracion: null })
+    // Por defecto no hay festivos — cada test puede sobreescribir si lo necesita
+    prismaMock.festivo.findFirst.mockResolvedValue(null)
+    prismaMock.festivo.findMany.mockResolvedValue([])
   })
 
   it('debería devolver 404 cuando se consulta sin sesión y la instalación no existe', async () => {

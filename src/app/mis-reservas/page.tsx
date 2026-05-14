@@ -37,6 +37,17 @@ interface DatosReservas {
   historial: Reserva[]
 }
 
+interface EntradaEspera {
+  id: string
+  instalacionId: string
+  fecha: string
+  horaInicio: string
+  estado: "ESPERANDO" | "NOTIFICADO"
+  posicion: number
+  expiraEn: string | null
+  instalacion: { id: string; nombre: string }
+}
+
 export default function PaginaMisReservas() {
   const router = useRouter()
   const { toast } = useToast()
@@ -48,23 +59,34 @@ export default function PaginaMisReservas() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
 
+  // Estado del tab Lista de espera
+  const [entradasEspera, setEntradasEspera] = useState<EntradaEspera[]>([])
+  const [accionandoEspera, setAccionandoEspera] = useState<string | null>(null)
+
   // Estado del dialog de cancelación
   const [reservaACancelar, setReservaACancelar] = useState<Reserva | null>(null)
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [cancelando, setCancelando] = useState(false)
   const [errorCancelacion, setErrorCancelacion] = useState("")
 
-  // Carga las reservas del usuario
+  // Carga las reservas y la lista de espera del usuario
   async function cargarReservas() {
     try {
-      const res = await fetch("/api/reservas/mis-reservas")
-      if (res.status === 401) {
+      const [resReservas, resEspera] = await Promise.all([
+        fetch("/api/reservas/mis-reservas"),
+        fetch("/api/lista-espera"),
+      ])
+      if (resReservas.status === 401) {
         router.push("/login?callbackUrl=/mis-reservas")
         return
       }
-      if (!res.ok) throw new Error("Error al cargar las reservas")
-      const json = await res.json()
-      setDatos(json)
+      if (!resReservas.ok) throw new Error("Error al cargar las reservas")
+      const jsonReservas = await resReservas.json()
+      setDatos(jsonReservas)
+      if (resEspera.ok) {
+        const jsonEspera = await resEspera.json()
+        setEntradasEspera(jsonEspera.entradas ?? [])
+      }
     } catch {
       setError("No se pudieron cargar tus reservas. Inténtalo de nuevo.")
     } finally {
@@ -75,6 +97,42 @@ export default function PaginaMisReservas() {
   useEffect(() => {
     cargarReservas()
   }, [])
+
+  // Abandona la lista de espera para una entrada
+  async function abandonarEspera(entrada: EntradaEspera) {
+    setAccionandoEspera(entrada.id)
+    try {
+      const res = await fetch(`/api/lista-espera/${entrada.id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast({ title: "Eliminado de la lista de espera" })
+        const json = await fetch("/api/lista-espera").then((r) => r.json())
+        setEntradasEspera(json.entradas ?? [])
+      }
+    } catch {
+      toast({ title: "Error al abandonar la lista", variant: "destructive" } as Parameters<typeof toast>[0])
+    } finally {
+      setAccionandoEspera(null)
+    }
+  }
+
+  // Confirma la reserva desde la lista de espera
+  async function confirmarDesdeEspera(entrada: EntradaEspera) {
+    setAccionandoEspera(entrada.id)
+    try {
+      const res = await fetch(`/api/lista-espera/${entrada.id}/confirmar`, { method: "POST" })
+      if (res.ok) {
+        toast({ title: "Reserva confirmada", description: "Tu reserva está activa." })
+        await cargarReservas()
+      } else {
+        const json = await res.json()
+        toast({ title: json.error ?? "Error al confirmar", variant: "destructive" } as Parameters<typeof toast>[0])
+      }
+    } catch {
+      toast({ title: "Error de conexión", variant: "destructive" } as Parameters<typeof toast>[0])
+    } finally {
+      setAccionandoEspera(null)
+    }
+  }
 
   // Abre el dialog de confirmación de cancelación
   function abrirCancelacion(reserva: Reserva) {
@@ -171,7 +229,7 @@ export default function PaginaMisReservas() {
           </div>
         ) : (
           <Tabs defaultValue="activas" className="w-full">
-            <TabsList className="w-full grid grid-cols-2">
+            <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="activas">
                 Activas
                 {datos && datos.activas.length > 0 && (
@@ -181,6 +239,14 @@ export default function PaginaMisReservas() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="historial">Historial</TabsTrigger>
+              <TabsTrigger value="espera">
+                Lista de espera
+                {entradasEspera.length > 0 && (
+                  <span className="ml-1.5 bg-orange-100 text-orange-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                    {entradasEspera.length}
+                  </span>
+                )}
+              </TabsTrigger>
             </TabsList>
 
             {/* Pestaña: Reservas activas */}
@@ -259,6 +325,75 @@ export default function PaginaMisReservas() {
                         </div>
                       </li>
                     ))}
+                  </ul>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Pestaña: Lista de espera */}
+            <TabsContent value="espera">
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-2">
+                {entradasEspera.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-sm text-gray-500">
+                    No estás en ninguna lista de espera
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {entradasEspera.map((entrada) => {
+                      const notificado = entrada.estado === "NOTIFICADO"
+                      return (
+                        <li key={entrada.id} className="px-4 py-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {entrada.instalacion.nombre}
+                                </p>
+                                {notificado ? (
+                                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-0 text-xs">
+                                    ¡Turno disponible!
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-0 text-xs">
+                                    posición {entrada.posicion}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                {formatearFecha(entrada.fecha)}
+                              </p>
+                              <p className="text-sm text-gray-500">{entrada.horaInicio}</p>
+                            </div>
+
+                            {notificado ? (
+                              <Button
+                                size="sm"
+                                className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                                onClick={() => confirmarDesdeEspera(entrada)}
+                                disabled={accionandoEspera === entrada.id}
+                              >
+                                {accionandoEspera === entrada.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                    Confirmando...
+                                  </>
+                                ) : "Confirmar reserva"}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-gray-600 shrink-0"
+                                onClick={() => abandonarEspera(entrada)}
+                                disabled={accionandoEspera === entrada.id}
+                              >
+                                Abandonar
+                              </Button>
+                            )}
+                          </div>
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </div>

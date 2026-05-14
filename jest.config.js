@@ -4,6 +4,7 @@ const createJestConfig = nextJest({ dir: './' })
 const customJestConfig = {
   testEnvironment: 'node',
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+  setupFiles: ['<rootDir>/jest.setup.js'],
   // Los tests de src/__tests__/lib/ usan Vitest, no Jest.
   // Los tests de src/__tests__/frontend/ y components/ también son Vitest.
   testMatch: [

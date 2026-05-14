@@ -342,6 +342,65 @@ function plantillaRecuperacion(nombreUsuario: string, urlReset: string): string 
 }
 
 // ---------------------------------------------------------------------------
+// Lista de espera
+// ---------------------------------------------------------------------------
+
+/**
+ * Notifica al ciudadano que hay un hueco disponible en la lista de espera.
+ * Tiene 30 minutos para confirmar la reserva desde la app.
+ */
+export async function enviarEmailSlotDisponible(datos: DatosReserva): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de slot disponible omitido")
+    return
+  }
+
+  await getResend().emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(datos.emailUsuario),
+    subject: `¡Hueco disponible! — ${datos.nombreInstalacion}`,
+    html: plantillaSlotDisponible(datos),
+  })
+}
+
+function plantillaSlotDisponible(datos: DatosReserva): string {
+  const urlConfirmar = `${process.env.NEXTAUTH_URL}/mis-reservas`
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #f59e0b; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">¡Tienes 30 minutos para confirmar!</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${datos.nombreUsuario}</strong>:</p>
+        <p>Se ha liberado el slot que estabas esperando. Tienes <strong>30 minutos</strong> para confirmar tu reserva antes de que pase al siguiente en la lista.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalación</td>
+            <td style="padding: 10px;">${datos.nombreInstalacion}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Fecha</td>
+            <td style="padding: 10px;">${formatearFechaEmail(datos.fecha)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Horario</td>
+            <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
+          </tr>
+        </table>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${urlConfirmar}" style="display: inline-block; background: #f59e0b; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Confirmar reserva ahora</a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">Si no confirmas en 30 minutos, el hueco pasará al siguiente ciudadano en lista de espera.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
 // Funciones de suspensión de cuenta
 // ---------------------------------------------------------------------------
 

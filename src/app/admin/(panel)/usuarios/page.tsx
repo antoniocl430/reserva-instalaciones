@@ -426,9 +426,15 @@ export default function PaginaUsuariosAdmin() {
                 onChange={(e) =>
                   setFormNuevo({ ...formNuevo, password: e.target.value })
                 }
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 6 caracteres, una mayúscula"
                 className="mt-1"
               />
+              {formNuevo.password.length > 0 && formNuevo.password.length < 6 && (
+                <p className="text-xs text-red-600 mt-1">Mínimo 6 caracteres</p>
+              )}
+              {formNuevo.password.length >= 6 && !/[A-Z]/.test(formNuevo.password) && (
+                <p className="text-xs text-red-600 mt-1">Debe contener al menos una letra mayúscula</p>
+              )}
             </div>
 
             <div>

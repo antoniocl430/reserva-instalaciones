@@ -46,6 +46,9 @@ export default function PaginaPistasAdmin() {
   const [dialogEditar, setDialogEditar] = useState(false)
   const [pistaEditando, setPistaEditando] = useState<Pista | null>(null)
   const [formEditar, setFormEditar] = useState({ nombre: "", descripcion: "", horario: "" })
+  const [dialogEliminar, setDialogEliminar] = useState(false)
+  const [pistaEliminar, setPistaEliminar] = useState<Pista | null>(null)
+  const [eliminando, setEliminando] = useState(false)
 
   // Cargar pistas
   async function cargarPistas() {
@@ -167,6 +170,30 @@ export default function PaginaPistasAdmin() {
     }
   }
 
+  // Eliminar pista (solo si no tiene reservas)
+  async function handleEliminarPista() {
+    if (!pistaEliminar) return
+    setEliminando(true)
+    try {
+      const res = await fetch(`/api/admin/pistas/${pistaEliminar.id}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Error al eliminar la instalación")
+      }
+      setDialogEliminar(false)
+      setPistaEliminar(null)
+      cargarPistas()
+    } catch (err) {
+      setDialogEliminar(false)
+      setPistaEliminar(null)
+      setError(err instanceof Error ? err.message : "Error al eliminar")
+    } finally {
+      setEliminando(false)
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -271,6 +298,14 @@ export default function PaginaPistasAdmin() {
                         >
                           {pista.activa ? "Desactivar" : "Activar"}
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setPistaEliminar(pista); setError(null); setDialogEliminar(true) }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Eliminar
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -346,6 +381,28 @@ export default function PaginaPistasAdmin() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {guardando ? "Creando..." : "Crear instalación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmar eliminación */}
+      <Dialog open={dialogEliminar} onOpenChange={(open) => !open && setDialogEliminar(false)}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Eliminar instalación</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que quieres eliminar{" "}
+              <span className="font-semibold">{pistaEliminar?.nombre}</span>? Esta acción es irreversible.
+              Si la instalación tiene reservas históricas, usa &quot;Desactivar&quot; en su lugar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogEliminar(false)} disabled={eliminando}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleEliminarPista} disabled={eliminando}>
+              {eliminando ? "Eliminando..." : "Eliminar"}
             </Button>
           </DialogFooter>
         </DialogContent>

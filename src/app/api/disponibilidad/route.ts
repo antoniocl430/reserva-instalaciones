@@ -78,6 +78,36 @@ export async function GET(request: NextRequest) {
     const inicioDia = crearHoraEnMadrid(fecha, "00:00")
     const finDia = new Date(crearHoraEnMadrid(fecha, "00:00").getTime() + 24 * 60 * 60 * 1000 - 1)
 
+    // Comprobar si el día es festivo para este tenant (puntual o anual por mes/día)
+    const festivoPuntual = await prisma.festivo.findFirst({
+      where: { tenantId, repetirAnual: false, fecha: { gte: inicioDia, lte: finDia } },
+      select: { nombre: true },
+    })
+
+    // Para festivos anuales comparamos mes/día en memoria (número de festivos es pequeño)
+    const [, , mesStr, diaStr] = fecha.match(/^(\d{4})-(\d{2})-(\d{2})$/)!
+    const mes = parseInt(mesStr)
+    const dia = parseInt(diaStr)
+    const todosLosAnuales = await prisma.festivo.findMany({
+      where: { tenantId, repetirAnual: true },
+      select: { nombre: true, fecha: true },
+    })
+    const festivoAnual = todosLosAnuales.find(
+      (f) => f.fecha.getUTCMonth() + 1 === mes && f.fecha.getUTCDate() === dia
+    ) ?? null
+
+    const festivoDelDia = festivoPuntual ?? festivoAnual
+
+    // Si el día es festivo, devolver todos los slots como bloqueados
+    if (festivoDelDia) {
+      const slots = slotsDisponibles.map((slot) => ({
+        horaInicio: slot.horaInicio,
+        horaFin: slot.horaFin,
+        estado: "bloqueado" as const,
+      }))
+      return NextResponse.json({ slots, festivoDelDia })
+    }
+
     const reservasDelDia = await prisma.reserva.findMany({
       where: {
         tenantId,

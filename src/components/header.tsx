@@ -25,8 +25,9 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
   const esSuperadmin = sesion?.user?.rol === "SUPERADMIN"
   const esInstructor = sesion?.user?.rol === "INSTRUCTOR"
 
-  function cerrarSesion() {
-    signOut({ callbackUrl: "/login" })
+  async function cerrarSesion() {
+    await signOut({ redirect: false })
+    window.location.href = "/"
   }
 
   return (

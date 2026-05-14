@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Loader2 } from "lucide-react"
+import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -58,6 +59,7 @@ export default function PaginaDetallePista({ params }: Props) {
   const [slots, setSlots] = useState<Slot[]>([])
   const [cargandoSlots, setCargandoSlots] = useState(false)
   const [errorSlots, setErrorSlots] = useState("")
+  const [festivoDelDia, setFestivoDelDia] = useState<{ nombre: string } | null>(null)
 
   // Dialog de confirmación de reserva
   const [slotSeleccionado, setSlotSeleccionado] = useState<Slot | null>(null)
@@ -65,10 +67,17 @@ export default function PaginaDetallePista({ params }: Props) {
   const [confirmando, setConfirmando] = useState(false)
   const [errorConfirmacion, setErrorConfirmacion] = useState("")
 
+  // Dialog de conversión para visitantes anónimos
+  const [mostrarDialogoConversion, setMostrarDialogoConversion] = useState(false)
+
   // Estados para reservas recurrentes (solo instructores)
   const [esRecurrente, setEsRecurrente] = useState(false)
   const [frecuencia, setFrecuencia] = useState("SEMANAL")
   const [fechaFin, setFechaFin] = useState("")
+
+  // Lista de espera: slots en los que el ciudadano ya está apuntado
+  const [miListaEspera, setMiListaEspera] = useState<{ horaInicio: string; posicion: number }[]>([])
+  const [apuntandose, setApuntandose] = useState<string | null>(null)
 
   // Carga info de la pista desde /api/instalaciones
   useEffect(() => {
@@ -101,6 +110,7 @@ export default function PaginaDetallePista({ params }: Props) {
       if (!res.ok) throw new Error("Error al cargar disponibilidad")
       const json = await res.json()
       setSlots(json.slots ?? [])
+      setFestivoDelDia(json.festivoDelDia ?? null)
     } catch {
       setErrorSlots("No se pudo cargar la disponibilidad. Inténtalo de nuevo.")
     } finally {
@@ -108,16 +118,71 @@ export default function PaginaDetallePista({ params }: Props) {
     }
   }, [id, fecha])
 
+  // Carga la lista de espera del ciudadano para esta instalación y fecha
+  const cargarMiListaEspera = useCallback(async () => {
+    try {
+      const res = await fetch("/api/lista-espera")
+      if (!res.ok) return
+      const json = await res.json()
+      const paraEstaPistaYFecha = (json.entradas ?? [])
+        .filter((e: { instalacionId: string; fecha: string; estado: string; horaInicio: string; posicion: number }) =>
+          e.instalacionId === id &&
+          e.fecha.startsWith(fecha) &&
+          (e.estado === "ESPERANDO" || e.estado === "NOTIFICADO")
+        )
+        .map((e: { horaInicio: string; posicion: number }) => ({ horaInicio: e.horaInicio, posicion: e.posicion }))
+      setMiListaEspera(paraEstaPistaYFecha)
+    } catch {
+      // Error silencioso — la lista de espera es información secundaria
+    }
+  }, [id, fecha])
+
+  // Apuntarse a la lista de espera de un slot ocupado
+  async function apuntarseALista(slot: Slot) {
+    if (!sesion) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`)
+      return
+    }
+    setApuntandose(slot.horaInicio)
+    try {
+      const res = await fetch("/api/lista-espera", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instalacionId: id, fecha, horaInicio: slot.horaInicio }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        toast({ title: "Apuntado a la lista de espera", description: "Te avisaremos si se libera el slot." })
+        await cargarMiListaEspera()
+      } else {
+        toast({ title: json.error ?? "Error al apuntarse", variant: "destructive" } as Parameters<typeof toast>[0])
+      }
+    } catch {
+      toast({ title: "Error de conexión", variant: "destructive" } as Parameters<typeof toast>[0])
+    } finally {
+      setApuntandose(null)
+    }
+  }
+
   // Recarga disponibilidad cuando cambia la fecha
   useEffect(() => {
     cargarDisponibilidad()
   }, [cargarDisponibilidad])
 
+  // Carga la lista de espera solo para ciudadanos, cuando cambia fecha o instalación
+  const rol = sesion?.user?.rol
+  useEffect(() => {
+    if (rol === "CIUDADANO") {
+      cargarMiListaEspera()
+    }
+  }, [cargarMiListaEspera, rol])
+
   // Maneja el click en un slot libre
   function seleccionarSlot(slot: Slot) {
     if (slot.estado !== "libre") return
     if (!sesion) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`)
+      // Mostrar dialog de conversión en lugar de redirigir directamente
+      setMostrarDialogoConversion(true)
       return
     }
     setSlotSeleccionado(slot)
@@ -272,6 +337,15 @@ export default function PaginaDetallePista({ params }: Props) {
           )}
         </div>
 
+        {/* Banner de festivo */}
+        {festivoDelDia && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-amber-800">
+            <span className="text-lg">🎉</span>
+            <span className="font-medium">Festivo: {festivoDelDia.nombre}</span>
+            <span className="text-amber-600 text-sm">— Este día no hay disponibilidad</span>
+          </div>
+        )}
+
         {/* Grilla de slots */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
@@ -279,7 +353,18 @@ export default function PaginaDetallePista({ params }: Props) {
             <p className="text-sm text-gray-500 mt-0.5">
               {sesion
                 ? "Haz click en un slot verde para reservar"
-                : "Inicia sesión para poder reservar un slot"}
+                : (
+                  <>
+                    Consulta la disponibilidad sin registrarte. Para reservar,{" "}
+                    <Link
+                      href={`/registro?callbackUrl=${encodeURIComponent(pathname)}`}
+                      className="font-medium underline underline-offset-2 hover:text-gray-700"
+                    >
+                      crea tu cuenta gratis
+                    </Link>.
+                  </>
+                )
+              }
             </p>
           </div>
 
@@ -313,36 +398,78 @@ export default function PaginaDetallePista({ params }: Props) {
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {slots.map((slot) => (
-                  <div
-                    key={slot.horaInicio}
-                    className={clasesSlot(slot.estado)}
-                    onClick={() => seleccionarSlot(slot)}
-                    role={slot.estado === "libre" ? "button" : undefined}
-                    tabIndex={slot.estado === "libre" ? 0 : undefined}
-                    aria-label={
-                      slot.estado === "libre"
-                        ? `Reservar de ${slot.horaInicio} a ${slot.horaFin}`
-                        : slot.estado === "ocupado"
-                        ? `Ocupado de ${slot.horaInicio} a ${slot.horaFin}`
-                        : slot.estado === "pasado"
-                        ? `Pasado — ${slot.horaInicio} a ${slot.horaFin}`
-                        : `Bloqueado — ${slot.horaInicio} a ${slot.horaFin}`
-                    }
-                    aria-disabled={slot.estado !== "libre"}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") seleccionarSlot(slot)
-                    }}
-                  >
-                    <div className="font-semibold">{slot.horaInicio}–{slot.horaFin}</div>
-                    <div className="text-xs opacity-75">{etiquetaEstado(slot.estado)}</div>
-                  </div>
-                ))}
+                {slots.map((slot) => {
+                  const enEspera = miListaEspera.find((e) => e.horaInicio === slot.horaInicio)
+                  return (
+                    <div
+                      key={slot.horaInicio}
+                      className={clasesSlot(slot.estado)}
+                      onClick={() => seleccionarSlot(slot)}
+                      role={slot.estado === "libre" ? "button" : undefined}
+                      tabIndex={slot.estado === "libre" ? 0 : undefined}
+                      aria-label={
+                        slot.estado === "libre"
+                          ? `Reservar de ${slot.horaInicio} a ${slot.horaFin}`
+                          : slot.estado === "ocupado"
+                          ? `Ocupado de ${slot.horaInicio} a ${slot.horaFin}`
+                          : slot.estado === "pasado"
+                          ? `Pasado — ${slot.horaInicio} a ${slot.horaFin}`
+                          : `Bloqueado — ${slot.horaInicio} a ${slot.horaFin}`
+                      }
+                      aria-disabled={slot.estado !== "libre"}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") seleccionarSlot(slot)
+                      }}
+                    >
+                      <div className="font-semibold">{slot.horaInicio}–{slot.horaFin}</div>
+                      <div className="text-xs opacity-75">{etiquetaEstado(slot.estado)}</div>
+                      {slot.estado === "ocupado" && sesion?.user?.rol === "CIUDADANO" && (
+                        <button
+                          className="mt-1 text-xs underline text-red-600 hover:text-red-800 disabled:opacity-50"
+                          onClick={(e) => { e.stopPropagation(); apuntarseALista(slot) }}
+                          disabled={apuntandose === slot.horaInicio}
+                        >
+                          {apuntandose === slot.horaInicio
+                            ? "Apuntando..."
+                            : enEspera
+                            ? `En lista (pos. ${enEspera.posicion})`
+                            : "Apuntarme"}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Dialog de conversión para visitantes anónimos */}
+      <Dialog open={mostrarDialogoConversion} onOpenChange={setMostrarDialogoConversion}>
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Reserva esta franja</DialogTitle>
+            <DialogDescription>
+              Para realizar una reserva necesitas una cuenta. Es gratuito y tarda menos de un minuto.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 flex-col sm:flex-row">
+            <Link
+              href={`/registro?callbackUrl=${encodeURIComponent(pathname)}`}
+              className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Crear cuenta gratis
+            </Link>
+            <Link
+              href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}
+              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              Ya tengo cuenta
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmación de reserva */}
       <Dialog open={dialogAbierto} onOpenChange={(abierto) => { if (!abierto) cerrarDialog() }}>

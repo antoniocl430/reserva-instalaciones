@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  CalendarX2,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -37,6 +38,11 @@ const navItems = [
     label: "Bloqueos",
     href: "/admin/bloqueos",
     icon: Lock,
+  },
+  {
+    label: "Festivos",
+    href: "/admin/festivos",
+    icon: CalendarX2,
   },
   {
     label: "Usuarios",

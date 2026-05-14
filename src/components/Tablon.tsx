@@ -189,14 +189,24 @@ export default function Tablon({ pistas, avisos, municipio, sesionActiva }: Tabl
 
             {/* Aviso de acceso — solo visible si no hay sesión activa */}
             {!sesionActiva && (
-              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5 text-sm text-blue-800">
-                <LogIn className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-                <span>
-                  <Link href="/login" className="font-semibold underline underline-offset-2 hover:text-blue-600">
-                    Inicia sesión
-                  </Link>{" "}
-                  para realizar una reserva.
-                </span>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-4 mb-5">
+                <div className="flex items-start gap-3">
+                  <LogIn className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800 font-medium">Consulta la disponibilidad sin cuenta</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Haz clic en cualquier instalación para ver los horarios disponibles.
+                      Para reservar,{" "}
+                      <Link href="/registro" className="font-semibold underline underline-offset-2 hover:text-blue-900">
+                        crea tu cuenta gratis
+                      </Link>
+                      {" "}o{" "}
+                      <Link href="/login" className="underline underline-offset-2 hover:text-blue-900">
+                        inicia sesión
+                      </Link>.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 

@@ -118,12 +118,10 @@ optimizada para pantallas pequeñas.
 
 ## Backlog (pendiente)
 
-- [ ] Sistema de penalizaciones por no presentarse
-- [ ] Festivos predefinidos por calendario oficial
-- [ ] Estadísticas avanzadas de uso por instalación
-- [ ] Exportación de reservas a CSV
-- [ ] Horarios y slots configurables por tenant desde el panel
-- [ ] Límite de reservas configurable por tenant
+- [x] Sistema de penalizaciones por no presentarse ✅
+- [x] Festivos predefinidos por calendario oficial ✅
+- [x] Horarios y slots configurables por tenant desde el panel ✅
+- [x] Límite de reservas configurable por tenant ✅
 - [ ] Integración con sede electrónica del ayuntamiento
 - [ ] Base de datos dedicada por tenant (para ayuntamientos grandes)
 - [ ] Facturación por uso (SaaS pricing)

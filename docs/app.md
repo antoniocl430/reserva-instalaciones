@@ -48,13 +48,23 @@ Al entrar a la aplicación, el ciudadano ve:
 - **Tablón de avisos**: avisos publicados por el ayuntamiento (informativos, alertas de cierre, mantenimiento, etc.). Los avisos caducados desaparecen automáticamente.
 - Si no ha iniciado sesión, aparece un banner invitándole a registrarse o iniciar sesión.
 
-### 3.3 Ver disponibilidad y reservar
+### 3.3 Consultar disponibilidad sin cuenta
+
+Cualquier visitante puede consultar la disponibilidad de las instalaciones **sin necesidad de registrarse**:
+
+1. Desde la página principal, hace clic en cualquier instalación.
+2. Selecciona una fecha y ve todos los slots del día con su estado en tiempo real.
+3. Si quiere reservar un slot libre, el sistema le invita a crear una cuenta gratuita o a iniciar sesión, y le lleva directamente de vuelta al slot que le interesaba.
+
+Esta funcionalidad está pensada para que los nuevos ciudadanos vean si hay disponibilidad antes de decidirse a registrarse.
+
+### 3.4 Ver disponibilidad y reservar (usuario registrado)
 
 1. El ciudadano hace clic en una instalación → accede a su página de detalle.
 2. Selecciona una fecha en el calendario.
 3. El sistema muestra todos los **slots horarios** del día seleccionado con su estado:
    - **Verde** — libre, se puede reservar
-   - **Rojo** — ocupado por otro ciudadano
+   - **Rojo** — ocupado por otro ciudadano (con opción de apuntarse a la lista de espera)
    - **Gris** — bloqueado por el administrador (mantenimiento, festivo, cierre)
    - **Azul** — reserva propia del ciudadano logueado
 4. Hace clic en un slot verde → se muestra un modal de confirmación con el resumen (instalación, fecha, hora de inicio y fin).
@@ -69,25 +79,53 @@ Al entrar a la aplicación, el ciudadano ve:
 
 **Bloqueo por suspensión**: si el ciudadano tiene la cuenta suspendida (por no presentarse repetidamente), el sistema le informa de la fecha hasta la que está suspendido y no puede hacer nuevas reservas.
 
-### 3.4 Mis reservas
+### 3.5 Mis reservas
 
 El ciudadano accede a la sección "Mis reservas" donde ve:
 - **Pestaña "Activas"**: sus reservas futuras con estado ACTIVA, con botón para cancelar.
 - **Pestaña "Historial"**: todas sus reservas pasadas y canceladas.
+- **Pestaña "Lista de espera"**: sus posiciones actuales en listas de espera (ver sección 3.6).
 
 **Cancelación**: el ciudadano puede cancelar una reserva hasta **2 horas antes** del inicio. Si intenta cancelar después de ese plazo, el sistema se lo impide. Al cancelar, recibe un email de confirmación.
 
-### 3.5 Perfil de usuario
+### 3.6 Lista de espera
+
+Cuando todos los slots de un horario están ocupados, el ciudadano puede apuntarse a la **lista de espera** en lugar de tener que comprobar manualmente si se libera un hueco.
+
+**Cómo funciona**:
+
+1. El ciudadano accede a la página de una instalación y selecciona una fecha.
+2. En los slots marcados en rojo (ocupados), aparece el enlace **"Apuntarme a la lista"**.
+3. Al hacer clic, queda inscrito en la cola de espera para ese slot concreto.
+4. Si ya estaba en la lista para ese slot, el botón muestra **"En lista (pos. N)"** indicando su posición actual.
+
+**Cuando se libera un hueco** (por cancelación):
+
+1. El sistema avisa automáticamente al **primero de la cola** mediante **push y email** — "Tienes 30 minutos para confirmar tu reserva".
+2. En la pestaña "Lista de espera" de "Mis reservas", la entrada pasa a estado **"¡Turno disponible!"** con un badge naranja y el botón **"Confirmar reserva"**.
+3. Si el ciudadano confirma dentro de los 30 minutos → se crea la reserva al instante.
+4. Si no confirma en 30 minutos → su posición expira y el sistema notifica al siguiente en la cola.
+
+**Pestaña "Lista de espera" en Mis reservas**:
+- **ESPERANDO**: muestra la posición en la cola (ej. "Posición 2") y el botón **"Abandonar"** para salir de la lista.
+- **NOTIFICADO**: muestra un badge naranja "¡Turno disponible!" y el botón prominente **"Confirmar reserva"**.
+
+**Reglas**:
+- Un ciudadano no puede apuntarse dos veces al mismo slot.
+- Solo se puede apuntar a slots que estén realmente ocupados (si queda libre, puede reservarlo directamente).
+- Los ciudadanos suspendidos no pueden unirse a listas de espera.
+
+### 3.7 Perfil de usuario
 
 El ciudadano puede acceder a su perfil desde la cabecera, donde puede:
 
 - **Editar su nombre**
 - **Cambiar su contraseña** (se le pide la contraseña actual por seguridad)
-- **Activar o desactivar notificaciones push** en el dispositivo actual (ver sección 3.6)
+- **Activar o desactivar notificaciones push** en el dispositivo actual (ver sección 3.8)
 - **Gestionar sus preferencias de notificación**: elegir qué tipo de avisos recibir (confirmaciones de reserva, recordatorios, cancelaciones, avisos del ayuntamiento)
 - **Consultar sus penalizaciones**: ver cuántos no-shows acumula y, si está suspendido, la fecha de fin y el motivo
 
-### 3.6 Notificaciones
+### 3.8 Notificaciones
 
 El sistema notifica al ciudadano por dos canales:
 
@@ -96,11 +134,13 @@ El sistema notifica al ciudadano por dos canales:
 - Confirmación al cancelar una reserva propia
 - Aviso cuando el administrador cancela su reserva (con mensaje personalizado)
 - Aviso si la cuenta queda suspendida por penalizaciones
+- **Aviso de turno disponible en lista de espera** — "Tienes 30 minutos para confirmar"
 
 **Notificaciones push** (requiere activación desde el perfil):
 - Confirmación inmediata al hacer una reserva
 - **Recordatorio 1 hora antes** de la reserva
 - Aviso de cancelación por el administrador
+- **Aviso urgente de turno en lista de espera** (cuando se libera el slot esperado)
 - El ciudadano puede activar/desactivar cada tipo de notificación individualmente
 
 ---
@@ -137,7 +177,20 @@ El admin puede gestionar el catálogo de instalaciones:
 - **Editar** los datos de una instalación existente
 - **Activar o desactivar** una instalación (si está inactiva, no aparece en la web del ciudadano)
 
-### 4.4 Gestión de bloqueos
+### 4.4 Gestión de festivos
+
+El admin puede definir días festivos para que todas las instalaciones queden automáticamente bloqueadas ese día, sin necesidad de crear bloqueos individuales por pista:
+
+- **Ver** todos los festivos del año seleccionado con fecha, nombre y tipo
+- **Añadir festivo**: seleccionar fecha, escribir el nombre y marcar opcionalmente "Repetir cada año"
+  - Los festivos marcados como **anuales** bloquean ese día del mes cada año sin necesidad de reimportarlos
+  - Los festivos puntuales solo aplican al año concreto de su fecha
+- **Importar festivos nacionales**: con un clic se importan los 10 festivos nacionales de España (incluido Viernes Santo calculado automáticamente) para el año seleccionado. Los que ya existan no se duplican.
+- **Eliminar** un festivo
+
+**Efecto en la vista del ciudadano**: cuando un ciudadano consulta la disponibilidad de una instalación en un día festivo, todos los slots aparecen en gris con el motivo mostrado en un banner superior: "Festivo: [nombre] — Este día no hay disponibilidad".
+
+### 4.5 Gestión de bloqueos
 
 Los bloqueos permiten cerrar una instalación durante un periodo concreto (mantenimiento, festivo, evento especial, avería):
 - **Ver** todos los bloqueos activos con instalación, fechas y motivo
@@ -290,8 +343,6 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 
 | Funcionalidad | Descripción |
 |---------------|-------------|
-| **Lista de espera** | Cuando un slot está ocupado, el ciudadano puede apuntarse. Si hay una cancelación, recibe una notificación y tiene 30 minutos para confirmar la reserva. |
-| **Calendario público** | Vista de disponibilidad accesible sin necesidad de crear cuenta, para facilitar que nuevos ciudadanos se animen a registrarse. |
 | **QR de verificación** | Cada reserva genera un código QR que el ciudadano muestra en la entrada. El personal del ayuntamiento lo escanea con el móvil para verificar la reserva al instante. |
 | **Comunicados masivos** | El administrador puede enviar un mensaje por push y email a todos los ciudadanos del ayuntamiento (útil para avisos urgentes de cierre, averías o cambios de horario). |
 
@@ -304,10 +355,11 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 |---------------|-----------|
 | Registro y login | ✓ |
 | Recuperación de contraseña | ✓ |
-| Ver disponibilidad en tiempo real | ✓ |
+| Consultar disponibilidad sin cuenta | ✓ |
 | Reservar instalación | ✓ |
 | Cancelar reserva propia | ✓ |
 | Ver mis reservas e historial | ✓ |
+| Lista de espera para slots ocupados | ✓ |
 | Editar perfil y contraseña | ✓ |
 | Notificaciones por email | ✓ |
 | Notificaciones push en el móvil | ✓ |
@@ -323,6 +375,7 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Marcar no-shows y gestionar penalizaciones | ✓ |
 | Suspender y reactivar ciudadanos | ✓ |
 | Gestionar instalaciones | ✓ |
+| Gestionar festivos y festivos nacionales | ✓ |
 | Gestionar bloqueos | ✓ |
 | Gestionar cuentas de admin e instructor | ✓ |
 | Gestionar tablón de avisos con caducidad | ✓ |

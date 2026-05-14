@@ -81,7 +81,7 @@ export const schemaCrearPistaAdmin = z.object({
   tipo: z.literal("PADEL").refine((val) => val === "PADEL", {
     message: "El tipo debe ser PADEL",
   }),
-  descripcion: z.string().optional(),
+  descripcion: z.string().nullable().optional(),
   horario: z.string().optional(),
 })
 
@@ -92,7 +92,7 @@ export type CrearPistaAdminInput = z.infer<typeof schemaCrearPistaAdmin>
  */
 export const schemaActualizarPistaAdmin = z.object({
   nombre: z.string().min(1, "El nombre no puede estar vacío").optional(),
-  descripcion: z.string().optional(),
+  descripcion: z.string().nullable().optional(),
   horario: z.string().optional(),
   activa: z.boolean().optional(),
 })
@@ -196,10 +196,12 @@ export const schemaCrearAviso = z.object({
     error: () => ({ message: "El tipo debe ser INFO, AVISO o CIERRE" }),
   }),
   fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
-  // Fecha opcional de caducidad: si se proporciona, debe ser una fecha ISO válida
+  // Fecha opcional de caducidad: si se proporciona, debe ser una fecha ISO válida.
+  // Acepta null (caducidad sin valor) igual que el schema de actualización.
   caducaEn: z
     .string()
     .refine(esFechaIsoValida, "La fecha de caducidad no es una fecha válida")
+    .nullable()
     .optional(),
 })
 
@@ -255,6 +257,28 @@ export const schemaColores = z.object({
 })
 
 export type ColoresInput = z.infer<typeof schemaColores>
+
+/**
+ * Schema para crear un festivo
+ */
+export const schemaCrearFestivo = z.object({
+  fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  nombre: z.string().min(1, "El nombre es obligatorio").max(100, "El nombre no puede superar 100 caracteres"),
+  repetirAnual: z.boolean().optional().default(false),
+})
+
+export type CrearFestivoInput = z.infer<typeof schemaCrearFestivo>
+
+/**
+ * Schema para apuntarse a la lista de espera de un slot
+ */
+export const schemaUnirseListaEspera = z.object({
+  instalacionId: z.string().min(1, "La instalación es obligatoria"),
+  fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  horaInicio: z.string().regex(/^\d{2}:\d{2}$/, "Formato de hora inválido (HH:MM)"),
+})
+
+export type UnirseListaEsperaInput = z.infer<typeof schemaUnirseListaEspera>
 
 /**
  * Schema para validar una franja horaria en formato HH:MM

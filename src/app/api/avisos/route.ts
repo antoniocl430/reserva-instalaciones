@@ -119,8 +119,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         descripcion,
         tipo,
         fecha: new Date(fecha),
-        // caducaEn: undefined si no se proporciona (Prisma lo almacenará como null)
-        ...(caducaEn !== undefined ? { caducaEn: new Date(caducaEn) } : {}),
+        // caducaEn: null/undefined → no se establece (Prisma almacena null)
+        ...(caducaEn != null ? { caducaEn: new Date(caducaEn) } : {}),
       },
     })
 

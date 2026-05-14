@@ -6,9 +6,10 @@
  * y simulamos interacciones del usuario.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import React from 'react'
+import { useSession } from 'next-auth/react'
 
 // --- Mocks ---
 
@@ -62,6 +63,12 @@ vi.mock('@/components/ui/button', () => ({
 
 vi.mock('@/lib/utils', () => ({
   cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
+}))
+
+// Mock de next/link para que renderice como <a> con el href correcto
+vi.mock('next/link', () => ({
+  default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) =>
+    React.createElement('a', { href, className }, children),
 }))
 
 // Pista ficticia de ejemplo
@@ -373,6 +380,11 @@ describe('PaginaDetallePista', () => {
         ok: true,
         json: async () => ({ slots: [{ horaInicio: '09:00', horaFin: '10:00', estado: 'libre' }] }),
       })
+      // Lista de espera del ciudadano (llamada al montar el componente)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ entradas: [] }),
+      })
       // Respuesta al POST /api/reservas
       .mockResolvedValueOnce({
         ok: true,
@@ -427,6 +439,11 @@ describe('PaginaDetallePista', () => {
         ok: true,
         json: async () => ({ slots: [{ horaInicio: '09:00', horaFin: '10:00', estado: 'libre' }] }),
       })
+      // Lista de espera del ciudadano (llamada al montar el componente)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ entradas: [] }),
+      })
       .mockResolvedValueOnce({
         ok: false,
         json: async () => ({ error: 'Ya tienes una reserva activa de este tipo. Cancélala antes de hacer otra del mismo tipo' }),
@@ -452,5 +469,132 @@ describe('PaginaDetallePista', () => {
     await waitFor(() => {
       expect(screen.getByText(/Ya tienes una reserva activa de este tipo/i)).toBeInTheDocument()
     })
+  })
+})
+
+describe('PaginaDetallePista — usuario anónimo (sin sesión)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockToast.mockClear()
+    global.fetch = vi.fn()
+    // Sobreescribir useSession para simular usuario no autenticado
+    vi.mocked(useSession).mockReturnValue({
+      data: null,
+      status: 'unauthenticated',
+    } as ReturnType<typeof useSession>)
+  })
+
+  afterEach(() => {
+    // Restaurar al estado autenticado por defecto
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: 'usuario-123', name: 'Ana García', rol: 'CIUDADANO' } },
+      status: 'authenticated',
+    } as ReturnType<typeof useSession>)
+  })
+
+  it('muestra el mensaje de invitación a registrarse cuando no hay sesión', async () => {
+    // Solo 2 llamadas fetch: instalaciones + slots (sin 3ª de lista-espera porque no hay sesión)
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ instalaciones: [pistaFicticia] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ slots: sieteSlotsDelSistema }),
+      })
+
+    render(React.createElement(PaginaDetallePista, { params: { id: 'pista-1' } }))
+
+    // Esperar a que cargue la pista (pueden aparecer en heading y breadcrumb)
+    await waitFor(() => {
+      expect(screen.getAllByText('Pista de Pádel 1').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Debe aparecer texto que invite al registro o a iniciar sesión
+    // Buscamos en el texto completo del documento (incluyendo texto distribuido en nodos)
+    const body = document.body.textContent ?? ''
+    const tieneTextoInvitacion =
+      /Consulta la disponibilidad/i.test(body) ||
+      /sin registrarte/i.test(body) ||
+      /crea tu cuenta/i.test(body) ||
+      /sin cuenta/i.test(body)
+
+    expect(tieneTextoInvitacion).toBe(true)
+  })
+
+  it('al hacer clic en slot libre sin sesión, muestra dialog de conversión en lugar de redirigir', async () => {
+    // Solo 2 llamadas fetch: instalaciones + slots
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ instalaciones: [pistaFicticia] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ slots: [{ horaInicio: '09:00', horaFin: '10:00', estado: 'libre' }] }),
+      })
+
+    render(React.createElement(PaginaDetallePista, { params: { id: 'pista-1' } }))
+
+    // Esperar a que aparezca el slot libre
+    await waitFor(() => {
+      expect(document.querySelector('[role="button"]')).toBeTruthy()
+    })
+
+    // Hacer clic en el slot libre
+    const slotLibre = document.querySelector('[role="button"]')!
+    fireEvent.click(slotLibre)
+
+    // Debe aparecer un dialog
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    // El dialog NO debe contener "Confirmar reserva" (eso es para autenticados)
+    expect(screen.queryByText('Confirmar reserva')).not.toBeInTheDocument()
+
+    // NO se debe haber llamado a router.push (no redirige al login directamente)
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('el dialog de conversión contiene enlace a /registro y a /login', async () => {
+    // Solo 2 llamadas fetch: instalaciones + slots
+    ;(global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ instalaciones: [pistaFicticia] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ slots: [{ horaInicio: '09:00', horaFin: '10:00', estado: 'libre' }] }),
+      })
+
+    render(React.createElement(PaginaDetallePista, { params: { id: 'pista-1' } }))
+
+    // Esperar a que aparezca el slot libre
+    await waitFor(() => {
+      expect(document.querySelector('[role="button"]')).toBeTruthy()
+    })
+
+    // Hacer clic en el slot libre para abrir el dialog de conversión
+    const slotLibre = document.querySelector('[role="button"]')!
+    fireEvent.click(slotLibre)
+
+    // Esperar a que aparezca el dialog
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    // Verificar que hay un enlace/botón que va a /registro
+    const enlaceRegistro = document.querySelector('[href*="/registro"]')
+    expect(enlaceRegistro).toBeInTheDocument()
+
+    // Verificar que hay un enlace/botón que va a /login
+    const enlaceLogin = document.querySelector('[href*="/login"]')
+    expect(enlaceLogin).toBeInTheDocument()
+
+    // Verificar que NO se llamó a router.push
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })

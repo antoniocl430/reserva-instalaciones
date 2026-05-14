@@ -1,5 +1,30 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
+## Calendario público — UX visitantes anónimos (COMPLETADO — 2026-05-14)
+
+### Objetivo
+Mejorar la experiencia de visitantes no registrados en `/pistas/[id]`: en lugar de redirigir al login al hacer clic en un slot libre, mostrar un dialog de conversión con CTA a /registro y /login. Mejorar también el banner del Tablón de instalaciones.
+
+### Cambios realizados
+
+- [x] PASO 1 (RED): 3 tests nuevos en `pistas-id.test.tsx` — fallando confirmado
+- [x] PASO 2 (GREEN): `src/app/pistas/[id]/page.tsx` — estado `mostrarDialogoConversion`, handler actualizado, dialog de conversión añadido, texto informativo mejorado con Link a /registro
+- [x] PASO 3: `src/components/Tablon.tsx` — banner anónimo mejorado con CTA dual (registro + login) y texto más descriptivo
+- [x] PASO 4: `src/__tests__/frontend/tablon.test.tsx` — 5 tests nuevos para el banner anónimo y tarjetas de instalaciones
+- [x] PASO 5 (REFACTOR + VERIFICACIÓN): 253/253 tests Vitest pasan, sin regresiones
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Vitest nuevos | 8 (3 en pistas-id + 5 en tablon) |
+| Tests Vitest totales | 253/253 |
+| Archivos creados | 1 (`tablon.test.tsx`) |
+| Archivos modificados | 3 (`pistas-id.test.tsx`, `pistas/[id]/page.tsx`, `Tablon.tsx`) |
+| Regresiones | 0 |
+
+---
+
 ## Caducidad automática de avisos (COMPLETADO — 2026-05-13)
 
 ### Objetivo
@@ -101,14 +126,51 @@ Añadir campo `caducaEn DateTime?` al modelo `Aviso` para que los avisos puedan 
 
 ---
 
-## Estado actual del proyecto — 2026-05-13
+## Estado actual del proyecto — 2026-05-14
 
-**Último bloque completado:** UI sistema de penalizaciones en panel de administración (2026-05-13)
+**Último bloque completado:** Festivos predefinidos (2026-05-14)
 
 **Tests en verde:**
-- Jest (API/backend): 297/301 pasando (4 preexistentes fallidos en tenant.test.ts — no relacionados)
-- Vitest (frontend/componentes/lib): 197/197 pasan (+12 nuevos)
+- Jest (API/backend): 333/337 pasando (4 preexistentes fallidos en tenant.test.ts — no relacionados)
+- Vitest (frontend/componentes/lib): 239/239 pasan (+27 nuevos)
 - Playwright E2E: 3/3 pasan (instructor.spec.ts)
+
+---
+
+## Festivos predefinidos (COMPLETADO — 2026-05-14)
+
+### Objetivo
+Permitir al admin definir días festivos para que todas las instalaciones queden bloqueadas automáticamente ese día, con soporte de festivos puntuales (fecha exacta) y anuales (se repiten cada año por mes/día).
+
+### Cambios realizados
+
+- [x] PASO 1: `src/lib/festivos-nacionales.ts` — función pura `obtenerFestivosNacionales(año)` con 10 festivos + Viernes Santo (algoritmo Meeus/Jones/Butcher)
+- [x] PASO 2 (RED): `src/__tests__/api/festivos.test.ts` — 20 tests escritos y confirmados fallando
+- [x] PASO 3: Migración Prisma `20260514091455_add_festivo` — modelo `Festivo` con `repetirAnual`
+- [x] PASO 4: `src/lib/validaciones.ts` — `schemaCrearFestivo` añadido
+- [x] PASO 5 (GREEN): `src/app/api/admin/festivos/route.ts` — GET + POST
+- [x] PASO 6 (GREEN): `src/app/api/admin/festivos/[id]/route.ts` — DELETE
+- [x] PASO 7 (GREEN): `src/app/api/admin/festivos/importar/route.ts` — POST importar nacionales
+- [x] PASO 8: `src/app/api/disponibilidad/route.ts` — consulta festivos (puntual + anual en memoria)
+- [x] PASO 9: `src/__tests__/api/disponibilidad.test.ts` — mocks de festivos añadidos al `beforeEach`
+- [x] PASO 10 (RED→GREEN): `src/__tests__/frontend/admin-festivos.test.tsx` — 7 tests, todos verdes
+- [x] PASO 11: `src/app/admin/(panel)/festivos/page.tsx` — tabla con badge Anual, dialog, importar
+- [x] PASO 12: `src/components/AdminSidebar.tsx` — enlace "Festivos" con icono CalendarX2
+- [x] PASO 13: `src/app/pistas/[id]/page.tsx` — banner festivo en vista ciudadano
+- [x] PASO 14: `docs/app.md` actualizado con sección 4.4 Festivos
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Jest nuevos | 20 (festivos.test.ts) |
+| Tests Jest totales | 333/337 (4 pre-existentes en tenant.test.ts) |
+| Tests Vitest nuevos | 7 (admin-festivos.test.tsx) |
+| Tests Vitest totales | 239/239 |
+| Migración BD | 20260514091455_add_festivo |
+| Archivos creados | 7 |
+| Archivos modificados | 6 |
+| Regresiones | 0 |
 
 ---
 

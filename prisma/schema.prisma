@@ -37,6 +37,8 @@ model Tenant {
   suscripcionesPush           SuscripcionPush[]
   preferenciaNotificaciones   PreferenciaNotificacion[]
   gruposRecurrencia           GrupoRecurrencia[]
+  festivos                    Festivo[]
+  listaEspera                 ListaEspera[]
 }
 
 // Usuario: ciudadanos y administradores del ayuntamiento
@@ -65,6 +67,7 @@ model Usuario {
   suscripcionesPush           SuscripcionPush[]
   preferenciaNotificaciones   PreferenciaNotificacion[]
   gruposRecurrencia           GrupoRecurrencia[]
+  listaEspera                 ListaEspera[]
 
   // Email único dentro del mismo tenant (no globalmente)
   // NOTA: tenantId es opcional para superadmins (sin tenant)
@@ -88,6 +91,7 @@ model Instalacion {
   reservas Reserva[]
   bloqueos Bloqueo[]
   gruposRecurrencia  GrupoRecurrencia[]
+  listaEspera        ListaEspera[]
 
   @@index([tenantId])
 }
@@ -225,6 +229,21 @@ model PreferenciaNotificacion {
   @@index([usuarioId])
 }
 
+// Festivo: día festivo definido por el admin para bloquear todas las instalaciones
+model Festivo {
+  id           String   @id @default(uuid())
+  tenantId     String
+  fecha        DateTime // Almacenado como YYYY-MM-DDT00:00:00.000Z
+  nombre       String   // "Navidad", "Día del Trabajador", etc.
+  repetirAnual Boolean  @default(false) // Si true, bloquea ese mes/día cada año
+  creadoEn     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, fecha])
+  @@index([tenantId])
+}
+
 // GrupoRecurrencia: agrupa reservas recurrentes de un instructor
 model GrupoRecurrencia {
   id            String   @id @default(uuid())
@@ -246,4 +265,26 @@ model GrupoRecurrencia {
   @@index([tenantId])
   @@index([usuarioId])
   @@index([instalacionId])
+}
+
+// ListaEspera: un ciudadano en cola para un slot ocupado
+model ListaEspera {
+  id            String    @id @default(uuid())
+  tenantId      String
+  usuarioId     String
+  instalacionId String
+  fecha         DateTime  // Fecha del slot (YYYY-MM-DDT00:00:00.000Z)
+  horaInicio    String    // "10:00"
+  estado        String    @default("ESPERANDO")
+  // "ESPERANDO" | "NOTIFICADO" | "CONFIRMADO" | "EXPIRADO" | "CANCELADO"
+  expiraEn      DateTime? // Relleno cuando pasa a NOTIFICADO (now + 30 min)
+  creadoEn      DateTime  @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id])
+
+  @@unique([usuarioId, instalacionId, fecha, horaInicio])
+  @@index([tenantId])
+  @@index([instalacionId, fecha, horaInicio])
 }

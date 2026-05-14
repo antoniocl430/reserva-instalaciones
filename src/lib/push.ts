@@ -189,3 +189,22 @@ export async function enviarPushReservaConfirmada(
     "recordatorio"
   )
 }
+
+/**
+ * Notifica al ciudadano que hay un hueco disponible en la lista de espera.
+ * Urgente — usa preferencia "recordatorio" (es una oportunidad de reserva).
+ */
+export async function enviarPushSlotDisponible(
+  usuarioId: string,
+  datos: { instalacion: string; fecha: string; horaInicio: string }
+): Promise<void> {
+  await enviarPushUsuario(
+    usuarioId,
+    {
+      titulo: "¡Hueco disponible!",
+      cuerpo: `Se liberó un slot en ${datos.instalacion} el ${datos.fecha} a las ${datos.horaInicio}. Tienes 30 min para confirmar.`,
+      url: "/mis-reservas",
+    },
+    "recordatorio"
+  )
+}
