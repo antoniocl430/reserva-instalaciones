@@ -17,7 +17,8 @@ const RUTAS_PUBLICAS_AUTH = ["/login", "/registro", "/recuperar-password", "/nue
 const RUTA_ADMIN_LOGIN = "/admin/login"
 // Rutas de API que son públicas (no requieren autenticación)
 // UI-FLOWS.md: la disponibilidad y las instalaciones son públicas (GAP-03)
-const RUTAS_API_PUBLICAS = ["/api/auth", "/api/instalaciones", "/api/disponibilidad"]
+// /api/verificar es pública: permite escanear QR sin estar autenticado
+const RUTAS_API_PUBLICAS = ["/api/auth", "/api/instalaciones", "/api/disponibilidad", "/api/verificar"]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

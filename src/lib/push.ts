@@ -208,3 +208,53 @@ export async function enviarPushSlotDisponible(
     "recordatorio"
   )
 }
+
+/**
+ * Envía una notificación push masiva a todos los ciudadanos suscritos del tenant.
+ * Respeta la preferencia notificacionesAviso de cada usuario.
+ * Devuelve el número de suscripciones a las que se envió.
+ */
+export async function enviarPushComunicadoMasivo(datos: {
+  tenantId: string
+  titulo: string
+  cuerpo: string
+}): Promise<number> {
+  // Obtener todas las suscripciones activas del tenant con las preferencias del usuario
+  const suscripciones = await prisma.suscripcionPush.findMany({
+    where: { tenantId: datos.tenantId, activa: true, usuario: { rol: "CIUDADANO", activo: true } },
+    include: {
+      usuario: {
+        include: {
+          preferenciaNotificacion: { select: { notificacionesPush: true, notificacionesAviso: true } },
+        },
+      },
+    },
+  })
+
+  const payload = JSON.stringify({ titulo: datos.titulo, cuerpo: datos.cuerpo, url: "/" })
+  let enviados = 0
+
+  await Promise.all(
+    suscripciones.map(async (suscripcion) => {
+      const pref = suscripcion.usuario.preferenciaNotificacion[0]
+      // Sin registro de preferencias → enviar por defecto
+      if (pref && (!pref.notificacionesPush || pref.notificacionesAviso === false)) return
+
+      try {
+        await webpush.sendNotification(
+          { endpoint: suscripcion.endpoint, keys: { p256dh: suscripcion.p256dh, auth: suscripcion.auth } },
+          payload
+        )
+        enviados++
+      } catch (err: unknown) {
+        const statusCode = (err as { statusCode?: number })?.statusCode
+        if (statusCode === 410) {
+          await prisma.suscripcionPush.update({ where: { id: suscripcion.id }, data: { activa: false } })
+        } else {
+          console.error("[Push] Error en comunicado masivo:", err)
+        }
+      }
+    })
+  )
+  return enviados
+}

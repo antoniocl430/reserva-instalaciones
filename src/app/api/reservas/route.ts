@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
+import { randomUUID } from "crypto"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { enviarEmailReserva } from "@/lib/email"
@@ -148,6 +149,7 @@ export async function POST(request: NextRequest) {
           horaInicio: horaInicioDate,
           horaFin: horaFinDate,
           estado: "ACTIVA",
+          qrToken: randomUUID(),
         },
         include: { instalacion: { select: { nombre: true } } },
       })

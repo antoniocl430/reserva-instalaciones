@@ -84,11 +84,25 @@ Esta funcionalidad está pensada para que los nuevos ciudadanos vean si hay disp
 El ciudadano accede a la sección "Mis reservas" donde ve:
 - **Pestaña "Activas"**: sus reservas futuras con estado ACTIVA, con botón para cancelar.
 - **Pestaña "Historial"**: todas sus reservas pasadas y canceladas.
-- **Pestaña "Lista de espera"**: sus posiciones actuales en listas de espera (ver sección 3.6).
+- **Pestaña "Lista de espera"**: sus posiciones actuales en listas de espera (ver sección 3.7).
 
 **Cancelación**: el ciudadano puede cancelar una reserva hasta **2 horas antes** del inicio. Si intenta cancelar después de ese plazo, el sistema se lo impide. Al cancelar, recibe un email de confirmación.
 
-### 3.6 Lista de espera
+### 3.6 Código QR de verificación
+
+Cada reserva activa tiene asociado un **código QR único** que sirve como entrada al recinto:
+
+1. En la sección "Mis reservas > Activas", el ciudadano hace clic en **"Ver QR"** junto a su reserva.
+2. Aparece un dialog con el código QR generado específicamente para esa reserva.
+3. El ciudadano muestra el código en la entrada del recinto (desde la pantalla del móvil).
+4. El personal del ayuntamiento escanea el código con su móvil y accede a una página de verificación que muestra:
+   - **Verde** — "Reserva válida" (con nombre del ciudadano, instalación, fecha y hora)
+   - **Rojo** — "Reserva cancelada" (si la reserva fue cancelada)
+   - **Gris** — "Token no encontrado" (si el código no es válido)
+
+La página de verificación es pública — el personal no necesita iniciar sesión para verificar una reserva.
+
+### 3.7 Lista de espera
 
 Cuando todos los slots de un horario están ocupados, el ciudadano puede apuntarse a la **lista de espera** en lugar de tener que comprobar manualmente si se libera un hueco.
 
@@ -115,17 +129,17 @@ Cuando todos los slots de un horario están ocupados, el ciudadano puede apuntar
 - Solo se puede apuntar a slots que estén realmente ocupados (si queda libre, puede reservarlo directamente).
 - Los ciudadanos suspendidos no pueden unirse a listas de espera.
 
-### 3.7 Perfil de usuario
+### 3.8 Perfil de usuario
 
 El ciudadano puede acceder a su perfil desde la cabecera, donde puede:
 
 - **Editar su nombre**
 - **Cambiar su contraseña** (se le pide la contraseña actual por seguridad)
-- **Activar o desactivar notificaciones push** en el dispositivo actual (ver sección 3.8)
+- **Activar o desactivar notificaciones push** en el dispositivo actual (ver sección 3.9)
 - **Gestionar sus preferencias de notificación**: elegir qué tipo de avisos recibir (confirmaciones de reserva, recordatorios, cancelaciones, avisos del ayuntamiento)
 - **Consultar sus penalizaciones**: ver cuántos no-shows acumula y, si está suspendido, la fecha de fin y el motivo
 
-### 3.8 Notificaciones
+### 3.9 Notificaciones
 
 El sistema notifica al ciudadano por dos canales:
 
@@ -213,7 +227,20 @@ El admin gestiona los avisos que aparecen en la página principal del ciudadano:
 - **Fecha de caducidad** (opcional): si se establece, el aviso desaparece automáticamente del tablón público al llegar esa fecha. En el panel admin se muestra con badge "Caducado" pero no se elimina.
 - **Editar** y **eliminar** avisos existentes
 
-### 4.7 Sistema de penalizaciones
+### 4.7 Comunicados masivos
+
+El admin puede enviar mensajes directamente a todos los ciudadanos del ayuntamiento sin necesidad de ninguna herramienta externa:
+
+- **Canal**: el admin elige si enviar solo por email, solo por notificación push, o por ambos canales a la vez
+- **Formulario**: título (máx. 100 caracteres) y cuerpo del mensaje (máx. 1000 caracteres)
+- **Confirmación**: el sistema pide confirmación antes de enviar para evitar envíos accidentales
+- **Resultado**: tras el envío, muestra el número exacto de destinatarios alcanzados (emails enviados y pushes entregados)
+- **Historial**: tabla con todos los comunicados enviados, fecha, título y canal usado
+- **Respeta las preferencias**: los ciudadanos que han desactivado las notificaciones de avisos en su perfil no reciben el comunicado
+
+Útil para avisos urgentes de cierre, averías, cambios de horario o eventos especiales.
+
+### 4.8 Sistema de penalizaciones
 
 El admin puede gestionar el comportamiento de los ciudadanos que no se presentan:
 
@@ -231,7 +258,7 @@ El admin puede gestionar el comportamiento de los ciudadanos que no se presentan
 **Visibilidad**:
 - En la tabla de usuarios, cada ciudadano muestra su contador de no-shows y, si está suspendido, un badge rojo con la fecha de fin.
 
-### 4.8 Configuración del tenant
+### 4.9 Configuración del tenant
 
 El admin puede personalizar su espacio del ayuntamiento sin necesidad de intervención técnica:
 
@@ -343,8 +370,6 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 
 | Funcionalidad | Descripción |
 |---------------|-------------|
-| **QR de verificación** | Cada reserva genera un código QR que el ciudadano muestra en la entrada. El personal del ayuntamiento lo escanea con el móvil para verificar la reserva al instante. |
-| **Comunicados masivos** | El administrador puede enviar un mensaje por push y email a todos los ciudadanos del ayuntamiento (útil para avisos urgentes de cierre, averías o cambios de horario). |
 
 ---
 
@@ -357,6 +382,7 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Recuperación de contraseña | ✓ |
 | Consultar disponibilidad sin cuenta | ✓ |
 | Reservar instalación | ✓ |
+| Código QR de verificación en cada reserva | ✓ |
 | Cancelar reserva propia | ✓ |
 | Ver mis reservas e historial | ✓ |
 | Lista de espera para slots ocupados | ✓ |
@@ -379,6 +405,7 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Gestionar bloqueos | ✓ |
 | Gestionar cuentas de admin e instructor | ✓ |
 | Gestionar tablón de avisos con caducidad | ✓ |
+| Enviar comunicados masivos por email y/o push | ✓ |
 | Configurar horarios y slots | ✓ |
 | Configurar identidad visual | ✓ |
 | Configurar límites y penalizaciones | ✓ |

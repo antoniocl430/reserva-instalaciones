@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { formatearFecha, formatearHora } from "@/lib/formato"
 import { useToast } from "@/hooks/use-toast"
+import QRCode from "react-qr-code"
 
 // Tipos de la API
 interface Reserva {
@@ -26,6 +27,7 @@ interface Reserva {
   horaInicio: string
   horaFin: string
   estado: "ACTIVA" | "CANCELADA"
+  qrToken: string | null
   instalacion: {
     id: string
     nombre: string
@@ -68,6 +70,10 @@ export default function PaginaMisReservas() {
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [cancelando, setCancelando] = useState(false)
   const [errorCancelacion, setErrorCancelacion] = useState("")
+
+  // Estado del dialog QR
+  const [reservaQR, setReservaQR] = useState<Reserva | null>(null)
+  const [dialogQRAbierto, setDialogQRAbierto] = useState(false)
 
   // Carga las reservas y la lista de espera del usuario
   async function cargarReservas() {
@@ -279,15 +285,26 @@ export default function PaginaMisReservas() {
                             </p>
                           </div>
 
-                          {/* Botón cancelar */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 shrink-0"
-                            onClick={() => abrirCancelacion(reserva)}
-                          >
-                            Cancelar
-                          </Button>
+                          {/* Acciones de la reserva */}
+                          <div className="flex gap-2 shrink-0">
+                            {reserva.qrToken && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setReservaQR(reserva); setDialogQRAbierto(true) }}
+                              >
+                                Ver QR
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => abrirCancelacion(reserva)}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
                         </div>
                       </li>
                     ))}
@@ -401,6 +418,29 @@ export default function PaginaMisReservas() {
           </Tabs>
         )}
       </div>
+
+      {/* Dialog de código QR */}
+      <Dialog open={dialogQRAbierto} onOpenChange={setDialogQRAbierto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Código QR de tu reserva</DialogTitle>
+            <DialogDescription>
+              Muestra este código en la entrada para verificar tu reserva.
+            </DialogDescription>
+          </DialogHeader>
+          {reservaQR?.qrToken && (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <QRCode
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verificar/${reservaQR.qrToken}`}
+                size={220}
+              />
+              <p className="text-sm text-gray-500 text-center">
+                {reservaQR.instalacion.nombre}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmación de cancelación */}
       <Dialog open={dialogAbierto} onOpenChange={(abierto) => { if (!abierto) cerrarDialog() }}>

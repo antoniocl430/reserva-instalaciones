@@ -707,3 +707,53 @@ function plantillaRecordatorioGrupo(
     </html>
   `
 }
+
+// ---------------------------------------------------------------------------
+// Comunicados masivos
+// ---------------------------------------------------------------------------
+
+/**
+ * Envía un comunicado masivo a una lista de emails de ciudadanos.
+ * Respeta EMAIL_REDIRECCION_DEV. Fire-and-forget por diseño.
+ * Devuelve el número de emails enviados correctamente.
+ */
+export async function enviarEmailComunicadoMasivo(datos: {
+  emails: string[]
+  titulo: string
+  cuerpo: string
+  nombreServicio: string
+}): Promise<number> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — comunicado masivo omitido")
+    return 0
+  }
+  let enviados = 0
+  await Promise.all(
+    datos.emails.map(async (email) => {
+      try {
+        await getResend().emails.send({
+          from: `${datos.nombreServicio} <onboarding@resend.dev>`,
+          to: resolverDestinatario(email),
+          subject: datos.titulo,
+          html: plantillaComunicado({ titulo: datos.titulo, cuerpo: datos.cuerpo, nombreServicio: datos.nombreServicio }),
+        })
+        enviados++
+      } catch (err) {
+        console.error("[Email] Error enviando comunicado a", email, err)
+      }
+    })
+  )
+  return enviados
+}
+
+function plantillaComunicado(datos: { titulo: string; cuerpo: string; nombreServicio: string }): string {
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <h2 style="color: #1e40af;">${datos.nombreServicio}</h2>
+      <h3 style="color: #111827;">${datos.titulo}</h3>
+      <p style="color: #374151; line-height: 1.6;">${datos.cuerpo}</p>
+      <hr style="border-color: #e5e7eb; margin: 24px 0;" />
+      <p style="color: #9ca3af; font-size: 12px;">Comunicado del ayuntamiento. Si no deseas recibir estas notificaciones, actualiza tus preferencias en tu perfil.</p>
+    </div>
+  `
+}

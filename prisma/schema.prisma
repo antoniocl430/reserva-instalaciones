@@ -39,6 +39,7 @@ model Tenant {
   gruposRecurrencia           GrupoRecurrencia[]
   festivos                    Festivo[]
   listaEspera                 ListaEspera[]
+  comunicados                 Comunicado[]
 }
 
 // Usuario: ciudadanos y administradores del ayuntamiento
@@ -106,6 +107,7 @@ model Reserva {
   horaInicio         DateTime
   horaFin            DateTime
   estado             String    @default("ACTIVA") // "ACTIVA" | "CANCELADA"
+  qrToken            String?   @unique            // Token único para verificación QR. Null en reservas pre-feature.
   noShow             Boolean   @default(false)    // true si el ciudadano no se presentó
   creadoEn           DateTime  @default(now())
   canceladoEn        DateTime?
@@ -287,4 +289,18 @@ model ListaEspera {
   @@unique([usuarioId, instalacionId, fecha, horaInicio])
   @@index([tenantId])
   @@index([instalacionId, fecha, horaInicio])
+}
+
+// Comunicado: mensaje masivo enviado por el admin a todos los ciudadanos del tenant
+model Comunicado {
+  id        String   @id @default(uuid())
+  tenantId  String
+  titulo    String
+  cuerpo    String
+  canal     String   // "EMAIL" | "PUSH" | "AMBOS"
+  enviadoEn DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
 }
