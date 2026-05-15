@@ -344,9 +344,9 @@ export default function PaginaPerfil() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         {/* Cabecera */}
-        <div className="mb-6 py-4 sm:py-8">
+        <div className="mb-6">
           <Link
             href="/"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4"
@@ -640,7 +640,7 @@ export default function PaginaPerfil() {
         </div>
 
         {/* Zona de peligro */}
-        <div className="bg-red-50 rounded-xl border border-red-200 p-6">
+        <div className="bg-red-50 rounded-xl border border-red-200 p-6 mb-8">
           <h2 className="text-base font-semibold text-red-800 mb-2">Zona de peligro</h2>
           <p className="text-sm text-red-700 mb-4">
             Eliminar tu cuenta es una acción permanente. No podrás recuperar tus datos.

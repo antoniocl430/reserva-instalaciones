@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -19,8 +20,15 @@ import {
 import { formatearFecha, formatearHora } from "@/lib/formato"
 import { useToast } from "@/hooks/use-toast"
 import QRCode from "react-qr-code"
+import StarRating from "@/components/StarRating"
 
 // Tipos de la API
+interface Valoracion {
+  id: string
+  puntuacion: number
+  comentario: string | null
+}
+
 interface Reserva {
   id: string
   fecha: string
@@ -32,6 +40,7 @@ interface Reserva {
     id: string
     nombre: string
   }
+  valoracion: Valoracion | null
 }
 
 interface DatosReservas {
@@ -74,6 +83,14 @@ export default function PaginaMisReservas() {
   // Estado del dialog QR
   const [reservaQR, setReservaQR] = useState<Reserva | null>(null)
   const [dialogQRAbierto, setDialogQRAbierto] = useState(false)
+
+  // Estado del dialog de valoración
+  const [reservaAValorar, setReservaAValorar] = useState<Reserva | null>(null)
+  const [dialogValoracionAbierto, setDialogValoracionAbierto] = useState(false)
+  const [puntuacionSeleccionada, setPuntuacionSeleccionada] = useState(0)
+  const [comentarioValoracion, setComentarioValoracion] = useState("")
+  const [enviandoValoracion, setEnviandoValoracion] = useState(false)
+  const [errorValoracion, setErrorValoracion] = useState("")
 
   // Carga las reservas y la lista de espera del usuario
   async function cargarReservas() {
@@ -189,6 +206,74 @@ export default function PaginaMisReservas() {
     }
   }
 
+  // Abre el dialog de valoración para una reserva
+  function abrirValoracion(reserva: Reserva) {
+    setReservaAValorar(reserva)
+    setPuntuacionSeleccionada(0)
+    setComentarioValoracion("")
+    setErrorValoracion("")
+    setDialogValoracionAbierto(true)
+  }
+
+  // Cierra el dialog de valoración
+  function cerrarDialogValoracion() {
+    if (enviandoValoracion) return
+    setDialogValoracionAbierto(false)
+    setReservaAValorar(null)
+    setErrorValoracion("")
+  }
+
+  // Envía la valoración a la API
+  async function enviarValoracion() {
+    if (!reservaAValorar || puntuacionSeleccionada === 0) return
+    setEnviandoValoracion(true)
+    setErrorValoracion("")
+
+    try {
+      const res = await fetch("/api/valoraciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservaId: reservaAValorar.id,
+          puntuacion: puntuacionSeleccionada,
+          comentario: comentarioValoracion.trim() || undefined,
+        }),
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        setErrorValoracion(json.error ?? "Error al enviar la valoración")
+        return
+      }
+
+      // Valoración creada: actualizar la lista sin recargar toda la página
+      setDialogValoracionAbierto(false)
+      setReservaAValorar(null)
+
+      // Actualizar el historial local con la nueva valoración
+      if (datos) {
+        setDatos({
+          ...datos,
+          historial: datos.historial.map((r) =>
+            r.id === reservaAValorar.id
+              ? { ...r, valoracion: json.valoracion }
+              : r
+          ),
+        })
+      }
+
+      toast({
+        title: "Valoración enviada",
+        description: "Gracias por tu opinión.",
+      })
+    } catch {
+      setErrorValoracion("Error de conexión. Inténtalo de nuevo.")
+    } finally {
+      setEnviandoValoracion(false)
+    }
+  }
+
   // Determina el badge de estado para reservas del historial
   function badgeHistorial(reserva: Reserva) {
     if (reserva.estado === "CANCELADA") {
@@ -215,7 +300,7 @@ export default function PaginaMisReservas() {
           </Link>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mis reservas</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Gestiona tus reservas de pistas de pádel
+            Gestiona tus reservas de instalaciones deportivas
           </p>
         </div>
 
@@ -236,19 +321,20 @@ export default function PaginaMisReservas() {
         ) : (
           <Tabs defaultValue="activas" className="w-full">
             <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="activas">
+              <TabsTrigger value="activas" className="text-xs sm:text-sm px-1 sm:px-3">
                 Activas
                 {datos && datos.activas.length > 0 && (
-                  <span className="ml-1.5 bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                  <span className="ml-1 sm:ml-1.5 bg-blue-100 text-blue-700 text-xs font-semibold px-1 sm:px-1.5 py-0.5 rounded-full">
                     {datos.activas.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="historial">Historial</TabsTrigger>
-              <TabsTrigger value="espera">
-                Lista de espera
+              <TabsTrigger value="historial" className="text-xs sm:text-sm px-1 sm:px-3">Historial</TabsTrigger>
+              <TabsTrigger value="espera" className="text-xs sm:text-sm px-1 sm:px-3">
+                <span className="hidden sm:inline">Lista de espera</span>
+                <span className="sm:hidden">Espera</span>
                 {entradasEspera.length > 0 && (
-                  <span className="ml-1.5 bg-orange-100 text-orange-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                  <span className="ml-1 sm:ml-1.5 bg-orange-100 text-orange-700 text-xs font-semibold px-1 sm:px-1.5 py-0.5 rounded-full">
                     {entradasEspera.length}
                   </span>
                 )}
@@ -339,6 +425,26 @@ export default function PaginaMisReservas() {
                               {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
                             </p>
                           </div>
+
+                          {/* Valoración: botón si no valorada, estrellas si ya valorada */}
+                          {reserva.estado !== "CANCELADA" && (
+                            <div className="shrink-0">
+                              {reserva.valoracion ? (
+                                <StarRating
+                                  value={reserva.valoracion.puntuacion}
+                                  size="sm"
+                                />
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => abrirValoracion(reserva)}
+                                >
+                                  Valorar
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </li>
                     ))}
@@ -418,6 +524,84 @@ export default function PaginaMisReservas() {
           </Tabs>
         )}
       </div>
+
+      {/* Dialog de valoración */}
+      <Dialog
+        open={dialogValoracionAbierto}
+        onOpenChange={(abierto) => { if (!abierto) cerrarDialogValoracion() }}
+      >
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Valorar instalación</DialogTitle>
+            {reservaAValorar && (
+              <DialogDescription>
+                {reservaAValorar.instalacion.nombre} — {formatearFecha(reservaAValorar.fecha)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Selector de estrellas */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm text-gray-600">¿Cómo valorarías esta instalación?</p>
+              <StarRating
+                value={puntuacionSeleccionada}
+                interactive
+                size="lg"
+                onChange={setPuntuacionSeleccionada}
+              />
+            </div>
+
+            {/* Textarea de comentario opcional */}
+            <div className="space-y-1">
+              <label htmlFor="comentario-valoracion" className="text-sm font-medium text-gray-700">
+                ¿Algo que reportar? (opcional)
+              </label>
+              <Textarea
+                id="comentario-valoracion"
+                placeholder="Escribe tu comentario aquí..."
+                value={comentarioValoracion}
+                onChange={(e) => setComentarioValoracion(e.target.value)}
+                maxLength={500}
+                className="resize-none"
+                rows={3}
+              />
+              <p className="text-xs text-gray-400 text-right">
+                {comentarioValoracion.length}/500
+              </p>
+            </div>
+
+            {/* Error inline */}
+            {errorValoracion && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {errorValoracion}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={cerrarDialogValoracion}
+              disabled={enviandoValoracion}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={enviarValoracion}
+              disabled={puntuacionSeleccionada === 0 || enviandoValoracion}
+              className="flex items-center gap-2"
+            >
+              {enviandoValoracion ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : "Enviar valoración"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de código QR */}
       <Dialog open={dialogQRAbierto} onOpenChange={setDialogQRAbierto}>

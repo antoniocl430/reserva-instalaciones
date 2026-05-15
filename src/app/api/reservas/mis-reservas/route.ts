@@ -27,13 +27,17 @@ export async function GET() {
       orderBy: { horaInicio: "asc" },
     }),
     // Historial: canceladas o cuya hora ya pasó, filtradas por tenant
+    // Incluye la valoración (si existe) para que el frontend sepa si ya fue valorada
     prisma.reserva.findMany({
       where: {
         tenantId,
         usuarioId,
         OR: [{ estado: "CANCELADA" }, { horaInicio: { lt: ahora } }],
       },
-      include: { instalacion: { select: { id: true, nombre: true } } },
+      include: {
+        instalacion: { select: { id: true, nombre: true } },
+        valoracion: { select: { id: true, puntuacion: true, comentario: true } },
+      },
       orderBy: { horaInicio: "desc" },
       take: 20, // últimas 20 entradas del historial
     }),

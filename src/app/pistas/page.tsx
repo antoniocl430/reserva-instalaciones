@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import StarRating from "@/components/StarRating"
 
 // Tipo que devuelve Prisma para una instalacion
 interface Instalacion {
@@ -24,6 +25,8 @@ interface Instalacion {
   descripcion: string | null
   horario: string
   activa: boolean
+  mediaValoracion?: number | null
+  totalValoraciones?: number
 }
 
 // Devuelve la etiqueta legible del tipo de instalacion
@@ -68,11 +71,38 @@ export default async function PaginaPistas() {
     tenantId = tenant?.id
   }
 
-  const instalaciones: Instalacion[] = await prisma.instalacion.findMany({
+  const instalacionesRaw = await prisma.instalacion.findMany({
     where: { activa: true, ...(tenantId ? { tenantId } : {}) },
-    select: { id: true, nombre: true, tipo: true, descripcion: true, horario: true, activa: true },
+    select: {
+      id: true,
+      nombre: true,
+      tipo: true,
+      descripcion: true,
+      horario: true,
+      activa: true,
+      _count: { select: { valoraciones: true } },
+    },
     orderBy: { nombre: "asc" },
   })
+
+  // Calcular la media de valoraciones para cada instalación
+  const instalaciones: Instalacion[] = await Promise.all(
+    instalacionesRaw.map(async ({ _count, ...inst }) => {
+      if (_count.valoraciones === 0) {
+        return { ...inst, mediaValoracion: null, totalValoraciones: 0 }
+      }
+      const agg = await prisma.valoracion.aggregate({
+        where: { instalacionId: inst.id },
+        _avg: { puntuacion: true },
+        _count: { puntuacion: true },
+      })
+      return {
+        ...inst,
+        mediaValoracion: agg._avg.puntuacion,
+        totalValoraciones: agg._count.puntuacion,
+      }
+    })
+  )
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -131,22 +161,34 @@ export default async function PaginaPistas() {
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="flex-1 space-y-2">
+                <CardContent className="flex-1 space-y-3">
                   {pista.descripcion ? (
-                    <p className="text-sm text-gray-600">{pista.descripcion}</p>
+                    <p className="text-sm text-gray-600 line-clamp-3">{pista.descripcion}</p>
                   ) : (
                     <p className="text-sm text-gray-400 italic">Sin descripción</p>
                   )}
-                  <div className="text-xs text-gray-600 border-t border-gray-200 pt-2 mt-2">
-                    <p className="font-medium">Horario:</p>
+
+                  {/* Media de valoraciones — solo si hay valoraciones */}
+                  {pista.totalValoraciones && pista.totalValoraciones > 0 && pista.mediaValoracion != null && (
+                    <div className="flex items-center gap-1.5">
+                      <StarRating value={Math.round(pista.mediaValoracion)} size="sm" />
+                      <span className="text-xs text-gray-500">
+                        {pista.mediaValoracion.toFixed(1)}{" "}
+                        <span className="text-gray-400">({pista.totalValoraciones} valoraciones)</span>
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-600 border-t border-gray-200 pt-3">
+                    <p className="font-medium mb-0.5">Horario:</p>
                     <p>{pista.horario}</p>
                   </div>
                 </CardContent>
 
-                <CardFooter>
+                <CardFooter className="pt-0">
                   <Link
                     href={`/pistas/${pista.id}`}
-                    className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                    className="w-full inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                   >
                     Ver disponibilidad
                   </Link>

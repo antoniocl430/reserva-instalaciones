@@ -40,6 +40,7 @@ model Tenant {
   festivos                    Festivo[]
   listaEspera                 ListaEspera[]
   comunicados                 Comunicado[]
+  valoraciones                Valoracion[]
 }
 
 // Usuario: ciudadanos y administradores del ayuntamiento
@@ -69,6 +70,7 @@ model Usuario {
   preferenciaNotificaciones   PreferenciaNotificacion[]
   gruposRecurrencia           GrupoRecurrencia[]
   listaEspera                 ListaEspera[]
+  valoraciones                Valoracion[]
 
   // Email único dentro del mismo tenant (no globalmente)
   // NOTA: tenantId es opcional para superadmins (sin tenant)
@@ -93,6 +95,7 @@ model Instalacion {
   bloqueos Bloqueo[]
   gruposRecurrencia  GrupoRecurrencia[]
   listaEspera        ListaEspera[]
+  valoraciones       Valoracion[]
 
   @@index([tenantId])
 }
@@ -120,6 +123,7 @@ model Reserva {
   instalacion Instalacion @relation(fields: [instalacionId], references: [id])
   cancelador  Usuario?    @relation("CanceladorReservas", fields: [canceladoPor], references: [id])
   grupoRecurrencia   GrupoRecurrencia? @relation(fields: [grupoRecurrenciaId], references: [id], onDelete: SetNull)
+  valoracion  Valoracion?
 
   // Campo para evitar enviar el recordatorio push más de una vez por reserva
   recordatorioEnviado Boolean @default(false)
@@ -303,4 +307,27 @@ model Comunicado {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+}
+
+// Valoracion: valoración de una instalación por un ciudadano tras completar una reserva
+// Una reserva solo puede tener una valoración (campo @unique en reservaId)
+model Valoracion {
+  id            String      @id @default(cuid())
+  tenantId      String
+  usuarioId     String
+  instalacionId String
+  reservaId     String      @unique  // una valoración por reserva
+  puntuacion    Int         // 1-5
+  comentario    String?     // opcional, max 500 chars
+  creadoEn      DateTime    @default(now())
+
+  // Relaciones
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
+  instalacion Instalacion @relation(fields: [instalacionId], references: [id])
+  reserva     Reserva     @relation(fields: [reservaId], references: [id])
+
+  @@index([tenantId])
+  @@index([instalacionId])
+  @@index([usuarioId])
 }

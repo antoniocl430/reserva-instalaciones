@@ -401,3 +401,15 @@ export const schemaPreferenciasNotificacion = z.object({
 })
 
 export type PreferenciasNotificacionInput = z.infer<typeof schemaPreferenciasNotificacion>
+
+/**
+ * Schema para crear una valoración de una instalación
+ * Solo ciudadanos pueden valorar, una vez por reserva completada
+ */
+export const schemaCrearValoracion = z.object({
+  reservaId: z.string().min(1, "El ID de la reserva es obligatorio"),
+  puntuacion: z.number().int("La puntuación debe ser un entero").min(1, "La puntuación mínima es 1").max(5, "La puntuación máxima es 5"),
+  comentario: z.string().max(500, "El comentario no puede superar 500 caracteres").optional(),
+})
+
+export type CrearValoracionInput = z.infer<typeof schemaCrearValoracion>

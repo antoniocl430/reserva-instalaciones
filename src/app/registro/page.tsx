@@ -94,9 +94,9 @@ export default function PaginaRegistro() {
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           {/* Cabecera */}
-          <div className="space-y-4 mb-6 text-center">
+          <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold text-gray-900">Crear cuenta</h1>
-            <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
+            <p className="text-sm text-gray-500 mt-1">Reservas Deportivas Municipales</p>
           </div>
 
           {/* Formulario */}
@@ -161,14 +161,15 @@ export default function PaginaRegistro() {
           </div>
 
           {/* Aceptación de política de privacidad — obligatorio según RGPD */}
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 py-1">
             <Checkbox
               id="aceptaPrivacidad"
               checked={aceptaPrivacidad}
               onCheckedChange={(checked) => setAceptaPrivacidad(checked === true)}
               required
+              className="mt-0.5 shrink-0"
             />
-            <label htmlFor="aceptaPrivacidad" className="text-sm text-gray-700">
+            <label htmlFor="aceptaPrivacidad" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
               He leído y acepto la{" "}
               <Link
                 href="/privacidad"

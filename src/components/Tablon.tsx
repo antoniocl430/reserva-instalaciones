@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Clock, Bell, AlertCircle, CheckCircle, LogIn } from "lucide-react"
+import StarRating from "@/components/StarRating"
 
 interface Instalacion {
   id: string
@@ -13,6 +14,10 @@ interface Instalacion {
   descripcion: string | null
   horario: string
   activa: boolean
+  /** Media de valoraciones (0-5). Null si no hay valoraciones. */
+  mediaValoracion?: number | null
+  /** Número total de valoraciones recibidas. */
+  totalValoraciones?: number
 }
 
 // Tipo canónico de aviso proveniente de la API (tipos en mayúsculas)
@@ -52,7 +57,7 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
     TIPO_COLORES[instalacion.tipo] || { badge: "bg-gray-100 text-gray-700", icono: "📍" }
 
   const contenido = (
-    <Card className={`flex flex-col gap-3 p-4 border border-gray-200 transition-all duration-200 ${
+    <Card className={`flex flex-col gap-3 p-4 md:p-5 border border-gray-200 transition-all duration-200 ${
       instalacion.activa
         ? "hover:border-blue-300 hover:shadow-md cursor-pointer"
         : "opacity-60 grayscale cursor-not-allowed bg-gray-50"
@@ -71,7 +76,19 @@ function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
 
       {/* Descripción */}
       {instalacion.descripcion && (
-        <p className="text-xs text-gray-600 line-clamp-2">{instalacion.descripcion}</p>
+        <p className="text-xs text-gray-600 line-clamp-3 md:line-clamp-none">{instalacion.descripcion}</p>
+      )}
+
+      {/* Media de valoraciones — solo si hay valoraciones */}
+      {instalacion.totalValoraciones && instalacion.totalValoraciones > 0 && instalacion.mediaValoracion != null && (
+        <div className="flex items-center gap-1.5">
+          <StarRating value={Math.round(instalacion.mediaValoracion)} size="sm" />
+          <span className="text-xs text-gray-500">
+            {instalacion.mediaValoracion.toFixed(1)}
+            {" "}
+            <span className="text-gray-400">({instalacion.totalValoraciones})</span>
+          </span>
+        </div>
       )}
 
       {/* Horario */}
@@ -152,10 +169,10 @@ function TarjetaAviso({ aviso }: { aviso: Aviso }) {
 
   return (
     <div className="flex gap-3 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0">
-      <div className="flex-shrink-0 pt-1">{iconoTipo}</div>
+      <div className="flex-shrink-0 pt-0.5">{iconoTipo}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 font-medium">{fechaTexto}</p>
-        <h4 className="font-semibold text-sm text-gray-900 mt-0.5">{aviso.titulo}</h4>
+        <p className="text-xs text-gray-500 font-medium tabular-nums">{fechaTexto}</p>
+        <h4 className="font-semibold text-sm text-gray-900 mt-1 leading-snug">{aviso.titulo}</h4>
         <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">{aviso.descripcion}</p>
       </div>
     </div>
@@ -173,29 +190,29 @@ export default function Tablon({ pistas, avisos, municipio, sesionActiva }: Tabl
 
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
         {/* Grid de dos columnas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Columna izquierda: Instalaciones (2/3 del ancho en desktop) */}
           <div className="lg:col-span-2">
             <div className="mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
                 {municipio ? `Instalaciones — ${municipio}` : "Instalaciones disponibles"}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 mt-2">
                 Consulta el estado y horarios de todas nuestras instalaciones deportivas
               </p>
             </div>
 
             {/* Aviso de acceso — solo visible si no hay sesión activa */}
             {!sesionActiva && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-4 mb-5">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5">
                 <div className="flex items-start gap-3">
                   <LogIn className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm text-blue-800 font-medium">Consulta la disponibilidad sin cuenta</p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      Haz clic en cualquier instalación para ver los horarios disponibles.
+                    <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+                      Haz clic en cualquier instalación para ver los horarios.
                       Para reservar,{" "}
                       <Link href="/registro" className="font-semibold underline underline-offset-2 hover:text-blue-900">
                         crea tu cuenta gratis
@@ -222,8 +239,8 @@ export default function Tablon({ pistas, avisos, municipio, sesionActiva }: Tabl
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <div className="mb-4">
-                <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-gray-700" aria-hidden="true" />
+                <h3 className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-gray-700 shrink-0" aria-hidden="true" />
                   Tablón de avisos
                 </h3>
               </div>
@@ -242,7 +259,7 @@ export default function Tablon({ pistas, avisos, municipio, sesionActiva }: Tabl
 
               {/* Pie de avisos */}
               <p className="text-xs text-gray-500 mt-3 text-center">
-                Últimas actualizaciones del polideportivo municipal
+                Últimas actualizaciones del ayuntamiento
               </p>
             </div>
           </div>

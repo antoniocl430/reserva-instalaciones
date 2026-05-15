@@ -63,10 +63,23 @@ vi.mock('@/components/ui/badge', () => ({
     React.createElement('span', { className, 'data-testid': 'badge' }, children),
 }))
 
+// Mock de StarRating para evitar dependencias en tests de pistas
+vi.mock('@/components/StarRating', () => ({
+  default: ({ value, size }: { value: number; size?: string }) =>
+    React.createElement('div', { 'data-testid': 'star-rating', 'data-value': value, 'data-size': size }),
+}))
+
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     instalacion: {
       findMany: vi.fn(),
+    },
+    valoracion: {
+      // aggregate siempre devuelve 0 valoraciones por defecto en los tests existentes
+      aggregate: vi.fn().mockResolvedValue({
+        _avg: { puntuacion: null },
+        _count: { puntuacion: 0 },
+      }),
     },
   },
 }))
@@ -80,10 +93,11 @@ const sesionFicticia = {
   expires: '2099-01-01',
 }
 
+// Los datos ficticios incluyen _count para compatibilidad con la nueva query que usa _count.valoraciones
 const pistasFicticias = [
-  { id: 'p1', nombre: 'Pista de Pádel 1', tipo: 'PADEL', descripcion: 'Pista techada', activa: true, horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30' },
-  { id: 'p2', nombre: 'Pista de Pádel 2', tipo: 'PADEL', descripcion: null, activa: true, horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30' },
-  { id: 'p3', nombre: 'Pista de Pádel 3', tipo: 'PADEL', descripcion: 'Exterior', activa: true, horario: 'Mar-Sab: 9:00-14:00 y 17:00-21:00' },
+  { id: 'p1', nombre: 'Pista de Pádel 1', tipo: 'PADEL', descripcion: 'Pista techada', activa: true, horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30', _count: { valoraciones: 0 } },
+  { id: 'p2', nombre: 'Pista de Pádel 2', tipo: 'PADEL', descripcion: null, activa: true, horario: 'Lun-Dom: 8:00-13:00 y 16:45-20:30', _count: { valoraciones: 0 } },
+  { id: 'p3', nombre: 'Pista de Pádel 3', tipo: 'PADEL', descripcion: 'Exterior', activa: true, horario: 'Mar-Sab: 9:00-14:00 y 17:00-21:00', _count: { valoraciones: 0 } },
 ]
 
 describe('PaginaPistas', () => {

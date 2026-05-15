@@ -16,6 +16,7 @@ import {
   X,
   CalendarX2,
   Megaphone,
+  Star,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -59,6 +60,11 @@ const navItems = [
     label: "Comunicados",
     href: "/admin/comunicados",
     icon: Megaphone,
+  },
+  {
+    label: "Valoraciones",
+    href: "/admin/valoraciones",
+    icon: Star,
   },
   {
     label: "Configuración",

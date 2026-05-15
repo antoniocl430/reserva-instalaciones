@@ -261,10 +261,10 @@ export default function PaginaDetallePista({ params }: Props) {
 
   // Devuelve las clases CSS del slot según su estado
   function clasesSlot(estado: Slot["estado"]): string {
-    const base = "rounded-lg border px-3 py-2.5 text-sm font-medium text-center transition-colors min-h-[44px] flex items-center justify-center"
+    const base = "rounded-lg border px-3 py-3 text-sm font-medium text-center transition-colors min-h-[56px] flex flex-col items-center justify-center gap-1"
     switch (estado) {
       case "libre":
-        return cn(base, "bg-green-50 border-green-200 text-green-800 cursor-pointer hover:bg-green-100")
+        return cn(base, "bg-green-50 border-green-200 text-green-800 cursor-pointer hover:bg-green-100 hover:border-green-300")
       case "ocupado":
         return cn(base, "bg-red-50 border-red-200 text-red-700 cursor-not-allowed opacity-75")
       case "bloqueado":
@@ -320,18 +320,19 @@ export default function PaginaDetallePista({ params }: Props) {
 
         {/* Selector de fecha */}
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="selector-fecha" className="block text-sm font-medium text-gray-700 mb-2">
             Selecciona una fecha
           </label>
           <input
+            id="selector-fecha"
             type="date"
             value={fecha}
             min={hoy}
             onChange={(e) => setFecha(e.target.value)}
-            className="w-full sm:w-auto rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full sm:w-auto rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           {fecha && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1.5">
               {formatearFechaLocal(fecha)}
             </p>
           )}
@@ -350,12 +351,12 @@ export default function PaginaDetallePista({ params }: Props) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Disponibilidad</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">
               {sesion
-                ? "Haz click en un slot verde para reservar"
+                ? "Selecciona un slot verde para reservar"
                 : (
                   <>
-                    Consulta la disponibilidad sin registrarte. Para reservar,{" "}
+                    Consulta horarios sin registrarte. Para reservar,{" "}
                     <Link
                       href={`/registro?callbackUrl=${encodeURIComponent(pathname)}`}
                       className="font-medium underline underline-offset-2 hover:text-gray-700"
@@ -369,21 +370,21 @@ export default function PaginaDetallePista({ params }: Props) {
           </div>
 
           {/* Leyenda de colores */}
-          <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap gap-3 text-xs text-gray-600">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-green-200 inline-block" /> Disponible
+          <div className="px-4 py-2.5 border-b border-gray-100 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-600">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-green-200 inline-block shrink-0" aria-hidden="true" /> Disponible
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-red-200 inline-block" /> Ocupado
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-red-200 inline-block shrink-0" aria-hidden="true" /> Ocupado
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-gray-200 inline-block" /> No disponible
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-gray-200 inline-block shrink-0" aria-hidden="true" /> No disponible
             </span>
           </div>
 
           <div className="p-4">
             {cargandoSlots ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {Array.from({ length: 7 }).map((_, i) => (
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}
@@ -397,7 +398,7 @@ export default function PaginaDetallePista({ params }: Props) {
                 No hay slots disponibles para esta fecha
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {slots.map((slot) => {
                   const enEspera = miListaEspera.find((e) => e.horaInicio === slot.horaInicio)
                   return (
@@ -421,18 +422,18 @@ export default function PaginaDetallePista({ params }: Props) {
                         if (e.key === "Enter" || e.key === " ") seleccionarSlot(slot)
                       }}
                     >
-                      <div className="font-semibold">{slot.horaInicio}–{slot.horaFin}</div>
-                      <div className="text-xs opacity-75">{etiquetaEstado(slot.estado)}</div>
+                      <div className="font-semibold leading-tight">{slot.horaInicio}–{slot.horaFin}</div>
+                      <div className="text-xs opacity-75 mt-0.5">{etiquetaEstado(slot.estado)}</div>
                       {slot.estado === "ocupado" && sesion?.user?.rol === "CIUDADANO" && (
                         <button
-                          className="mt-1 text-xs underline text-red-600 hover:text-red-800 disabled:opacity-50"
+                          className="mt-2 text-xs underline text-red-600 hover:text-red-800 disabled:opacity-50 leading-tight"
                           onClick={(e) => { e.stopPropagation(); apuntarseALista(slot) }}
                           disabled={apuntandose === slot.horaInicio}
                         >
                           {apuntandose === slot.horaInicio
                             ? "Apuntando..."
                             : enEspera
-                            ? `En lista (pos. ${enEspera.posicion})`
+                            ? `En lista (${enEspera.posicion})`
                             : "Apuntarme"}
                         </button>
                       )}

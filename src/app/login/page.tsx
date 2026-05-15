@@ -63,9 +63,9 @@ export default function PaginaLogin() {
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           {/* Cabecera */}
-          <div className="space-y-4 mb-6 text-center">
+          <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold text-gray-900">Iniciar sesión</h1>
-            <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
+            <p className="text-sm text-gray-500 mt-1">Reservas Deportivas Municipales</p>
           </div>
 
           {/* Formulario */}

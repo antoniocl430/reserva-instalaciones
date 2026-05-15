@@ -114,12 +114,14 @@ export default async function PaginaDashboard() {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
-                      {indice === 0 && <span className="text-blue-600 font-bold">⭐ </span>}
+                      {indice === 0 && <span className="text-blue-600 font-bold" aria-hidden="true">⭐ </span>}
                       {reserva.instalacion.nombre}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatearFechaCorta(reserva.horaInicio)} · {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 flex-wrap">
+                      <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span>{formatearFechaCorta(reserva.horaInicio)}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}</span>
                     </p>
                   </div>
                   <span className="shrink-0 text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
@@ -132,8 +134,8 @@ export default async function PaginaDashboard() {
         </section>
 
         {/* Sección: Mis datos (RGPD) */}
-        <section aria-labelledby="titulo-mis-datos" className="mt-8 border border-gray-200 rounded-lg p-6 bg-white">
-          <h2 id="titulo-mis-datos" className="text-lg font-semibold text-gray-900 mb-1">Mis datos</h2>
+        <section aria-labelledby="titulo-mis-datos" className="border border-gray-200 rounded-lg p-5 sm:p-6 bg-white">
+          <h2 id="titulo-mis-datos" className="text-base font-semibold text-gray-900 mb-1">Mis datos</h2>
           <p className="text-sm text-gray-600 mb-4">
             Conforme al RGPD, puedes exportar o eliminar tu cuenta desde tu perfil.
           </p>
