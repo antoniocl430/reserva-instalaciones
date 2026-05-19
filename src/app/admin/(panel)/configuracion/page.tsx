@@ -4,6 +4,7 @@
  * Página de configuración del tenant.
  *
  * Permite al administrador personalizar:
+ *   - Identidad del ayuntamiento (nombre, municipio, logo)
  *   - Nombre del servicio (aparece en el header)
  *   - Colores primario y secundario (con vista previa en tiempo real)
  *   - Título y descripción SEO (metadata)
@@ -13,8 +14,8 @@
  * Acceso: solo ADMIN (protegido por el layout /admin/(panel))
  */
 
-import { useEffect, useState, useMemo } from "react"
-import { Settings, AlertCircle, CheckCircle2, Clock, ShieldAlert, CalendarCheck } from "lucide-react"
+import { useEffect, useState, useMemo, useRef } from "react"
+import { Settings, AlertCircle, CheckCircle2, Clock, ShieldAlert, CalendarCheck, Upload, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -84,6 +85,13 @@ export default function PaginaConfiguracion() {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null)
   const [mensajeError, setMensajeError] = useState<string | null>(null)
 
+  // ── Estado de la sección de identidad del ayuntamiento ────────────────────
+  const [nombreTenant, setNombreTenant] = useState("")
+  const [municipio, setMunicipio] = useState("")
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [subiendoLogo, setSubiendoLogo] = useState(false)
+  const inputLogoRef = useRef<HTMLInputElement>(null)
+
   // ── Estado de la sección de horarios y slots ───────────────────────────────
   const [duracionMinutos, setDuracionMinutos] = useState<DuracionValida>(
     SLOTS_CONFIG_DEFAULT.duracionMinutos as DuracionValida
@@ -119,6 +127,10 @@ export default function PaginaConfiguracion() {
           metadataTitle: config.metadata?.title ?? "",
           metadataDescription: config.metadata?.description ?? "",
         })
+        // Cargar datos de identidad del ayuntamiento
+        setNombreTenant(datos.nombre ?? "")
+        setMunicipio(datos.municipio ?? "")
+        setLogoUrl(datos.logoUrl ?? null)
         // Cargar slots desde la config guardada o usar defaults
         const slotsConfig = config.slots ?? SLOTS_CONFIG_DEFAULT
         const duracion = DURACIONES_VALIDAS.includes(slotsConfig.duracionMinutos as DuracionValida)
@@ -193,6 +205,45 @@ export default function PaginaConfiguracion() {
     return true
   }
 
+  // ── Subir logo del ayuntamiento ───────────────────────────────────────────
+
+  async function manejarSubidaLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSubiendoLogo(true)
+    setMensajeError(null)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/admin/logo", { method: "POST", body: form })
+      if (!res.ok) {
+        const err = await res.json()
+        setMensajeError(err.error ?? "No se pudo subir el logo")
+        return
+      }
+      const data = await res.json()
+      setLogoUrl(data.logoUrl)
+      setMensajeExito("Logo actualizado correctamente")
+    } finally {
+      setSubiendoLogo(false)
+      e.target.value = ""
+    }
+  }
+
+  // ── Eliminar logo del ayuntamiento ────────────────────────────────────────
+
+  async function eliminarLogo() {
+    const res = await fetch("/api/admin/configuracion", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logoUrl: null }),
+    })
+    if (res.ok) {
+      setLogoUrl(null)
+      setMensajeExito("Logo eliminado")
+    }
+  }
+
   // ── Guardar cambios ────────────────────────────────────────────────────────
 
   async function guardarConfiguracion() {
@@ -206,6 +257,8 @@ export default function PaginaConfiguracion() {
     setGuardando(true)
 
     const payload = {
+      nombre: nombreTenant,
+      municipio: municipio,
       configuracion: {
         nombreServicio: formulario.nombreServicio,
         colores: {
@@ -299,6 +352,109 @@ export default function PaginaConfiguracion() {
             <span>{mensajeError}</span>
           </div>
         )}
+
+        {/* Sección: Identidad del ayuntamiento */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-gray-800">
+              Identidad del ayuntamiento
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+
+            {/* Nombre del ayuntamiento */}
+            <div className="space-y-2">
+              <Label htmlFor="nombreTenant">Nombre del ayuntamiento</Label>
+              <Input
+                id="nombreTenant"
+                value={nombreTenant}
+                onChange={(e) => {
+                  setNombreTenant(e.target.value)
+                  setMensajeExito(null)
+                  setMensajeError(null)
+                }}
+                placeholder="Ej: Ayuntamiento de Sevilla"
+                disabled={guardando}
+              />
+            </div>
+
+            {/* Municipio */}
+            <div className="space-y-2">
+              <Label htmlFor="municipio">Municipio</Label>
+              <Input
+                id="municipio"
+                value={municipio}
+                onChange={(e) => {
+                  setMunicipio(e.target.value)
+                  setMensajeExito(null)
+                  setMensajeError(null)
+                }}
+                placeholder="Ej: Sevilla"
+                disabled={guardando}
+              />
+            </div>
+
+            {/* Logo */}
+            <div className="space-y-3">
+              <Label>Logo</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+
+                {/* Preview o placeholder */}
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="Logo del ayuntamiento"
+                    className="h-16 w-auto object-contain border rounded p-1"
+                  />
+                ) : (
+                  <div className="h-16 w-32 border rounded flex items-center justify-center text-gray-400 text-sm">
+                    Sin logo
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => inputLogoRef.current?.click()}
+                    disabled={subiendoLogo || guardando}
+                  >
+                    <Upload className="w-4 h-4 mr-2" aria-hidden="true" />
+                    {subiendoLogo ? "Subiendo..." : "Subir logo"}
+                  </Button>
+
+                  {logoUrl && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={eliminarLogo}
+                      disabled={guardando}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                      Eliminar logo
+                    </Button>
+                  )}
+                </div>
+
+                {/* Input file oculto */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={inputLogoRef}
+                  onChange={manejarSubidaLogo}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                PNG, JPG o SVG — máx. 200 KB
+              </p>
+            </div>
+
+          </CardContent>
+        </Card>
 
         {/* Sección: Nombre del servicio */}
         <Card>

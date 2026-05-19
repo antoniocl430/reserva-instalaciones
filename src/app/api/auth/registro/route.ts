@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // aceptaPrivacidad solo se valida, no se persiste en BD
-    const { nombre, email, password, aceptaPrivacidad: _aceptaPrivacidad } = resultado.data
+    // Extraer todos los campos validados — aceptaPrivacidad se persistirá como fecha RGPD
+    const { nombre, email, password, aceptaPrivacidad } = resultado.data
 
     // Resolver el tenant desde el header inyectado por el middleware
     const slugTenant = request.headers.get("x-tenant-slug") ?? "desarrollo"
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12)
 
     // Crear el usuario con rol CIUDADANO por defecto en el tenant actual
+    // aceptaPrivacidadEn registra el instante exacto de aceptación del consentimiento RGPD
     const usuario = await prisma.usuario.create({
       data: {
         tenantId,
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase(),
         passwordHash,
         rol: "CIUDADANO",
+        aceptaPrivacidadEn: aceptaPrivacidad ? new Date() : null,
       },
     })
 

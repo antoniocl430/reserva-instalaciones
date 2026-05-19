@@ -1,12 +1,12 @@
 import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 
-import { authOptions } from "@/lib/auth"
+import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { obtenerFestivosNacionales } from "@/lib/festivos-nacionales"
 
 export async function POST(req: NextRequest) {
-  const sesion = await getServerSession(authOptions)
+  const sesion = await getServerSession(opcionesAuth)
   if (!sesion) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   if (sesion.user.rol !== "ADMIN") return NextResponse.json({ error: "Acceso denegado" }, { status: 403 })
 

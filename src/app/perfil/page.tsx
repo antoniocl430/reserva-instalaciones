@@ -303,21 +303,17 @@ export default function PaginaPerfil() {
   // Eliminar cuenta
   async function alEliminarCuenta() {
     setEliminando(true)
-
     try {
-      const respuesta = await fetch("/api/cuenta", {
-        method: "DELETE",
-      })
-
-      if (!respuesta.ok) {
-        throw new Error("Error al eliminar la cuenta")
+      const res = await fetch("/api/perfil/eliminar", { method: "DELETE" })
+      if (res.ok) {
+        await signOut({ callbackUrl: "/" })
+      } else {
+        toast({ title: "Error al eliminar cuenta", description: "No se pudo eliminar la cuenta. Inténtalo de nuevo.", variant: "destructive" })
+        setEliminando(false)
       }
-
-      setDialogAbierto(false)
-      await signOut({ callbackUrl: "/" })
     } catch {
+      toast({ title: "Error", description: "Error de conexión. Inténtalo de nuevo.", variant: "destructive" })
       setEliminando(false)
-      setDialogAbierto(false)
     }
   }
 

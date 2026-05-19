@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatearFechaLocal } from "@/lib/formato"
+import VistaSemanaPistas, { obtenerLunesDeHoy } from "@/components/VistaSemanaPistas"
 
 // Tipos de datos de la API
 interface Slot {
@@ -51,6 +52,10 @@ export default function PaginaDetallePista({ params }: Props) {
   // Usamos Intl para obtener la fecha local en Madrid (toISOString devolvería UTC)
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(new Date())
   const [fecha, setFecha] = useState<string>(hoy)
+
+  // Control de vista: día individual o semana completa
+  const [vista, setVista] = useState<"dia" | "semana">("dia")
+  const [semanaBase, setSemanaBase] = useState<string>(() => obtenerLunesDeHoy())
 
   // Datos de la pista
   const [pista, setPista] = useState<Instalacion | null>(null)
@@ -190,6 +195,13 @@ export default function PaginaDetallePista({ params }: Props) {
     setDialogAbierto(true)
   }
 
+  // Abre el dialog de confirmación con el slot dado (usado desde la vista semanal)
+  function abrirDialogoReserva(slot: Slot) {
+    setSlotSeleccionado(slot)
+    setErrorConfirmacion("")
+    setDialogAbierto(true)
+  }
+
   // Cierra el dialog de confirmación
   function cerrarDialog() {
     if (confirmando) return
@@ -318,6 +330,35 @@ export default function PaginaDetallePista({ params }: Props) {
           </div>
         </div>
 
+        {/* Toggle vista día / semana */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+          <button
+            onClick={() => setVista("dia")}
+            className={cn(
+              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+              vista === "dia"
+                ? "bg-white shadow text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Día
+          </button>
+          <button
+            onClick={() => setVista("semana")}
+            className={cn(
+              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+              vista === "semana"
+                ? "bg-white shadow text-gray-900"
+                : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Semana
+          </button>
+        </div>
+
+        {/* Vista de día: selector de fecha + banner de festivo + grilla */}
+        {vista === "dia" && (
+          <>
         {/* Selector de fecha */}
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-4">
           <label htmlFor="selector-fecha" className="block text-sm font-medium text-gray-700 mb-2">
@@ -444,6 +485,24 @@ export default function PaginaDetallePista({ params }: Props) {
             )}
           </div>
         </div>
+          </>
+        )}
+
+        {/* Vista semanal */}
+        {vista === "semana" && (
+          <VistaSemanaPistas
+            instalacionId={id}
+            semanaBase={semanaBase}
+            onSeleccionarSlot={(fechaSlot, slot) => {
+              if (!sesion) {
+                setMostrarDialogoConversion(true)
+                return
+              }
+              setFecha(fechaSlot)
+              abrirDialogoReserva(slot as { horaInicio: string; horaFin: string; estado: "libre" | "ocupado" | "pasado" | "bloqueado" })
+            }}
+          />
+        )}
       </div>
 
       {/* Dialog de conversión para visitantes anónimos */}

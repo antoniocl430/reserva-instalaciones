@@ -12,10 +12,12 @@ import InstalarPWA from "@/components/InstalarPWA"
 interface HeaderProps {
   /** Nombre del servicio a mostrar en el logo. Si no se pasa, usa el valor por defecto. */
   nombreServicio?: string
+  /** URL del logo del ayuntamiento. Si se pasa, se muestra en lugar del emoji. */
+  logoUrl?: string | null
 }
 
 // Cabecera de navegación principal — adaptativa según rol y estado de sesión
-export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) {
+export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: HeaderProps) {
   const { data: sesion, status } = useSession()
   const [menuAbierto, setMenuAbierto] = useState(false)
 
@@ -35,10 +37,25 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
       <div className="w-full px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center gap-2 font-bold text-blue-700 shrink-0">
-            <span className="text-xl" aria-hidden="true">🏓</span>
-            <span className="hidden sm:inline text-lg leading-tight">{nombreServicio}</span>
-            <span className="sm:hidden text-base leading-tight">Reservas</span>
+          <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center gap-2 font-bold text-blue-700 shrink-0 min-w-0">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={nombreServicio}
+                className="h-8 sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-[180px]"
+              />
+            ) : (
+              <span className="text-xl" aria-hidden="true">🏓</span>
+            )}
+            {/* Con logo: nombre solo en pantallas grandes para no saturar el header */}
+            {logoUrl ? (
+              <span className="hidden lg:inline text-base leading-tight truncate max-w-[180px]">{nombreServicio}</span>
+            ) : (
+              <>
+                <span className="hidden sm:inline text-lg leading-tight">{nombreServicio}</span>
+                <span className="sm:hidden text-base leading-tight">Reservas</span>
+              </>
+            )}
           </Link>
 
           {/* Navegación desktop */}

@@ -162,8 +162,8 @@ describe("POST /api/admin/comunicados", () => {
     mockGetServerSession.mockResolvedValue(sesionAdmin)
     prismaMock.tenant.findUnique.mockResolvedValue({ nombre: "Ayuntamiento de Sevilla" })
     prismaMock.usuario.findMany.mockResolvedValue([
-      { email: "c1@test.es", preferenciaNotificacion: [] },
-      { email: "c2@test.es", preferenciaNotificacion: [] },
+      { email: "c1@test.es", preferenciaNotificaciones: [] },
+      { email: "c2@test.es", preferenciaNotificaciones: [] },
     ])
     prismaMock.comunicado.create.mockResolvedValue({ ...comunicadoMock, canal: "EMAIL" })
 
@@ -211,7 +211,7 @@ describe("POST /api/admin/comunicados", () => {
     mockGetServerSession.mockResolvedValue(sesionAdmin)
     prismaMock.tenant.findUnique.mockResolvedValue({ nombre: "Ayuntamiento de Sevilla" })
     prismaMock.usuario.findMany.mockResolvedValue([
-      { email: "c1@test.es", preferenciaNotificacion: [] },
+      { email: "c1@test.es", preferenciaNotificaciones: [] },
     ])
     prismaMock.comunicado.create.mockResolvedValue({ ...comunicadoMock, canal: "AMBOS" })
 
@@ -237,7 +237,7 @@ describe("POST /api/admin/comunicados", () => {
     mockGetServerSession.mockResolvedValue(sesionAdmin)
     prismaMock.tenant.findUnique.mockResolvedValue({ nombre: "Ayuntamiento de Sevilla" })
     prismaMock.usuario.findMany.mockResolvedValue([
-      { email: "c1@test.es", preferenciaNotificacion: [] },
+      { email: "c1@test.es", preferenciaNotificaciones: [] },
     ])
     prismaMock.comunicado.create.mockResolvedValue(comunicadoMock)
 

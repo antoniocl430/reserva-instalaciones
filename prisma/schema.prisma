@@ -56,8 +56,9 @@ model Usuario {
   avatarUrl        String?   // URL de la foto de perfil del usuario (opcional)
   noShows          Int       @default(0)           // Contador de veces que no se presentó a una reserva
   suspendidoHasta  DateTime?                        // Si está suspendido, fecha hasta la que dura la suspensión
-  motivoSuspension String?                          // Motivo de la suspensión activa
-  creadoEn         DateTime  @default(now())
+  motivoSuspension   String?                          // Motivo de la suspensión activa
+  aceptaPrivacidadEn DateTime?                        // Fecha y hora en que el usuario aceptó la política de privacidad (RGPD)
+  creadoEn           DateTime  @default(now())
   actualizadoEn    DateTime  @updatedAt
 
   // Relaciones

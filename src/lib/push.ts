@@ -225,7 +225,7 @@ export async function enviarPushComunicadoMasivo(datos: {
     include: {
       usuario: {
         include: {
-          preferenciaNotificacion: { select: { notificacionesPush: true, notificacionesAviso: true } },
+          preferenciaNotificaciones: { select: { notificacionesPush: true, notificacionesAviso: true } },
         },
       },
     },
@@ -236,7 +236,7 @@ export async function enviarPushComunicadoMasivo(datos: {
 
   await Promise.all(
     suscripciones.map(async (suscripcion) => {
-      const pref = suscripcion.usuario.preferenciaNotificacion[0]
+      const pref = suscripcion.usuario.preferenciaNotificaciones[0]
       // Sin registro de preferencias → enviar por defecto
       if (pref && (!pref.notificacionesPush || pref.notificacionesAviso === false)) return
 

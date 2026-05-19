@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       where: { tenantId, rol: "CIUDADANO", activo: true },
       select: {
         email: true,
-        preferenciaNotificacion: {
+        preferenciaNotificaciones: {
           select: { notificacionesEmail: true, notificacionesAviso: true },
         },
       },
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Filtrar por preferencias: sin registro → incluir por defecto
     const emails = ciudadanos
       .filter((u) => {
-        const pref = u.preferenciaNotificacion[0]
+        const pref = u.preferenciaNotificaciones[0]
         if (!pref) return true
         return pref.notificacionesEmail !== false && pref.notificacionesAviso !== false
       })

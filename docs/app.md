@@ -82,8 +82,8 @@ Esta funcionalidad está pensada para que los nuevos ciudadanos vean si hay disp
 ### 3.5 Mis reservas
 
 El ciudadano accede a la sección "Mis reservas" donde ve:
-- **Pestaña "Activas"**: sus reservas futuras con estado ACTIVA, con botón para cancelar.
-- **Pestaña "Historial"**: todas sus reservas pasadas y canceladas.
+- **Pestaña "Activas"**: sus reservas futuras con estado ACTIVA, con botón para cancelar y botón para ver el código QR.
+- **Pestaña "Historial"**: todas sus reservas pasadas y canceladas. Cada reserva finalizada muestra un botón **"Valorar"** si aún no ha sido valorada, o las estrellas ya dadas si ya la valoró.
 - **Pestaña "Lista de espera"**: sus posiciones actuales en listas de espera (ver sección 3.7).
 
 **Cancelación**: el ciudadano puede cancelar una reserva hasta **2 horas antes** del inicio. Si intenta cancelar después de ese plazo, el sistema se lo impide. Al cancelar, recibe un email de confirmación.
@@ -129,7 +129,26 @@ Cuando todos los slots de un horario están ocupados, el ciudadano puede apuntar
 - Solo se puede apuntar a slots que estén realmente ocupados (si queda libre, puede reservarlo directamente).
 - Los ciudadanos suspendidos no pueden unirse a listas de espera.
 
-### 3.8 Perfil de usuario
+### 3.8 Valoraciones de instalaciones
+
+Tras el uso de una instalación, el ciudadano puede dejar su opinión para ayudar a otros vecinos y proporcionar feedback al ayuntamiento.
+
+**Cómo valorar**:
+1. En "Mis reservas > Historial", cada reserva ya finalizada muestra el botón **"Valorar"**.
+2. Al hacer clic, se abre un dialog con un selector de estrellas (1 a 5) y un campo de comentario opcional.
+3. Al enviar, la valoración queda registrada — solo se puede valorar una vez por reserva.
+4. Si ya la valoró, se muestran las estrellas que dio en lugar del botón.
+
+**Reglas**:
+- Solo se puede valorar una reserva que ya haya finalizado.
+- Una valoración por reserva (no se puede modificar ni repetir).
+- Solo ciudadanos pueden valorar (no admins ni instructores).
+
+**Visibilidad pública**:
+- En la página principal y en el listado de instalaciones, cada tarjeta muestra la **media de estrellas** y el número total de valoraciones recibidas por esa instalación.
+- Esta información es visible para cualquier visitante, incluso sin cuenta.
+
+### 3.9 Perfil de usuario
 
 El ciudadano puede acceder a su perfil desde la cabecera, donde puede:
 
@@ -139,7 +158,7 @@ El ciudadano puede acceder a su perfil desde la cabecera, donde puede:
 - **Gestionar sus preferencias de notificación**: elegir qué tipo de avisos recibir (confirmaciones de reserva, recordatorios, cancelaciones, avisos del ayuntamiento)
 - **Consultar sus penalizaciones**: ver cuántos no-shows acumula y, si está suspendido, la fecha de fin y el motivo
 
-### 3.9 Notificaciones
+### 3.10 Notificaciones
 
 El sistema notifica al ciudadano por dos canales:
 
@@ -181,7 +200,7 @@ Vista completa de todas las reservas del ayuntamiento con:
 - **Tabla** con: ciudadano, instalación, fecha, hora, estado
 - **Cancelar reserva**: el admin puede cancelar cualquier reserva sin restricción de tiempo. El ciudadano recibe un email de notificación.
 - **Crear reserva manualmente**: el admin puede hacer una reserva a nombre de cualquier ciudadano registrado (útil para reservas telefónicas o presenciales).
-- **Marcar como "No presentado"**: para reservas pasadas, el admin puede marcar que el ciudadano no se presentó. Esto acumula penalizaciones en la cuenta del ciudadano (ver sección 4.7).
+- **Marcar como "No presentado"**: para reservas pasadas, el admin puede marcar que el ciudadano no se presentó. Esto acumula penalizaciones en la cuenta del ciudadano (ver sección 4.9).
 
 ### 4.3 Gestión de instalaciones
 
@@ -212,14 +231,14 @@ Los bloqueos permiten cerrar una instalación durante un periodo concreto (mante
 - **Eliminar** un bloqueo existente
 - Los slots bloqueados aparecen en gris en el calendario del ciudadano y no pueden reservarse.
 
-### 4.5 Gestión de usuarios administradores
+### 4.6 Gestión de usuarios administradores
 
 El admin puede gestionar las cuentas de su propio ayuntamiento:
 - **Ver** todos los administradores activos e inactivos
 - **Crear** nuevo administrador o instructor (con email, nombre y contraseña inicial)
 - **Desactivar** la cuenta de un administrador (no se puede eliminar, solo desactivar para conservar el historial)
 
-### 4.6 Tablón de avisos
+### 4.7 Tablón de avisos
 
 El admin gestiona los avisos que aparecen en la página principal del ciudadano:
 - **Ver** todos los avisos con tipo y fecha
@@ -227,7 +246,7 @@ El admin gestiona los avisos que aparecen en la página principal del ciudadano:
 - **Fecha de caducidad** (opcional): si se establece, el aviso desaparece automáticamente del tablón público al llegar esa fecha. En el panel admin se muestra con badge "Caducado" pero no se elimina.
 - **Editar** y **eliminar** avisos existentes
 
-### 4.7 Comunicados masivos
+### 4.8 Comunicados masivos
 
 El admin puede enviar mensajes directamente a todos los ciudadanos del ayuntamiento sin necesidad de ninguna herramienta externa:
 
@@ -240,7 +259,7 @@ El admin puede enviar mensajes directamente a todos los ciudadanos del ayuntamie
 
 Útil para avisos urgentes de cierre, averías, cambios de horario o eventos especiales.
 
-### 4.8 Sistema de penalizaciones
+### 4.9 Sistema de penalizaciones
 
 El admin puede gestionar el comportamiento de los ciudadanos que no se presentan:
 
@@ -258,12 +277,17 @@ El admin puede gestionar el comportamiento de los ciudadanos que no se presentan
 **Visibilidad**:
 - En la tabla de usuarios, cada ciudadano muestra su contador de no-shows y, si está suspendido, un badge rojo con la fecha de fin.
 
-### 4.9 Configuración del tenant
+### 4.10 Configuración del tenant
 
 El admin puede personalizar su espacio del ayuntamiento sin necesidad de intervención técnica:
 
+**Identidad del ayuntamiento**:
+- Nombre oficial del ayuntamiento y municipio (aparecen en los metadatos y documentación del sistema)
+- **Logo**: el admin sube una imagen (PNG, JPG o SVG, máx. 200 KB) desde su ordenador con un solo clic. El logo aparece de inmediato en la cabecera de la aplicación para todos los ciudadanos. Se puede eliminar en cualquier momento.
+- Si no hay logo configurado, se muestra un icono deportivo por defecto.
+
 **Identidad visual**:
-- Nombre del servicio (aparece en la cabecera y emails)
+- Nombre del servicio (texto que aparece junto al logo en la cabecera y en los emails)
 - Color primario y secundario (con vista previa en tiempo real)
 - Título SEO y descripción para buscadores
 
@@ -278,6 +302,16 @@ El admin puede personalizar su espacio del ayuntamiento sin necesidad de interve
 **Penalizaciones**:
 - Número de no-shows para activar suspensión automática (de 1 a 10, por defecto 3)
 - Duración de la suspensión en días (de 1 a 365, por defecto 14)
+
+### 4.11 Valoraciones de instalaciones
+
+El admin tiene acceso a todas las valoraciones recibidas por las instalaciones de su ayuntamiento desde la sección "Valoraciones" del panel:
+
+- **Tabla completa**: muestra todas las valoraciones con ciudadano, instalación, puntuación (estrellas), comentario y fecha.
+- **Media por instalación**: en la cabecera de la tabla se calcula y muestra la puntuación media global.
+- Las valoraciones son de solo lectura — el admin no puede modificarlas ni eliminarlas, solo consultarlas.
+
+Esta sección sirve para detectar patrones de satisfacción, identificar instalaciones con baja valoración o revisar comentarios específicos de los ciudadanos.
 
 ---
 
@@ -370,6 +404,9 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 
 | Funcionalidad | Descripción |
 |---------------|-------------|
+| Integración con sede electrónica | Conexión con el portal ciudadano del ayuntamiento para acceso con certificado digital o Cl@ve. |
+| Base de datos dedicada por tenant | Para ayuntamientos con alto volumen, aislar completamente los datos en una instancia PostgreSQL exclusiva. |
+| Facturación por uso (SaaS) | Panel de facturación para el superadmin con precios por tenant según número de reservas o usuarios activos. |
 
 ---
 
@@ -386,6 +423,7 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Cancelar reserva propia | ✓ |
 | Ver mis reservas e historial | ✓ |
 | Lista de espera para slots ocupados | ✓ |
+| Valorar instalaciones tras el uso | ✓ |
 | Editar perfil y contraseña | ✓ |
 | Notificaciones por email | ✓ |
 | Notificaciones push en el móvil | ✓ |
@@ -406,8 +444,10 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Gestionar cuentas de admin e instructor | ✓ |
 | Gestionar tablón de avisos con caducidad | ✓ |
 | Enviar comunicados masivos por email y/o push | ✓ |
+| Ver y analizar valoraciones de ciudadanos | ✓ |
+| Configurar nombre, municipio y logo del ayuntamiento | ✓ |
 | Configurar horarios y slots | ✓ |
-| Configurar identidad visual | ✓ |
+| Configurar identidad visual (colores, SEO) | ✓ |
 | Configurar límites y penalizaciones | ✓ |
 
 ### Instructor

@@ -73,7 +73,12 @@ const navItems = [
   },
 ]
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  logoUrl?: string | null
+  nombreServicio?: string
+}
+
+export function AdminSidebar({ logoUrl, nombreServicio = "Reservas Deportivas" }: AdminSidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -84,9 +89,13 @@ export function AdminSidebar() {
     <>
       {/* Botón de menú móvil */}
       <div className="md:hidden bg-slate-900 border-b border-slate-700 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🏓</span>
-          <div className="text-white font-semibold text-sm">Reservas Deportivas</div>
+        <div className="flex items-center gap-2 min-w-0">
+          {logoUrl ? (
+            <img src={logoUrl} alt={nombreServicio} className="h-7 w-auto object-contain max-w-[100px]" />
+          ) : (
+            <span className="text-xl">🏓</span>
+          )}
+          <div className="text-white font-semibold text-sm truncate">{nombreServicio}</div>
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -137,11 +146,20 @@ export function AdminSidebar() {
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-700 min-h-screen fixed left-0 top-0">
         {/* Logo/Título */}
-        <div className="px-6 py-8 border-b border-slate-700">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🏓</span>
-            <div className="text-white font-semibold">Reservas Deportivas</div>
+        <div className="px-6 py-6 border-b border-slate-700">
+          <div className="flex items-center gap-3 min-w-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt={nombreServicio} className="h-9 w-auto object-contain max-w-[140px]" />
+            ) : (
+              <span className="text-2xl">🏓</span>
+            )}
+            {!logoUrl && (
+              <div className="text-white font-semibold leading-tight">{nombreServicio}</div>
+            )}
           </div>
+          {logoUrl && (
+            <div className="text-slate-400 text-xs mt-2 truncate">{nombreServicio}</div>
+          )}
         </div>
 
         {/* Navegación */}

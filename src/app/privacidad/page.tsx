@@ -73,6 +73,12 @@ export default async function PaginaPrivacidad() {
                 <strong>Recuperación de acceso:</strong> Procesamiento de solicitudes de
                 restablecimiento de contraseña.
               </li>
+              <li>
+                <strong>Notificaciones push:</strong> Envío de recordatorios de reserva,
+                avisos de cancelación y alertas de turno en lista de espera a través de
+                notificaciones web push, únicamente si el ciudadano activa expresamente
+                esta funcionalidad desde su perfil.
+              </li>
             </ul>
           </section>
 
@@ -89,6 +95,11 @@ export default async function PaginaPrivacidad() {
                 <strong>Comunicaciones de servicio:</strong> Consentimiento del interesado
                 expresado en el momento del registro (Art. 6.1.a RGPD).
               </li>
+              <li>
+                <strong>Notificaciones push:</strong> Consentimiento explícito del
+                interesado, otorgado al activar las notificaciones desde el perfil
+                de usuario (Art. 6.1.a RGPD). Revocable en cualquier momento.
+              </li>
             </ul>
           </section>
 
@@ -100,6 +111,15 @@ export default async function PaginaPrivacidad() {
               <li>Nombre y apellidos</li>
               <li>Dirección de correo electrónico</li>
               <li>Historial de reservas (instalación, fecha y hora)</li>
+              <li>
+                Tokens de dispositivo para notificaciones push (solo si el ciudadano
+                activa las notificaciones; se eliminan al revocar el permiso)
+              </li>
+              <li>
+                Registro de incidencias de no presentación y, en su caso, periodo de
+                suspensión temporal del servicio
+              </li>
+              <li>Fecha y hora de aceptación de la presente política de privacidad</li>
             </ul>
           </section>
 
@@ -164,8 +184,11 @@ export default async function PaginaPrivacidad() {
             </ul>
             <p className="text-gray-700 mt-3">
               Para ejercer estos derechos, puede contactar con el Ayuntamiento de {municipio} a través
-              de sus canales oficiales, o directamente desde la sección{" "}
-              <strong>&ldquo;Mis datos&rdquo;</strong> de su cuenta en esta plataforma.
+              de sus canales oficiales, o directamente desde su{" "}
+              <a href="/perfil" className="text-blue-600 underline hover:text-blue-800">
+                perfil de usuario
+              </a>{" "}
+              en esta plataforma.
             </p>
           </section>
 

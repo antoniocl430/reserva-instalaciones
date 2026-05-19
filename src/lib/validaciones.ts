@@ -328,7 +328,13 @@ export type ConfiguracionTenantInput = z.infer<typeof schemaConfiguracionTenant>
 export const schemaActualizarTenant = z.object({
   nombre: z.string().min(1).max(200).optional(),
   municipio: z.string().min(1).max(200).optional(),
-  logoUrl: z.string().url("URL inválida").optional().nullable(),
+  logoUrl: z.union([
+    z.string().url("URL inválida"),
+    z.string().regex(
+      /^data:image\/(png|jpeg|jpg|gif|svg\+xml|webp);base64,/,
+      "Formato de imagen inválido"
+    ),
+  ]).optional().nullable(),
   configuracion: schemaConfiguracionTenant.optional(),
 })
 

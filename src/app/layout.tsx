@@ -140,15 +140,15 @@ async function obtenerColoresTenant(): Promise<ColoresTenant> {
   }
 }
 
-// Obtiene el nombre del servicio para el Header a partir del tenant actual
-async function obtenerNombreServicio(): Promise<string> {
+// Obtiene el nombre del servicio y el logo para el Header a partir del tenant actual
+async function obtenerDatosTenant(): Promise<{ nombreServicio: string; logoUrl: string | null }> {
   try {
     const headersList = await headers()
     const host = headersList.get("host") ?? ""
     const slug = extraerSlugDelHost(host)
     const tenant = await obtenerTenantPorSlug(slug)
 
-    if (!tenant) return "Reservas Deportivas"
+    if (!tenant) return { nombreServicio: "Reservas Deportivas", logoUrl: null }
 
     let configuracion: ConfiguracionTenant | null = null
     if (tenant.configuracion) {
@@ -162,9 +162,12 @@ async function obtenerNombreServicio(): Promise<string> {
       }
     }
 
-    return configuracion?.nombreServicio ?? tenant.nombre ?? "Reservas Deportivas"
+    return {
+      nombreServicio: configuracion?.nombreServicio ?? (tenant as any).nombre ?? "Reservas Deportivas",
+      logoUrl: (tenant as any).logoUrl ?? null,
+    }
   } catch {
-    return "Reservas Deportivas"
+    return { nombreServicio: "Reservas Deportivas", logoUrl: null }
   }
 }
 
@@ -173,7 +176,7 @@ export default async function LayoutRaiz({
 }: {
   children: React.ReactNode
 }) {
-  const nombreServicio = await obtenerNombreServicio()
+  const { nombreServicio, logoUrl } = await obtenerDatosTenant()
   const colores = await obtenerColoresTenant()
 
   return (
@@ -201,7 +204,7 @@ export default async function LayoutRaiz({
           Saltar al contenido principal
         </a>
         <Proveedores>
-          <Header nombreServicio={nombreServicio} />
+          <Header nombreServicio={nombreServicio} logoUrl={logoUrl} />
           <TransicionPagina>{children}</TransicionPagina>
           <Footer />
           <BannerCookies />
