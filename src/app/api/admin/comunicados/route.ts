@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const validacion = schemaCrearComunicado.safeParse(body)
   if (!validacion.success) {
-    return NextResponse.json({ error: validacion.error.errors }, { status: 400 })
+    return NextResponse.json({ error: validacion.error.issues }, { status: 400 })
   }
 
   const { titulo, cuerpo, canal } = validacion.data

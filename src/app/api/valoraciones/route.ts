@@ -38,11 +38,14 @@ export async function POST(request: NextRequest) {
 
   const validacion = schemaCrearValoracion.safeParse(body)
   if (!validacion.success) {
-    return NextResponse.json({ error: validacion.error.errors }, { status: 400 })
+    return NextResponse.json({ error: validacion.error.issues }, { status: 400 })
   }
 
   const { reservaId, puntuacion, comentario } = validacion.data
   const { id: usuarioId, tenantId } = sesion.user
+  if (!tenantId) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+  }
 
   // Buscar la reserva verificando que pertenece al ciudadano y al tenant
   const reserva = await prisma.reserva.findFirst({

@@ -208,8 +208,8 @@ const usuarioCiudadano = {
   email: 'juan@test.com',
   rol: 'CIUDADANO',
   noShows: 0,
-  suspendidoHasta: null,
-  motivoSuspension: null,
+  suspendidoHasta: null as string | null,
+  motivoSuspension: null as string | null,
   creadoEn: '2026-01-01T00:00:00Z',
 }
 

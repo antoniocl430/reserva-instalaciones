@@ -123,7 +123,7 @@ const entradaEsperando = {
   horaInicio: '10:00',
   estado: 'ESPERANDO',
   posicion: 2,
-  expiraEn: null,
+  expiraEn: null as string | null,
   instalacion: { id: 'inst-1', nombre: 'Pista 1' },
 }
 

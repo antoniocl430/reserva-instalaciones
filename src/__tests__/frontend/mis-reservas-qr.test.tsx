@@ -141,7 +141,7 @@ const reservaActiva = {
   horaInicio: '2099-06-15T08:00:00.000Z',
   horaFin: '2099-06-15T09:15:00.000Z',
   estado: 'ACTIVA',
-  qrToken: 'abc-123-token',
+  qrToken: 'abc-123-token' as string | null,
   instalacion: { id: 'inst-1', nombre: 'Pista 1' },
 }
 

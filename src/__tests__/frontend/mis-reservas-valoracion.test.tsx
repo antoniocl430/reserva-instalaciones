@@ -178,7 +178,7 @@ const reservaHistorialSinValorar = {
   estado: 'ACTIVA', // "ACTIVA" completada en historial
   qrToken: null,
   instalacion: { id: 'inst-1', nombre: 'Pista de Pádel 1' },
-  valoracion: null,
+  valoracion: null as { id: string; puntuacion: number; comentario: string } | null,
 }
 
 const reservaHistorialConValoracion = {
