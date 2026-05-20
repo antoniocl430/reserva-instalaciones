@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react"
 import { ThemeProvider } from "next-themes"
 import { Toaster } from "@/components/ui/toast"
 import { registrarServiceWorker } from "@/lib/push-client"
+import { AppProgressBar as BarraProgreso } from "next-nprogress-bar"
 
 // Componente cliente que envuelve la app con los proveedores necesarios
 export function Proveedores({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,12 @@ export function Proveedores({ children }: { children: React.ReactNode }) {
       <SessionProvider>
         {children}
         <Toaster />
+        <BarraProgreso
+          height="3px"
+          color="var(--color-primario)"
+          options={{ showSpinner: false }}
+          shallowRouting
+        />
       </SessionProvider>
     </ThemeProvider>
   )
