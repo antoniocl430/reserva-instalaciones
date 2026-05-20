@@ -18,7 +18,15 @@ const RUTA_ADMIN_LOGIN = "/admin/login"
 // Rutas de API que son públicas (no requieren autenticación)
 // UI-FLOWS.md: la disponibilidad y las instalaciones son públicas (GAP-03)
 // /api/verificar es pública: permite escanear QR sin estar autenticado
-const RUTAS_API_PUBLICAS = ["/api/auth", "/api/instalaciones", "/api/disponibilidad", "/api/verificar"]
+// /api/verificar-email y /api/reenviar-verificacion: flujo de verificación de email al registro
+const RUTAS_API_PUBLICAS = [
+  "/api/auth",
+  "/api/instalaciones",
+  "/api/disponibilidad",
+  "/api/verificar",
+  "/api/verificar-email",
+  "/api/reenviar-verificacion",
+]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -165,5 +173,7 @@ export const config = {
     "/api/instalaciones/:path*",
     "/api/avisos/:path*",
     "/api/push/:path*",
+    "/api/verificar-email",
+    "/api/reenviar-verificacion",
   ],
 }

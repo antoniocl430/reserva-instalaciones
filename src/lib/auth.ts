@@ -68,6 +68,11 @@ export const opcionesAuth: NextAuthOptions = {
 
         if (!usuario || !usuario.activo || !passwordValida) return null
 
+        // Bloquear login si el email no ha sido verificado
+        if (!usuario.emailVerificado) {
+          throw new Error("EMAIL_NO_VERIFICADO")
+        }
+
         // Login exitoso: resetear el rate limit para esta IP
         resetearRateLimit(ip)
 

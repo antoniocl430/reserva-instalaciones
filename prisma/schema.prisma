@@ -57,7 +57,10 @@ model Usuario {
   noShows          Int       @default(0)           // Contador de veces que no se presentó a una reserva
   suspendidoHasta  DateTime?                        // Si está suspendido, fecha hasta la que dura la suspensión
   motivoSuspension   String?                          // Motivo de la suspensión activa
-  aceptaPrivacidadEn DateTime?                        // Fecha y hora en que el usuario aceptó la política de privacidad (RGPD)
+  aceptaPrivacidadEn          DateTime?  // Fecha y hora en que el usuario aceptó la política de privacidad (RGPD)
+  emailVerificado             Boolean   @default(false)  // true si el email fue verificado via enlace
+  tokenVerificacion           String?   @unique           // Token de un solo uso para verificar el email
+  tokenVerificacionExpira     DateTime?                   // Expiración del token (24h desde generación)
   creadoEn           DateTime  @default(now())
   actualizadoEn    DateTime  @updatedAt
 

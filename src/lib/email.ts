@@ -719,6 +719,66 @@ function plantillaRecordatorioGrupo(
 }
 
 // ---------------------------------------------------------------------------
+// Verificación de email al registro
+// ---------------------------------------------------------------------------
+
+/**
+ * Envía email de verificación al ciudadano recién registrado.
+ * El enlace contiene un token único que caduca en 24 horas.
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ */
+export async function enviarEmailVerificacion({
+  emailUsuario,
+  nombreUsuario,
+  token,
+  baseUrl,
+}: {
+  emailUsuario: string
+  nombreUsuario: string
+  token: string
+  baseUrl: string
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de verificación omitido")
+    return
+  }
+
+  const enlaceVerificacion = `${baseUrl}/verificar-email?token=${token}`
+
+  const resultado = await getResend().emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailUsuario),
+    subject: "Verifica tu cuenta — Reservas Pádel",
+    html: plantillaVerificacion(nombreUsuario, enlaceVerificacion),
+  })
+  console.log("[Email] Verificación de email →", JSON.stringify(resultado))
+}
+
+function plantillaVerificacion(nombreUsuario: string, enlaceVerificacion: string): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #16a34a; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Verifica tu cuenta</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreUsuario}</strong>:</p>
+        <p>Gracias por registrarte. Haz clic en el botón de abajo para verificar tu cuenta y empezar a reservar instalaciones:</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${enlaceVerificacion}" style="display: inline-block; background: #16a34a; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Verificar mi cuenta</a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">O copia y pega este enlace en tu navegador:</p>
+        <p style="font-size: 12px; color: #6b7280; word-break: break-all;">${enlaceVerificacion}</p>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Este enlace expira en 24 horas. Si no creaste esta cuenta, ignora este email.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
 // Comunicados masivos
 // ---------------------------------------------------------------------------
 

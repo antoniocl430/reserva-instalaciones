@@ -1,12 +1,13 @@
 /**
  * Tests para POST /api/auth/registro
- * TDD: fase RED — se escriben antes de la implementación de persistencia RGPD
+ * TDD: actualizados para reflejar el flujo con verificación de email obligatoria
  *
  * Verifica que:
  *   - Un registro válido con aceptaPrivacidad:true persiste aceptaPrivacidadEn como Date
  *   - Un registro sin aceptaPrivacidad devuelve 400 (validación Zod)
  *   - Un email duplicado en el mismo tenant devuelve 409
- *   - Un registro válido devuelve 201 con { ok: true, email }
+ *   - Un registro válido devuelve 201 con { mensaje: "..." } (no { ok: true, email })
+ *   - El token de verificación se guarda en BD y se envía email de verificación
  */
 
 // ─── Mock de Prisma ───────────────────────────────────────────────────────────
@@ -22,6 +23,14 @@ jest.mock("@/lib/prisma", () => {
 // Mock del módulo tenant para aislar del entorno real
 jest.mock("@/lib/tenant", () => ({
   obtenerTenantIdPorSlug: jest.fn().mockResolvedValue("tenant-uuid-desarrollo"),
+}))
+
+// Mock del módulo email — evita llamadas reales a Resend en tests
+jest.mock("@/lib/email", () => ({
+  enviarEmailVerificacion: jest.fn().mockResolvedValue(undefined),
+  enviarEmailReserva: jest.fn().mockResolvedValue(undefined),
+  enviarEmailCancelacion: jest.fn().mockResolvedValue(undefined),
+  enviarEmailRecuperacion: jest.fn().mockResolvedValue(undefined),
 }))
 
 import { NextRequest } from "next/server"
@@ -65,6 +74,10 @@ describe("POST /api/auth/registro", () => {
       email: "ana@ejemplo.com",
       nombre: "Ana García",
       aceptaPrivacidadEn: new Date(),
+    })
+    prismaMock.usuario.update.mockResolvedValue({
+      id: "usuario-uuid-1",
+      tokenVerificacion: "token-generado",
     })
 
     const req = crearRequest(BODY_VALIDO)
@@ -115,8 +128,8 @@ describe("POST /api/auth/registro", () => {
     expect(body.error).toMatch(/ya está registrado/i)
   })
 
-  // ── 4. Registro exitoso devuelve 201 con email ────────────────────────────
-  it("devuelve 201 con ok:true y email cuando el registro es válido", async () => {
+  // ── 4. Registro exitoso devuelve 201 con mensaje de verificación ──────────
+  it("devuelve 201 con mensaje de verificación y envía email de verificación", async () => {
     prismaMock.usuario.findFirst.mockResolvedValue(null)
     prismaMock.usuario.create.mockResolvedValue({
       id: "usuario-uuid-2",
@@ -124,14 +137,28 @@ describe("POST /api/auth/registro", () => {
       nombre: "Ana García",
       aceptaPrivacidadEn: new Date(),
     })
+    prismaMock.usuario.update.mockResolvedValue({
+      id: "usuario-uuid-2",
+      tokenVerificacion: "token-generado",
+    })
 
     const req = crearRequest(BODY_VALIDO)
     const res = await POST(req)
     const body = await res.json()
 
     expect(res.status).toBe(201)
-    expect(body.ok).toBe(true)
-    expect(body.email).toBe("ana@ejemplo.com")
+    // La respuesta es un mensaje de verificación, no el usuario directamente
+    expect(body.mensaje).toBeDefined()
+    expect(body.ok).toBeUndefined()
+    // Debe guardar el token en BD
+    expect(prismaMock.usuario.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tokenVerificacion: expect.any(String),
+          tokenVerificacionExpira: expect.any(Date),
+        }),
+      })
+    )
   })
 
   // ── 5. Tenant no existe → 503 ─────────────────────────────────────────────

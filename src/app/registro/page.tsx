@@ -1,17 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { Loader2, Mail } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PaginaRegistro() {
   const router = useRouter()
+  const { toast } = useToast()
   const [destino, setDestino] = useState("/dashboard")
 
   // Leer callbackUrl directamente de window.location (solución para bug de useSearchParams en Next.js)
@@ -38,6 +39,10 @@ export default function PaginaRegistro() {
   const [error, setError] = useState("")
   const [cargando, setCargando] = useState(false)
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false)
+
+  // Estado para mostrar la pantalla de confirmación de email
+  const [emailEnviado, setEmailEnviado] = useState(false)
+  const [enviandoReenvio, setEnviandoReenvio] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -70,23 +75,100 @@ export default function PaginaRegistro() {
       return
     }
 
-    // Auto-login tras registro exitoso
-    await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
+    // El backend devuelve 201 con { mensaje } — mostrar pantalla de confirmación
+    // No hay auto-login; el usuario debe verificar su email primero
+    setEmailEnviado(true)
+    setCargando(false)
+  }
 
-    // Leer destino en el momento del submit (no confiar en estado previo)
-    const params = new URLSearchParams(window.location.search)
-    const callbackUrl = params.get("callbackUrl")
-    const esCallbackValido = callbackUrl &&
-                             callbackUrl.startsWith("/") &&
-                             !callbackUrl.startsWith("/login") &&
-                             !callbackUrl.startsWith("/registro")
-    const destinoFinal = esCallbackValido ? callbackUrl : "/dashboard"
+  async function handleReenviar() {
+    setEnviandoReenvio(true)
 
-    router.push(destinoFinal)
+    try {
+      const respuesta = await fetch("/api/reenviar-verificacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const data = await respuesta.json()
+
+      if (respuesta.ok) {
+        toast({
+          title: "Email reenviado",
+          description: "Revisa tu bandeja de entrada y la carpeta de spam.",
+        })
+      } else {
+        toast({
+          title: "Error al reenviar",
+          description: data.error || "No se pudo reenviar el email.",
+          variant: "destructive",
+        })
+      }
+    } catch {
+      toast({
+        title: "Error de conexión",
+        description: "Inténtalo de nuevo más tarde.",
+        variant: "destructive",
+      })
+    } finally {
+      setEnviandoReenvio(false)
+    }
+  }
+
+  // Pantalla de confirmación: se muestra tras el registro exitoso
+  if (emailEnviado) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-sm">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center gap-4 text-center">
+              {/* Icono de sobre / email */}
+              <div className="rounded-full bg-blue-50 p-4 dark:bg-blue-950/40">
+                <Mail className="h-10 w-10 text-blue-600" />
+              </div>
+
+              <div>
+                <h1 className="text-xl font-bold text-foreground">
+                  Revisa tu bandeja de entrada
+                </h1>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Te hemos enviado un enlace de verificación a{" "}
+                  <span className="font-medium text-foreground">{email}</span>.
+                  Haz clic en él para activar tu cuenta.
+                </p>
+              </div>
+
+              {/* Aviso de caducidad */}
+              <p className="text-xs text-muted-foreground/70 bg-muted rounded-lg px-3 py-2">
+                El enlace caduca en 24 horas. Si no lo ves, revisa la carpeta de spam.
+              </p>
+
+              {/* Botón de reenvío */}
+              <button
+                type="button"
+                onClick={handleReenviar}
+                disabled={enviandoReenvio}
+                className="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-center text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400"
+              >
+                {enviandoReenvio ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enviando...
+                  </span>
+                ) : "Reenviar email"}
+              </button>
+
+              <Link
+                href="/login"
+                className="text-sm text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              >
+                Ir al inicio de sesión
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    )
   }
 
   return (
