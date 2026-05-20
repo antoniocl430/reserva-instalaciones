@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import { Loader2, WifiOff } from "lucide-react"
 
-const UMBRAL_MS = 3_000 // TODO: cambiar a 10_000 en producción
+const UMBRAL_MS = 5_000
 
 export function MensajeCargaLenta() {
   const pathname = usePathname()
