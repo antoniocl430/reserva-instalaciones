@@ -407,3 +407,105 @@ describe('POST /api/reservas', () => {
     expect(body.reserva.id).toBe('reserva-nueva')
   })
 })
+
+// ─── Regla: un ciudadano solo puede tener 1 reserva activa por día ────────────
+// La verificación ocurre DENTRO de la transacción (LESSON-001).
+// Cuando el ciudadano ya tiene 1 reserva en ese día, la ruta lanza LIMITE_RESERVAS
+// y devuelve 409 con el mensaje "Ya tienes una reserva activa para este día".
+
+describe('POST /api/reservas — límite de 1 reserva por día', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    prismaMock.usuario.findMany.mockResolvedValue([])
+  })
+
+  it('debería devolver 409 cuando el ciudadano ya tiene 1 reserva activa ese día', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
+    prismaMock.bloqueo.findFirst.mockResolvedValue(null)
+    // Sin configuración de límite global → usa default
+    prismaMock.tenant.findUnique.mockResolvedValue({ configuracion: null })
+    prismaMock.usuario.findUnique.mockResolvedValue({ suspendidoHasta: null, motivoSuspension: null })
+
+    // La transacción ejecuta el callback con prismaMock como cliente tx
+    prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
+    // El conteo de reservas ACTIVAS del día devuelve 1 → supera el límite diario
+    prismaMock.reserva.count.mockResolvedValue(1)
+
+    const req = new Request('http://localhost/api/reservas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyValido),
+    }) as any
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(body.error).toBe('Ya tienes una reserva activa para este día')
+  })
+
+  it('debería devolver 409 cuando el ciudadano tiene 3 reservas activas ese día (nunca puede haber más de 1)', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
+    prismaMock.bloqueo.findFirst.mockResolvedValue(null)
+    prismaMock.tenant.findUnique.mockResolvedValue({ configuracion: null })
+    prismaMock.usuario.findUnique.mockResolvedValue({ suspendidoHasta: null, motivoSuspension: null })
+
+    prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
+    // Aunque tenga más de 1, la regla se activa desde >= 1
+    prismaMock.reserva.count.mockResolvedValue(3)
+
+    const req = new Request('http://localhost/api/reservas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyValido),
+    }) as any
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(body.error).toBe('Ya tienes una reserva activa para este día')
+  })
+
+  it('debería devolver 201 cuando el ciudadano no tiene reservas activas ese día (camino feliz)', async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.instalacion.findFirst.mockResolvedValue(instalacionActiva)
+    prismaMock.bloqueo.findFirst.mockResolvedValue(null)
+    prismaMock.tenant.findUnique.mockResolvedValue({ configuracion: null })
+    prismaMock.usuario.findUnique.mockResolvedValue({ suspendidoHasta: null, motivoSuspension: null })
+
+    prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
+    // 0 reservas activas ese día → pasa el límite diario
+    prismaMock.reserva.count.mockResolvedValue(0)
+    // Slot libre → no hay SLOT_OCUPADO
+    prismaMock.reserva.findFirst.mockResolvedValue(null)
+
+    const reservaCreada = {
+      id: 'reserva-dia-ok',
+      tenantId: TENANT_ID,
+      usuarioId: 'usuario-1',
+      instalacionId: 'inst-1',
+      fecha: new Date(`${FECHA_FUTURA}T00:00:00.000Z`),
+      horaInicio: new Date(`${FECHA_FUTURA}T10:30:00.000Z`),
+      horaFin: new Date(`${FECHA_FUTURA}T11:45:00.000Z`),
+      estado: 'ACTIVA',
+      creadoEn: new Date(),
+      canceladoEn: null,
+      canceladoPor: null,
+      instalacion: { nombre: 'Pista 1' },
+    }
+    prismaMock.reserva.create.mockResolvedValue(reservaCreada)
+
+    const req = new Request('http://localhost/api/reservas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyValido),
+    }) as any
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(201)
+    expect(body).toHaveProperty('reserva')
+    expect(body.reserva.id).toBe('reserva-dia-ok')
+  })
+})

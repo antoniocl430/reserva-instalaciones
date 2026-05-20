@@ -29,17 +29,26 @@ async function obtenerPistas(tenantId: string | undefined): Promise<Instalacion[
   }
 }
 
-// Obtiene los avisos activos del tenant directamente desde la BD
+// Obtiene los avisos activos y vigentes del tenant directamente desde la BD
 async function obtenerAvisos(tenantId: string | undefined): Promise<Aviso[]> {
   if (!tenantId) return []
   try {
+    const inicioDia = new Date()
+    inicioDia.setUTCHours(0, 0, 0, 0)
     const avisos = await prisma.aviso.findMany({
-      where: { tenantId, activo: true },
+      where: {
+        tenantId,
+        activo: true,
+        OR: [
+          { caducaEn: null },
+          { caducaEn: { gte: inicioDia } },
+        ],
+      },
       select: { id: true, titulo: true, descripcion: true, tipo: true, fecha: true },
       orderBy: { fecha: "desc" },
     })
     // Serializar fechas a string ISO para que sean compatibles con el tipo Aviso del cliente
-    return avisos.map((a) => ({ ...a, fecha: a.fecha.toISOString() }))
+    return avisos.map((a) => ({ ...a, fecha: a.fecha.toISOString(), tipo: a.tipo as Aviso["tipo"] }))
   } catch {
     return []
   }

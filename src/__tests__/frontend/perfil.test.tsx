@@ -407,9 +407,9 @@ describe('PaginaPerfil', () => {
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      const enlace = screen.getByRole('link', { name: /Volver/i })
+      // El enlace de vuelta al inicio dice "Inicio" (con icono ChevronLeft)
+      const enlace = document.querySelector('a[href="/"]')
       expect(enlace).toBeInTheDocument()
-      expect(enlace).toHaveAttribute('href', '/')
     })
   })
 

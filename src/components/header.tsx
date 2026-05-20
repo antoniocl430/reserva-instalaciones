@@ -33,7 +33,7 @@ export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: Head
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border sticky top-0 z-50">
       <div className="w-full px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -227,7 +227,7 @@ export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: Head
           {/* Botón hamburger — solo móvil */}
           {!cargandoSesion && (
             <button
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
               onClick={() => setMenuAbierto(!menuAbierto)}
               aria-label="Abrir menú"
             >
@@ -245,7 +245,7 @@ export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: Head
       <AnimatePresence>
         {!cargandoSesion && menuAbierto && (
           <motion.div
-            className="md:hidden border-t border-gray-200 bg-white shadow-md"
+            className="md:hidden border-t border-border bg-background shadow-md"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}

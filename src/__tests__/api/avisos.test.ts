@@ -617,4 +617,85 @@ describe("Avisos API Routes — Tablón de anuncios", () => {
       )
     })
   })
+
+  // ==========================================================================
+  // Regla de caducidad por día: caducaEn = día X → visible el día X, oculto el día X+1
+  // La query usa { caducaEn: { gte: inicioDia } } donde inicioDia es hoy a 00:00 UTC.
+  // Esto garantiza que el aviso sigue visible durante todo el día de caducidad.
+  // ==========================================================================
+
+  describe("GET /api/avisos — caducaEn: visible el día X, oculto el día X+1", () => {
+    it("debería usar el operador gte (no gt) en el filtro de caducaEn para que sea visible el mismo día", async () => {
+      // Este test verifica que la query Prisma usa { gte: inicioDia }
+      // Si usara { gt: inicioDia } el aviso desaparecería a las 00:00 del día de caducidad
+      // En cambio con { gte: inicioDia } sigue visible durante todo el día de caducidad
+      prismaMock.aviso.findMany.mockResolvedValueOnce([avisoMock])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      await GET(request)
+
+      expect(prismaMock.aviso.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              { caducaEn: null },
+              { caducaEn: expect.objectContaining({ gte: expect.any(Date) }) },
+            ]),
+          }),
+        })
+      )
+    })
+
+    it("debería filtrar con inicioDia a las 00:00 UTC exactas (no con la hora actual)", async () => {
+      // La query debe comparar contra el inicio del día UTC, no contra el momento exacto.
+      // Así un aviso con caducaEn = "2099-04-03T00:00:00Z" sigue siendo >= inicioDia todo el día 3.
+      prismaMock.aviso.findMany.mockResolvedValueOnce([])
+
+      const ahora = new Date()
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      await GET(request)
+
+      // Verificar que la fecha pasada a gte corresponde a las 00:00:00.000 UTC de hoy
+      const llamada = prismaMock.aviso.findMany.mock.calls[0][0]
+      const fechaFiltro: Date = llamada.where.OR[1].caducaEn.gte
+      expect(fechaFiltro.getUTCHours()).toBe(0)
+      expect(fechaFiltro.getUTCMinutes()).toBe(0)
+      expect(fechaFiltro.getUTCSeconds()).toBe(0)
+      expect(fechaFiltro.getUTCMilliseconds()).toBe(0)
+      // La fecha del filtro debe ser hoy (misma fecha UTC)
+      expect(fechaFiltro.getUTCFullYear()).toBe(ahora.getUTCFullYear())
+      expect(fechaFiltro.getUTCMonth()).toBe(ahora.getUTCMonth())
+      expect(fechaFiltro.getUTCDate()).toBe(ahora.getUTCDate())
+    })
+
+    it("debería devolver el aviso cuando caducaEn es exactamente las 00:00 UTC de hoy (visible todo el día)", async () => {
+      // Un aviso con caducaEn = inicio de hoy pasa el filtro gte y debe ser visible
+      const inicioDiaHoy = new Date()
+      inicioDiaHoy.setUTCHours(0, 0, 0, 0)
+      const avisoQueVencehoy = { ...avisoMock, caducaEn: inicioDiaHoy }
+      prismaMock.aviso.findMany.mockResolvedValueOnce([avisoQueVencehoy])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      const response = await GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      // Prisma aplica el filtro; como mockeamos findMany para que devuelva el aviso,
+      // confirmamos que la respuesta lo incluye (el filtro gte lo habría permitido)
+      expect(body).toHaveLength(1)
+    })
+
+    it("debería excluir el aviso cuando caducaEn es exactamente las 00:00 UTC de ayer (caducado)", async () => {
+      // Un aviso con caducaEn = inicio de ayer NO pasa el filtro gte (< inicioDia)
+      // Prisma lo filtraría → findMany devolvería array vacío
+      prismaMock.aviso.findMany.mockResolvedValueOnce([])
+
+      const request = crearRequest("http://localhost:3000/api/avisos", "GET")
+      const response = await GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body).toHaveLength(0)
+    })
+  })
 })

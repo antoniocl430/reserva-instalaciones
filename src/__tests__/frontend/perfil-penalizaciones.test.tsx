@@ -527,7 +527,8 @@ describe('PaginaPerfil — Sección penalizaciones', () => {
     render(React.createElement(PaginaPerfil))
 
     await waitFor(() => {
-      expect(screen.getByText(/cuenta está suspendida/i)).toBeInTheDocument()
+      // El componente muestra "Cuenta suspendida hasta [fecha]. Motivo: [motivo]"
+      expect(screen.getByText(/Cuenta suspendida hasta/i)).toBeInTheDocument()
       expect(screen.getByText(/Demasiados no-shows/i)).toBeInTheDocument()
     })
   })

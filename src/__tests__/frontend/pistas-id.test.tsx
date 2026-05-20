@@ -204,10 +204,10 @@ describe('PaginaDetallePista', () => {
     })
 
     // "Disponible" aparece tanto en la leyenda como en el slot.
-    // El que está en el slot es un <div class="text-xs opacity-75">
+    // El que está en el slot es un <div class="text-xs opacity-70">
     const todasLasEtiquetas = screen.getAllByText('Disponible')
     const etiquetaEnSlot = todasLasEtiquetas.find(
-      (el) => el.className.includes('text-xs') && el.className.includes('opacity-75')
+      (el) => el.className.includes('text-xs') && el.className.includes('opacity-70')
     )!
     expect(etiquetaEnSlot).toBeDefined()
     const contenedorSlot = etiquetaEnSlot.parentElement!
@@ -232,10 +232,10 @@ describe('PaginaDetallePista', () => {
     })
 
     // "Ocupado" aparece tanto en la leyenda como en el slot.
-    // El que está en el slot es un <div class="text-xs opacity-75">
+    // El que está en el slot es un <div class="text-xs opacity-70">
     const todasLasEtiquetas = screen.getAllByText('Ocupado')
     const etiquetaEnSlot = todasLasEtiquetas.find(
-      (el) => el.className.includes('text-xs') && el.className.includes('opacity-75')
+      (el) => el.className.includes('text-xs') && el.className.includes('opacity-70')
     )!
     expect(etiquetaEnSlot).toBeDefined()
     const contenedorSlot = etiquetaEnSlot.parentElement!

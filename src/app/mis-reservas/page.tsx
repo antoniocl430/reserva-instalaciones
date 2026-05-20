@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { Loader2, ChevronLeft, Calendar, Clock, QrCode, X, Star, ClockIcon, ListOrdered } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
@@ -22,7 +21,6 @@ import { useToast } from "@/hooks/use-toast"
 import QRCode from "react-qr-code"
 import StarRating from "@/components/StarRating"
 
-// Tipos de la API
 interface Valoracion {
   id: string
   puntuacion: number
@@ -36,10 +34,7 @@ interface Reserva {
   horaFin: string
   estado: "ACTIVA" | "CANCELADA"
   qrToken: string | null
-  instalacion: {
-    id: string
-    nombre: string
-  }
+  instalacion: { id: string; nombre: string }
   valoracion: Valoracion | null
 }
 
@@ -63,28 +58,19 @@ export default function PaginaMisReservas() {
   const router = useRouter()
   const { toast } = useToast()
 
-  // Título de la pestaña del navegador
   useEffect(() => { document.title = "Mis reservas" }, [])
 
   const [datos, setDatos] = useState<DatosReservas | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState("")
-
-  // Estado del tab Lista de espera
   const [entradasEspera, setEntradasEspera] = useState<EntradaEspera[]>([])
   const [accionandoEspera, setAccionandoEspera] = useState<string | null>(null)
-
-  // Estado del dialog de cancelación
   const [reservaACancelar, setReservaACancelar] = useState<Reserva | null>(null)
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [cancelando, setCancelando] = useState(false)
   const [errorCancelacion, setErrorCancelacion] = useState("")
-
-  // Estado del dialog QR
   const [reservaQR, setReservaQR] = useState<Reserva | null>(null)
   const [dialogQRAbierto, setDialogQRAbierto] = useState(false)
-
-  // Estado del dialog de valoración
   const [reservaAValorar, setReservaAValorar] = useState<Reserva | null>(null)
   const [dialogValoracionAbierto, setDialogValoracionAbierto] = useState(false)
   const [puntuacionSeleccionada, setPuntuacionSeleccionada] = useState(0)
@@ -92,7 +78,6 @@ export default function PaginaMisReservas() {
   const [enviandoValoracion, setEnviandoValoracion] = useState(false)
   const [errorValoracion, setErrorValoracion] = useState("")
 
-  // Carga las reservas y la lista de espera del usuario
   async function cargarReservas() {
     try {
       const [resReservas, resEspera] = await Promise.all([
@@ -117,11 +102,8 @@ export default function PaginaMisReservas() {
     }
   }
 
-  useEffect(() => {
-    cargarReservas()
-  }, [])
+  useEffect(() => { cargarReservas() }, [])
 
-  // Abandona la lista de espera para una entrada
   async function abandonarEspera(entrada: EntradaEspera) {
     setAccionandoEspera(entrada.id)
     try {
@@ -138,7 +120,6 @@ export default function PaginaMisReservas() {
     }
   }
 
-  // Confirma la reserva desde la lista de espera
   async function confirmarDesdeEspera(entrada: EntradaEspera) {
     setAccionandoEspera(entrada.id)
     try {
@@ -157,14 +138,12 @@ export default function PaginaMisReservas() {
     }
   }
 
-  // Abre el dialog de confirmación de cancelación
   function abrirCancelacion(reserva: Reserva) {
     setReservaACancelar(reserva)
     setErrorCancelacion("")
     setDialogAbierto(true)
   }
 
-  // Cierra el dialog de cancelación
   function cerrarDialog() {
     if (cancelando) return
     setDialogAbierto(false)
@@ -172,31 +151,20 @@ export default function PaginaMisReservas() {
     setErrorCancelacion("")
   }
 
-  // Confirma la cancelación llamando a PATCH /api/reservas/[id]/cancelar
   async function confirmarCancelacion() {
     if (!reservaACancelar) return
     setCancelando(true)
     setErrorCancelacion("")
-
     try {
-      const res = await fetch(`/api/reservas/${reservaACancelar.id}/cancelar`, {
-        method: "PATCH",
-      })
-
+      const res = await fetch(`/api/reservas/${reservaACancelar.id}/cancelar`, { method: "PATCH" })
       const json = await res.json()
-
       if (!res.ok) {
         setErrorCancelacion(json.error ?? "Error al cancelar la reserva")
         return
       }
-
-      // Cancelación exitosa: cerrar dialog, mostrar confirmación y recargar reservas
       setDialogAbierto(false)
       setReservaACancelar(null)
-      toast({
-        title: "Reserva cancelada",
-        description: "La reserva ha sido cancelada correctamente.",
-      })
+      toast({ title: "Reserva cancelada", description: "La reserva ha sido cancelada correctamente." })
       setCargando(true)
       await cargarReservas()
     } catch {
@@ -206,7 +174,6 @@ export default function PaginaMisReservas() {
     }
   }
 
-  // Abre el dialog de valoración para una reserva
   function abrirValoracion(reserva: Reserva) {
     setReservaAValorar(reserva)
     setPuntuacionSeleccionada(0)
@@ -215,7 +182,6 @@ export default function PaginaMisReservas() {
     setDialogValoracionAbierto(true)
   }
 
-  // Cierra el dialog de valoración
   function cerrarDialogValoracion() {
     if (enviandoValoracion) return
     setDialogValoracionAbierto(false)
@@ -223,12 +189,10 @@ export default function PaginaMisReservas() {
     setErrorValoracion("")
   }
 
-  // Envía la valoración a la API
   async function enviarValoracion() {
     if (!reservaAValorar || puntuacionSeleccionada === 0) return
     setEnviandoValoracion(true)
     setErrorValoracion("")
-
     try {
       const res = await fetch("/api/valoraciones", {
         method: "POST",
@@ -239,34 +203,22 @@ export default function PaginaMisReservas() {
           comentario: comentarioValoracion.trim() || undefined,
         }),
       })
-
       const json = await res.json()
-
       if (!res.ok) {
         setErrorValoracion(json.error ?? "Error al enviar la valoración")
         return
       }
-
-      // Valoración creada: actualizar la lista sin recargar toda la página
       setDialogValoracionAbierto(false)
       setReservaAValorar(null)
-
-      // Actualizar el historial local con la nueva valoración
       if (datos) {
         setDatos({
           ...datos,
           historial: datos.historial.map((r) =>
-            r.id === reservaAValorar.id
-              ? { ...r, valoracion: json.valoracion }
-              : r
+            r.id === reservaAValorar.id ? { ...r, valoracion: json.valoracion } : r
           ),
         })
       }
-
-      toast({
-        title: "Valoración enviada",
-        description: "Gracias por tu opinión.",
-      })
+      toast({ title: "Valoración enviada", description: "Gracias por tu opinión." })
     } catch {
       setErrorValoracion("Error de conexión. Inténtalo de nuevo.")
     } finally {
@@ -274,262 +226,261 @@ export default function PaginaMisReservas() {
     }
   }
 
-  // Determina el badge de estado para reservas del historial
-  function badgeHistorial(reserva: Reserva) {
-    if (reserva.estado === "CANCELADA") {
-      return <Badge variant="destructive">Cancelada</Badge>
-    }
-    // Estado ACTIVA en historial significa que ya pasó (completada)
-    return (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-600">
-        Completada
-      </Badge>
-    )
-  }
-
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
+    <main className="min-h-screen bg-background">
+      <div className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
         {/* Cabecera */}
-        <div>
+        <div className="mb-8">
           <Link
             href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5"
           >
-            ← Volver al inicio
+            <ChevronLeft className="w-4 h-4" />
+            Inicio
           </Link>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mis reservas</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Gestiona tus reservas de instalaciones deportivas
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Mis reservas</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Gestiona tus reservas de instalaciones deportivas</p>
         </div>
 
-        {/* Error global de carga */}
+        {/* Error global */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm mb-6">
             {error}
           </div>
         )}
 
-        {/* Estado de carga */}
+        {/* Skeleton de carga */}
         {cargando ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+          <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
+              <Skeleton key={i} className="h-24 w-full rounded-xl" />
             ))}
           </div>
         ) : (
           <Tabs defaultValue="activas" className="w-full">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="activas" className="text-xs sm:text-sm px-1 sm:px-3">
+            {/* Tabs */}
+            <TabsList className="grid w-full grid-cols-3 bg-muted/60 p-1 rounded-xl h-auto mb-6">
+              <TabsTrigger value="activas" className="rounded-lg text-xs sm:text-sm py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Calendar className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />
                 Activas
                 {datos && datos.activas.length > 0 && (
-                  <span className="ml-1 sm:ml-1.5 bg-blue-100 text-blue-700 text-xs font-semibold px-1 sm:px-1.5 py-0.5 rounded-full">
+                  <span className="ml-1.5 bg-blue-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {datos.activas.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="historial" className="text-xs sm:text-sm px-1 sm:px-3">Historial</TabsTrigger>
-              <TabsTrigger value="espera" className="text-xs sm:text-sm px-1 sm:px-3">
+              <TabsTrigger value="historial" className="rounded-lg text-xs sm:text-sm py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <ClockIcon className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />
+                Historial
+              </TabsTrigger>
+              <TabsTrigger value="espera" className="rounded-lg text-xs sm:text-sm py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <ListOrdered className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />
                 <span className="hidden sm:inline">Lista de espera</span>
                 <span className="sm:hidden">Espera</span>
                 {entradasEspera.length > 0 && (
-                  <span className="ml-1 sm:ml-1.5 bg-orange-100 text-orange-700 text-xs font-semibold px-1 sm:px-1.5 py-0.5 rounded-full">
+                  <span className="ml-1.5 bg-orange-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {entradasEspera.length}
                   </span>
                 )}
               </TabsTrigger>
             </TabsList>
 
-            {/* Pestaña: Reservas activas */}
+            {/* Reservas activas */}
             <TabsContent value="activas">
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-2">
-                {datos?.activas.length === 0 || !datos ? (
-                  <div className="px-4 py-10 text-center text-sm text-gray-500">
-                    No tienes reservas activas
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-gray-100">
-                    {datos.activas.map((reserva) => (
-                      <li key={reserva.id} className="px-4 py-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          {/* Info de la reserva */}
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-gray-800 truncate">
-                                {reserva.instalacion.nombre}
-                              </p>
-                              <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-xs">
-                                Activa
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                              {formatearFecha(reserva.fecha)}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
-                            </p>
+              {datos?.activas.length === 0 || !datos ? (
+                <div className="bg-card border border-border rounded-xl px-4 py-14 text-center">
+                  <Calendar className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No tienes reservas activas</p>
+                  <Link href="/pistas" className="inline-flex items-center gap-1 mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
+                    Ver instalaciones →
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {datos.activas.map((reserva) => (
+                    <div key={reserva.id} className="bg-card border border-border rounded-xl p-5 hover:shadow-sm transition-shadow">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground truncate">{reserva.instalacion.nombre}</p>
+                            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400">
+                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                              Activa
+                            </span>
                           </div>
-
-                          {/* Acciones de la reserva */}
-                          <div className="flex gap-2 shrink-0">
-                            {reserva.qrToken && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => { setReservaQR(reserva); setDialogQRAbierto(true) }}
-                              >
-                                Ver QR
-                              </Button>
-                            )}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatearFecha(reserva.fecha)}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          {reserva.qrToken && (
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => abrirCancelacion(reserva)}
+                              onClick={() => { setReservaQR(reserva); setDialogQRAbierto(true) }}
+                              className="gap-1.5"
                             >
-                              Cancelar
+                              <QrCode className="w-3.5 h-3.5" />
+                              QR
                             </Button>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Pestaña: Historial */}
-            <TabsContent value="historial">
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-2">
-                {datos?.historial.length === 0 || !datos ? (
-                  <div className="px-4 py-10 text-center text-sm text-gray-500">
-                    No hay reservas en el historial
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-gray-100">
-                    {datos.historial.map((reserva) => (
-                      <li key={reserva.id} className="px-4 py-4">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-gray-700">
-                                {reserva.instalacion.nombre}
-                              </p>
-                              {badgeHistorial(reserva)}
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {formatearFecha(reserva.fecha)}
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
-                            </p>
-                          </div>
-
-                          {/* Valoración: botón si no valorada, estrellas si ya valorada */}
-                          {reserva.estado !== "CANCELADA" && (
-                            <div className="shrink-0">
-                              {reserva.valoracion ? (
-                                <StarRating
-                                  value={reserva.valoracion.puntuacion}
-                                  size="sm"
-                                />
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => abrirValoracion(reserva)}
-                                >
-                                  Valorar
-                                </Button>
-                              )}
-                            </div>
                           )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:hover:bg-red-950/30 gap-1.5"
+                            onClick={() => abrirCancelacion(reserva)}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            Cancelar
+                          </Button>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
-            {/* Pestaña: Lista de espera */}
-            <TabsContent value="espera">
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-2">
-                {entradasEspera.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-sm text-gray-500">
-                    No estás en ninguna lista de espera
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-gray-100">
-                    {entradasEspera.map((entrada) => {
-                      const notificado = entrada.estado === "NOTIFICADO"
-                      return (
-                        <li key={entrada.id} className="px-4 py-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-sm font-semibold text-gray-800">
-                                  {entrada.instalacion.nombre}
-                                </p>
-                                {notificado ? (
-                                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-0 text-xs">
-                                    ¡Turno disponible!
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border-0 text-xs">
-                                    posición {entrada.posicion}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                {formatearFecha(entrada.fecha)}
-                              </p>
-                              <p className="text-sm text-gray-500">{entrada.horaInicio}</p>
-                            </div>
-
-                            {notificado ? (
-                              <Button
-                                size="sm"
-                                className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
-                                onClick={() => confirmarDesdeEspera(entrada)}
-                                disabled={accionandoEspera === entrada.id}
-                              >
-                                {accionandoEspera === entrada.id ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                    Confirmando...
-                                  </>
-                                ) : "Confirmar reserva"}
-                              </Button>
+            {/* Historial */}
+            <TabsContent value="historial">
+              {datos?.historial.length === 0 || !datos ? (
+                <div className="bg-card border border-border rounded-xl px-4 py-14 text-center">
+                  <ClockIcon className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No hay reservas en el historial</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {datos.historial.map((reserva) => (
+                    <div key={reserva.id} className="bg-card border border-border rounded-xl p-5 hover:shadow-sm transition-shadow">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground/80 truncate">{reserva.instalacion.nombre}</p>
+                            {reserva.estado === "CANCELADA" ? (
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">
+                                Cancelada
+                              </span>
+                            ) : (
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                Completada
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatearFecha(reserva.fecha)}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}
+                            </span>
+                          </div>
+                        </div>
+                        {reserva.estado !== "CANCELADA" && (
+                          <div className="shrink-0">
+                            {reserva.valoracion ? (
+                              <StarRating value={reserva.valoracion.puntuacion} size="sm" />
                             ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-gray-600 shrink-0"
-                                onClick={() => abandonarEspera(entrada)}
-                                disabled={accionandoEspera === entrada.id}
+                                onClick={() => abrirValoracion(reserva)}
+                                className="gap-1.5"
                               >
-                                Abandonar
+                                <Star className="w-3.5 h-3.5" />
+                                Valorar
                               </Button>
                             )}
                           </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Lista de espera */}
+            <TabsContent value="espera">
+              {entradasEspera.length === 0 ? (
+                <div className="bg-card border border-border rounded-xl px-4 py-14 text-center">
+                  <ListOrdered className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No estás en ninguna lista de espera</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {entradasEspera.map((entrada) => {
+                    const notificado = entrada.estado === "NOTIFICADO"
+                    return (
+                      <div key={entrada.id} className={`bg-card border rounded-xl p-5 hover:shadow-sm transition-shadow ${notificado ? "border-orange-300 dark:border-orange-800" : "border-border"}`}>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-foreground truncate">{entrada.instalacion.nombre}</p>
+                              {notificado ? (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400 animate-pulse">
+                                  ¡Turno disponible!
+                                </span>
+                              ) : (
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                  Posición {entrada.posicion}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5" />
+                                {formatearFecha(entrada.fecha)}
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5" />
+                                {entrada.horaInicio}
+                              </span>
+                            </div>
+                          </div>
+                          {notificado ? (
+                            <Button
+                              size="sm"
+                              className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                              onClick={() => confirmarDesdeEspera(entrada)}
+                              disabled={accionandoEspera === entrada.id}
+                            >
+                              {accionandoEspera === entrada.id ? (
+                                <><Loader2 className="h-4 w-4 animate-spin mr-1" />Confirmando...</>
+                              ) : "Confirmar reserva"}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-muted-foreground shrink-0"
+                              onClick={() => abandonarEspera(entrada)}
+                              disabled={accionandoEspera === entrada.id}
+                            >
+                              Abandonar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         )}
       </div>
 
-      {/* Dialog de valoración */}
-      <Dialog
-        open={dialogValoracionAbierto}
-        onOpenChange={(abierto) => { if (!abierto) cerrarDialogValoracion() }}
-      >
+      {/* Dialog valoración */}
+      <Dialog open={dialogValoracionAbierto} onOpenChange={(o) => { if (!o) cerrarDialogValoracion() }}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Valorar instalación</DialogTitle>
@@ -539,22 +490,13 @@ export default function PaginaMisReservas() {
               </DialogDescription>
             )}
           </DialogHeader>
-
           <div className="space-y-4 py-2">
-            {/* Selector de estrellas */}
             <div className="flex flex-col items-center gap-2">
-              <p className="text-sm text-gray-600">¿Cómo valorarías esta instalación?</p>
-              <StarRating
-                value={puntuacionSeleccionada}
-                interactive
-                size="lg"
-                onChange={setPuntuacionSeleccionada}
-              />
+              <p className="text-sm text-muted-foreground">¿Cómo valorarías esta instalación?</p>
+              <StarRating value={puntuacionSeleccionada} interactive size="lg" onChange={setPuntuacionSeleccionada} />
             </div>
-
-            {/* Textarea de comentario opcional */}
             <div className="space-y-1">
-              <label htmlFor="comentario-valoracion" className="text-sm font-medium text-gray-700">
+              <label htmlFor="comentario-valoracion" className="text-sm font-medium text-foreground">
                 ¿Algo que reportar? (opcional)
               </label>
               <Textarea
@@ -566,125 +508,71 @@ export default function PaginaMisReservas() {
                 className="resize-none"
                 rows={3}
               />
-              <p className="text-xs text-gray-400 text-right">
-                {comentarioValoracion.length}/500
-              </p>
+              <p className="text-xs text-muted-foreground text-right">{comentarioValoracion.length}/500</p>
             </div>
-
-            {/* Error inline */}
             {errorValoracion && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
                 {errorValoracion}
               </div>
             )}
           </div>
-
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={cerrarDialogValoracion}
-              disabled={enviandoValoracion}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={enviarValoracion}
-              disabled={puntuacionSeleccionada === 0 || enviandoValoracion}
-              className="flex items-center gap-2"
-            >
-              {enviandoValoracion ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : "Enviar valoración"}
+            <Button variant="outline" onClick={cerrarDialogValoracion} disabled={enviandoValoracion}>Cancelar</Button>
+            <Button onClick={enviarValoracion} disabled={puntuacionSeleccionada === 0 || enviandoValoracion}>
+              {enviandoValoracion ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Enviando...</> : "Enviar valoración"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de código QR */}
+      {/* Dialog QR */}
       <Dialog open={dialogQRAbierto} onOpenChange={setDialogQRAbierto}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Código QR de tu reserva</DialogTitle>
-            <DialogDescription>
-              Muestra este código en la entrada para verificar tu reserva.
-            </DialogDescription>
+            <DialogDescription>Muestra este código en la entrada para verificar tu reserva.</DialogDescription>
           </DialogHeader>
           {reservaQR?.qrToken && (
             <div className="flex flex-col items-center gap-4 py-4">
-              <QRCode
-                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verificar/${reservaQR.qrToken}`}
-                size={220}
-              />
-              <p className="text-sm text-gray-500 text-center">
-                {reservaQR.instalacion.nombre}
-              </p>
+              <div className="bg-white p-4 rounded-xl">
+                <QRCode value={`${typeof window !== "undefined" ? window.location.origin : ""}/verificar/${reservaQR.qrToken}`} size={200} />
+              </div>
+              <p className="text-sm text-muted-foreground text-center">{reservaQR.instalacion.nombre}</p>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de confirmación de cancelación */}
-      <Dialog open={dialogAbierto} onOpenChange={(abierto) => { if (!abierto) cerrarDialog() }}>
+      {/* Dialog cancelación */}
+      <Dialog open={dialogAbierto} onOpenChange={(o) => { if (!o) cerrarDialog() }}>
         <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cancelar reserva</DialogTitle>
-            <DialogDescription>
-              Esta acción no se puede deshacer.
-            </DialogDescription>
+            <DialogDescription>Esta acción no se puede deshacer.</DialogDescription>
           </DialogHeader>
-
-          {/* Detalles de la reserva a cancelar */}
           {reservaACancelar && (
-            <div className="space-y-2 py-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Pista</span>
-                <span className="font-medium text-gray-800">{reservaACancelar.instalacion.nombre}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Fecha</span>
-                <span className="font-medium text-gray-800">
-                  {formatearFecha(reservaACancelar.fecha)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Hora</span>
-                <span className="font-medium text-gray-800">
-                  {formatearHora(reservaACancelar.horaInicio)} – {formatearHora(reservaACancelar.horaFin)}
-                </span>
-              </div>
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              {[
+                { label: "Instalación", value: reservaACancelar.instalacion.nombre },
+                { label: "Fecha", value: formatearFecha(reservaACancelar.fecha) },
+                { label: "Hora", value: `${formatearHora(reservaACancelar.horaInicio)} – ${formatearHora(reservaACancelar.horaFin)}` },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className="font-medium text-foreground">{value}</span>
+                </div>
+              ))}
             </div>
           )}
-
-          {/* Error de cancelación */}
           {errorCancelacion && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
               {errorCancelacion}
             </div>
           )}
-
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={cerrarDialog}
-              disabled={cancelando}
-            >
-              Volver
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmarCancelacion}
-              disabled={cancelando}
-              className="flex items-center gap-2"
-            >
-              {cancelando ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Cancelando...
-                </>
-              ) : "Confirmar cancelación"}
+            <Button variant="outline" onClick={cerrarDialog} disabled={cancelando}>Volver</Button>
+            <Button variant="destructive" onClick={confirmarCancelacion} disabled={cancelando}>
+              {cancelando ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Cancelando...</> : "Confirmar cancelación"}
             </Button>
           </DialogFooter>
         </DialogContent>

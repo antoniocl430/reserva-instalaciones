@@ -65,3 +65,14 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Transición suave al cambiar de tema claro/oscuro */
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+body, .bg-background, .bg-card, .bg-muted {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}

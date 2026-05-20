@@ -24,6 +24,10 @@ vi.mock('lucide-react', () => ({
   AlertCircle: () => React.createElement('span', { 'data-testid': 'icon-alert' }),
   CheckCircle: () => React.createElement('span', { 'data-testid': 'icon-check' }),
   LogIn: () => React.createElement('span', { 'data-testid': 'icon-login' }),
+  ChevronRight: () => React.createElement('span', { 'data-testid': 'icon-chevron-right' }),
+  MapPin: () => React.createElement('span', { 'data-testid': 'icon-map-pin' }),
+  Info: () => React.createElement('span', { 'data-testid': 'icon-info' }),
+  Star: () => React.createElement('span', { 'data-testid': 'icon-star' }),
 }))
 
 // Mock de shadcn/ui Badge: renderiza directamente los hijos
@@ -73,7 +77,7 @@ const avisosSinDatos: Aviso[] = []
 
 describe('Tablon', () => {
   describe('banner anónimo (sesionActiva=false)', () => {
-    it('cuando sesionActiva=false, muestra texto sobre consultar disponibilidad sin registrarse', () => {
+    it('cuando sesionActiva=false, muestra CTAs para crear cuenta o iniciar sesión', () => {
       render(
         React.createElement(Tablon, {
           pistas: instalaciones,
@@ -82,12 +86,12 @@ describe('Tablon', () => {
         })
       )
 
-      // El banner debe mencionar que se puede consultar sin cuenta
+      // El banner muestra enlaces para crear cuenta o iniciar sesión
       const body = document.body.textContent ?? ''
       const tieneTexto =
-        /Consulta la disponibilidad sin cuenta/i.test(body) ||
-        /consulta la disponibilidad/i.test(body) ||
-        /sin cuenta/i.test(body)
+        /Crear cuenta/i.test(body) ||
+        /Ya tengo cuenta/i.test(body) ||
+        /reserva tu pista/i.test(body)
 
       expect(tieneTexto).toBe(true)
     })

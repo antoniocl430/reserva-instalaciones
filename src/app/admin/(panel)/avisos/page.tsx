@@ -83,9 +83,10 @@ function fechaParaFormulario(fechaIso: string): string {
  */
 function estadoCaducidad(caducaEn: string | null): "caducado" | "futuro" | "sin" {
   if (!caducaEn) return "sin"
-  const ahora = new Date()
+  const inicioDia = new Date()
+  inicioDia.setUTCHours(0, 0, 0, 0)
   const fechaCaducidad = new Date(caducaEn)
-  return fechaCaducidad < ahora ? "caducado" : "futuro"
+  return fechaCaducidad < inicioDia ? "caducado" : "futuro"
 }
 
 // Formatea una fecha ISO a formato DD/MM/AAAA

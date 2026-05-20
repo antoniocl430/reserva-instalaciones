@@ -4,12 +4,11 @@ import { useState, useEffect, useRef } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
+import { Loader2, ChevronLeft, Camera, Bell, Shield, Download, Trash2, Lock, User, Palette } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Dialog,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { AvatarUsuario } from "@/components/AvatarUsuario"
 import PreferenciasNotificacion from "@/components/PreferenciasNotificacion"
+import { TemaSwitch } from "@/components/TemaToggle"
 import { useToast } from "@/hooks/use-toast"
 import {
   registrarServiceWorker,
@@ -29,7 +29,6 @@ import {
   obtenerEstadoSuscripcion,
 } from "@/lib/push-client"
 
-// Datos del usuario cargados desde la API
 interface DatosUsuario {
   id: string
   nombre: string
@@ -39,7 +38,6 @@ interface DatosUsuario {
   creadoEn: string
 }
 
-// Datos extendidos de penalizaciones cargados desde /api/perfil
 interface DatosPerfil {
   id: string
   nombre: string
@@ -51,57 +49,48 @@ interface DatosPerfil {
   creadoEn: string
 }
 
+// Sección visual reutilizable con título e ícono
+function Seccion({ titulo, icono, children }: { titulo: string; icono: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
+        <span className="text-muted-foreground">{icono}</span>
+        <h2 className="font-semibold text-foreground text-sm">{titulo}</h2>
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
+  )
+}
+
 export default function PaginaPerfil() {
   const { data: sesion, status, update } = useSession()
   const router = useRouter()
   const { toast } = useToast()
 
-  // Título de la pestaña del navegador
   useEffect(() => { document.title = "Mi perfil" }, [])
 
-  // Estado del formulario de datos
   const [nombre, setNombre] = useState("")
   const [email, setEmail] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-
-  // Estado de carga inicial
   const [cargandoDatos, setCargandoDatos] = useState(true)
-
-  // Estado del formulario al guardar
   const [guardando, setGuardando] = useState(false)
-
-  // Estado del avatar
   const [subiendoAvatar, setSubiendoAvatar] = useState(false)
   const inputArchivoRef = useRef<HTMLInputElement>(null)
-
-  // Estado de exportación de datos
   const [exportando, setExportando] = useState(false)
-
-  // Estado del dialog de confirmación de eliminación
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [eliminando, setEliminando] = useState(false)
-
-  // Estado de las notificaciones push
-  const [estadoPush, setEstadoPush] = useState<'activo' | 'inactivo' | 'no-soportado' | 'denegado'>('inactivo')
-
-  // Estado del formulario de cambio de contraseña
+  const [estadoPush, setEstadoPush] = useState<"activo" | "inactivo" | "no-soportado" | "denegado">("inactivo")
   const [passwordActual, setPasswordActual] = useState("")
   const [passwordNueva, setPasswordNueva] = useState("")
   const [confirmarPassword, setConfirmarPassword] = useState("")
   const [errorPassword, setErrorPassword] = useState("")
   const [cambiandoPassword, setCambiandoPassword] = useState(false)
-
-  // Estado de datos de penalizaciones (cargados desde /api/perfil)
   const [datosPerfil, setDatosPerfil] = useState<DatosPerfil | null>(null)
 
-  // Protección de ruta: si no hay sesión, redirigir a /login
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login?callbackUrl=/perfil")
-    }
+    if (status === "unauthenticated") router.push("/login?callbackUrl=/perfil")
   }, [status, router])
 
-  // Cargar datos del perfil al montar el componente
   useEffect(() => {
     fetch("/api/cuenta")
       .then((r) => r.json())
@@ -113,24 +102,15 @@ export default function PaginaPerfil() {
       .finally(() => setCargandoDatos(false))
   }, [])
 
-  // Cargar datos extendidos de perfil (penalizaciones, rol, etc.)
   useEffect(() => {
     fetch("/api/perfil")
       .then((r) => r.json())
-      .then((data: DatosPerfil) => {
-        setDatosPerfil(data)
-      })
-      .catch(() => {
-        // Si el endpoint no está disponible, no bloqueamos la página
-      })
+      .then((data: DatosPerfil) => setDatosPerfil(data))
+      .catch(() => {})
   }, [])
 
-  // Cargar estado actual de las notificaciones push al montar
-  useEffect(() => {
-    obtenerEstadoSuscripcion().then(setEstadoPush)
-  }, [])
+  useEffect(() => { obtenerEstadoSuscripcion().then(setEstadoPush) }, [])
 
-  // Exportar datos personales como JSON
   async function alExportarDatos() {
     setExportando(true)
     try {
@@ -144,36 +124,23 @@ export default function PaginaPerfil() {
       enlace.click()
       URL.revokeObjectURL(url)
     } catch {
-      // Si falla no bloqueamos al usuario
     } finally {
       setExportando(false)
     }
   }
 
-  // Manejar selección de archivo de avatar
   function alSeleccionarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0]
     if (!archivo) return
-
-    // Guardar el avatar actual para restaurarlo si la subida falla
     const avatarUrlAnterior = avatarUrl
-
-    // Preview inmediata
     const urlPreview = URL.createObjectURL(archivo)
     setAvatarUrl(urlPreview)
-
-    // Subir al servidor
     const formData = new FormData()
     formData.append("avatar", archivo)
-
     setSubiendoAvatar(true)
-
-    fetch("/api/cuenta/avatar", {
-      method: "POST",
-      body: formData,
-    })
+    fetch("/api/cuenta/avatar", { method: "POST", body: formData })
       .then(async (r) => {
-        if (!r.ok) throw new Error("Error al subir la imagen")
+        if (!r.ok) throw new Error()
         return r.json()
       })
       .then((data: { avatarUrl: string }) => {
@@ -181,61 +148,38 @@ export default function PaginaPerfil() {
         toast({ title: "Avatar actualizado" })
       })
       .catch(() => {
-        toast({
-          title: "Error al subir imagen",
-          description: "No se pudo subir la imagen. Inténtalo de nuevo.",
-          variant: "destructive",
-        })
-        // Restaurar el avatar que había antes del intento fallido
+        toast({ title: "Error al subir imagen", description: "No se pudo subir la imagen.", variant: "destructive" })
         setAvatarUrl(avatarUrlAnterior)
       })
       .finally(() => setSubiendoAvatar(false))
   }
 
-  // Guardar cambios del perfil
   async function alGuardarCambios(e: React.FormEvent) {
     e.preventDefault()
     setGuardando(true)
-
     try {
       const respuesta = await fetch("/api/cuenta", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre }),
       })
-
-      if (!respuesta.ok) {
-        throw new Error("Error al guardar los cambios")
-      }
-
-      toast({
-        title: "Cambios guardados",
-        description: "Tu perfil ha sido actualizado correctamente.",
-      })
-      // Actualizar la sesión para que el nombre aparezca reflejado en el navbar
+      if (!respuesta.ok) throw new Error()
+      toast({ title: "Cambios guardados", description: "Tu perfil ha sido actualizado." })
       await update()
     } catch {
-      toast({
-        title: "Error al guardar",
-        description: "No se pudieron guardar los cambios. Inténtalo de nuevo.",
-        variant: "destructive",
-      })
+      toast({ title: "Error al guardar", description: "No se pudieron guardar los cambios.", variant: "destructive" })
     } finally {
       setGuardando(false)
     }
   }
 
-  // Cambiar la contraseña del usuario
   async function alCambiarPassword(e: React.FormEvent) {
     e.preventDefault()
     setErrorPassword("")
-
-    // Validación frontend: nueva y confirmación deben coincidir
     if (passwordNueva !== confirmarPassword) {
-      setErrorPassword("Las contraseñas no coinciden. Revisa los campos e inténtalo de nuevo.")
+      setErrorPassword("Las contraseñas no coinciden.")
       return
     }
-
     setCambiandoPassword(true)
     try {
       const respuesta = await fetch("/api/perfil", {
@@ -243,64 +187,56 @@ export default function PaginaPerfil() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ passwordActual, passwordNueva }),
       })
-
       if (!respuesta.ok) {
         const datos = await respuesta.json()
-        // Mensaje de error inline si la contraseña actual es incorrecta
-        setErrorPassword(datos.error ?? "Error al cambiar la contraseña. Inténtalo de nuevo.")
+        setErrorPassword(datos.error ?? "Error al cambiar la contraseña.")
         return
       }
-
-      // Limpiar formulario tras éxito
       setPasswordActual("")
       setPasswordNueva("")
       setConfirmarPassword("")
       toast({ title: "Contraseña actualizada", description: "Tu contraseña ha sido cambiada correctamente." })
     } catch {
-      setErrorPassword("Error al cambiar la contraseña. Inténtalo de nuevo.")
+      setErrorPassword("Error al cambiar la contraseña.")
     } finally {
       setCambiandoPassword(false)
     }
   }
 
-  // Activar o desactivar notificaciones push
   async function toggleNotificaciones() {
-    if (estadoPush === 'activo') {
-      // Desactivar: desuscribir del servicio push
+    if (estadoPush === "activo") {
       const exito = await desuscribirDePush()
       if (exito) {
-        setEstadoPush('inactivo')
+        setEstadoPush("inactivo")
         toast({ title: "Notificaciones desactivadas" })
       } else {
-        toast({
-          title: "Error al desactivar",
-          description: "No se pudieron desactivar las notificaciones. Inténtalo de nuevo.",
-          variant: "destructive",
-        })
+        toast({ title: "Error al desactivar", variant: "destructive" } as Parameters<typeof toast>[0])
       }
     } else {
-      // Activar: primero registrar el service worker y luego suscribir
-      await registrarServiceWorker()
       const exito = await suscribirAPush()
       if (exito) {
-        setEstadoPush('activo')
+        setEstadoPush("activo")
         toast({ title: "Notificaciones activadas" })
       } else {
-        // Volver a consultar el estado real (puede que el permiso haya sido denegado)
         const nuevoEstado = await obtenerEstadoSuscripcion()
         setEstadoPush(nuevoEstado)
-        if (nuevoEstado !== 'denegado' && nuevoEstado !== 'no-soportado') {
+        if (nuevoEstado === "denegado") {
           toast({
-            title: "Error al activar",
-            description: "No se pudieron activar las notificaciones. Inténtalo de nuevo.",
+            title: "Permiso denegado",
+            description: "Activa las notificaciones desde la configuración del navegador.",
             variant: "destructive",
-          })
+          } as Parameters<typeof toast>[0])
+        } else if (nuevoEstado !== "no-soportado") {
+          toast({
+            title: "No se pudo activar",
+            description: "Comprueba tu conexión a internet e inténtalo de nuevo.",
+            variant: "destructive",
+          } as Parameters<typeof toast>[0])
         }
       }
     }
   }
 
-  // Eliminar cuenta
   async function alEliminarCuenta() {
     setEliminando(true)
     try {
@@ -308,69 +244,52 @@ export default function PaginaPerfil() {
       if (res.ok) {
         await signOut({ callbackUrl: "/" })
       } else {
-        toast({ title: "Error al eliminar cuenta", description: "No se pudo eliminar la cuenta. Inténtalo de nuevo.", variant: "destructive" })
+        toast({ title: "Error al eliminar cuenta", description: "No se pudo eliminar la cuenta.", variant: "destructive" })
         setEliminando(false)
       }
     } catch {
-      toast({ title: "Error", description: "Error de conexión. Inténtalo de nuevo.", variant: "destructive" })
+      toast({ title: "Error", description: "Error de conexión.", variant: "destructive" })
       setEliminando(false)
     }
   }
 
-  // Mostrar skeleton mientras carga la sesión
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <Skeleton className="w-24 h-24 rounded-full mb-4" />
-            <Skeleton className="h-8 w-32" />
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-full" />
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="max-w-2xl mx-auto px-4 py-10 space-y-4">
+          <Skeleton className="h-7 w-36" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10 space-y-4">
         {/* Cabecera */}
         <div className="mb-6">
           <Link
             href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-4"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5"
           >
-            ← Volver al inicio
+            <ChevronLeft className="w-4 h-4" />
+            Inicio
           </Link>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mi perfil</h1>
-          <p className="text-sm text-gray-600 mt-1">Gestiona tu información personal</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Mi perfil</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Gestiona tu información personal y preferencias</p>
         </div>
 
-        {/* Tarjeta de avatar */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Foto de perfil</h2>
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Avatar */}
+        {/* Foto de perfil */}
+        <Seccion titulo="Foto de perfil" icono={<Camera className="w-4 h-4" />}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             {cargandoDatos ? (
-              <Skeleton className="w-24 h-24 rounded-full shrink-0" />
+              <Skeleton className="w-20 h-20 rounded-full shrink-0" />
             ) : (
-              <AvatarUsuario
-                nombre={nombre}
-                avatarUrl={avatarUrl}
-                className="w-24 h-24 text-2xl"
-              />
+              <AvatarUsuario nombre={nombre} avatarUrl={avatarUrl} className="w-20 h-20 text-xl shrink-0" />
             )}
-
             <div className="space-y-2">
-              {/* Input file oculto */}
               <input
                 ref={inputArchivoRef}
                 type="file"
@@ -381,29 +300,24 @@ export default function PaginaPerfil() {
               />
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => inputArchivoRef.current?.click()}
                 disabled={subiendoAvatar}
+                className="gap-2"
               >
-                {subiendoAvatar ? "Subiendo..." : "Cambiar foto"}
+                {subiendoAvatar ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Subiendo...</> : <><Camera className="h-3.5 w-3.5" />Cambiar foto</>}
               </Button>
-              <p className="text-xs text-gray-500">
-                Formatos admitidos: JPEG, PNG, WebP. Máximo 5 MB.
-              </p>
+              <p className="text-xs text-muted-foreground">JPEG, PNG o WebP · máximo 5 MB</p>
             </div>
           </div>
-        </div>
+        </Seccion>
 
-        {/* Tarjeta de datos del perfil */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Datos del perfil</h2>
-
+        {/* Datos del perfil */}
+        <Seccion titulo="Datos personales" icono={<User className="w-4 h-4" />}>
           <form onSubmit={alGuardarCambios} className="space-y-4">
-            {/* Campo nombre */}
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="nombre">Nombre completo</Label>
-              {cargandoDatos ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
+              {cargandoDatos ? <Skeleton className="h-10 w-full" /> : (
                 <Input
                   id="nombre"
                   type="text"
@@ -414,265 +328,169 @@ export default function PaginaPerfil() {
                 />
               )}
             </div>
-
-            {/* Campo email (deshabilitado) */}
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="email">Correo electrónico</Label>
-              {cargandoDatos ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  disabled
-                  className="bg-gray-50 text-gray-500"
-                />
+              {cargandoDatos ? <Skeleton className="h-10 w-full" /> : (
+                <Input id="email" type="email" value={email} disabled className="opacity-60" />
               )}
-              <p className="text-xs text-gray-500">
-                El correo electrónico no se puede cambiar.
-              </p>
+              <p className="text-xs text-muted-foreground">El correo electrónico no se puede cambiar.</p>
             </div>
-
-            {/* Botón guardar */}
-            <Button
-              type="submit"
-              disabled={guardando || cargandoDatos}
-              className="w-full sm:w-auto flex items-center gap-2"
-            >
-              {guardando ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : "Guardar cambios"}
+            <Button type="submit" disabled={guardando || cargandoDatos} size="sm" className="gap-2">
+              {guardando ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</> : "Guardar cambios"}
             </Button>
           </form>
-        </div>
+        </Seccion>
 
-        {/* Sección cambio de contraseña */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Cambiar contraseña</h2>
-
+        {/* Cambiar contraseña */}
+        <Seccion titulo="Seguridad" icono={<Lock className="w-4 h-4" />}>
           <form onSubmit={alCambiarPassword} className="space-y-4">
-            {/* Contraseña actual */}
-            <div className="space-y-1">
-              <Label htmlFor="password-actual">Contraseña actual</Label>
-              <Input
-                id="password-actual"
-                type="password"
-                value={passwordActual}
-                onChange={(e) => setPasswordActual(e.target.value)}
-                placeholder="Tu contraseña actual"
-                autoComplete="current-password"
-              />
-            </div>
-
-            {/* Nueva contraseña */}
-            <div className="space-y-1">
-              <Label htmlFor="password-nueva">Nueva contraseña</Label>
-              <Input
-                id="password-nueva"
-                type="password"
-                value={passwordNueva}
-                onChange={(e) => setPasswordNueva(e.target.value)}
-                placeholder="Nueva contraseña"
-                autoComplete="new-password"
-              />
-            </div>
-
-            {/* Confirmar nueva contraseña */}
-            <div className="space-y-1">
-              <Label htmlFor="confirmar-password">Confirmar nueva contraseña</Label>
-              <Input
-                id="confirmar-password"
-                type="password"
-                value={confirmarPassword}
-                onChange={(e) => setConfirmarPassword(e.target.value)}
-                placeholder="Repite la nueva contraseña"
-                autoComplete="new-password"
-              />
-            </div>
-
-            {/* Error inline de contraseñas */}
+            {[
+              { id: "password-actual", label: "Contraseña actual", value: passwordActual, onChange: setPasswordActual, autoComplete: "current-password" },
+              { id: "password-nueva", label: "Nueva contraseña", value: passwordNueva, onChange: setPasswordNueva, autoComplete: "new-password" },
+              { id: "confirmar-password", label: "Confirmar nueva contraseña", value: confirmarPassword, onChange: setConfirmarPassword, autoComplete: "new-password" },
+            ].map(({ id, label, value, onChange, autoComplete }) => (
+              <div key={id} className="space-y-1.5">
+                <Label htmlFor={id}>{label}</Label>
+                <Input
+                  id={id}
+                  type="password"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  autoComplete={autoComplete}
+                />
+              </div>
+            ))}
             {errorPassword && (
-              <p className="text-sm text-red-600" role="alert">
-                {errorPassword}
-              </p>
+              <p className="text-sm text-destructive" role="alert">{errorPassword}</p>
             )}
-
-            {/* Botón cambiar contraseña */}
-            <Button
-              type="submit"
-              disabled={cambiandoPassword}
-              className="w-full sm:w-auto flex items-center gap-2"
-            >
-              {cambiandoPassword ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Cambiando...
-                </>
-              ) : "Cambiar contraseña"}
+            <Button type="submit" disabled={cambiandoPassword} size="sm" className="gap-2">
+              {cambiandoPassword ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Cambiando...</> : "Cambiar contraseña"}
             </Button>
           </form>
-        </div>
+        </Seccion>
 
-        {/* Sección penalizaciones — solo visible para CIUDADANO */}
+        {/* Apariencia — modo oscuro */}
+        <Seccion titulo="Apariencia" icono={<Palette className="w-4 h-4" />}>
+          <TemaSwitch />
+        </Seccion>
+
+        {/* Penalizaciones — solo CIUDADANO */}
         {datosPerfil?.rol === "CIUDADANO" && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 className="text-base font-semibold text-gray-800 mb-4">Penalizaciones</h2>
-
-            {/* Sin penalizaciones */}
-            {datosPerfil.noShows === 0 && !datosPerfil.suspendidoHasta && (
-              <p className="text-sm text-gray-500">No tienes penalizaciones registradas.</p>
-            )}
-
-            {/* Badge de no-shows cuando hay alguno */}
-            {datosPerfil.noShows > 0 && (
-              <Badge variant="destructive" className="mb-3">
-                {datosPerfil.noShows} no-shows acumulados
-              </Badge>
-            )}
-
-            {/* Alerta de suspensión activa (fecha futura) */}
-            {datosPerfil.suspendidoHasta && new Date(datosPerfil.suspendidoHasta) > new Date() && (
-              <Alert variant="destructive" className="mt-3">
-                <AlertDescription>
-                  Tu cuenta está suspendida hasta{" "}
-                  {new Date(datosPerfil.suspendidoHasta).toLocaleDateString("es-ES", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })}
-                  {datosPerfil.motivoSuspension && (
-                    <>. Motivo: {datosPerfil.motivoSuspension}</>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Suspensión ya finalizada (fecha pasada) */}
-            {datosPerfil.suspendidoHasta && new Date(datosPerfil.suspendidoHasta) <= new Date() && (
-              <p className="text-sm text-gray-400 mt-2">
-                Última suspensión finalizada el{" "}
-                {new Date(datosPerfil.suspendidoHasta).toLocaleDateString("es-ES", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Sección notificaciones push — solo visible para CIUDADANO */}
-        {datosPerfil?.rol === "CIUDADANO" && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-base font-semibold text-gray-800">Notificaciones push</h2>
-              <Badge
-                variant={estadoPush === 'activo' ? 'default' : 'secondary'}
-              >
-                {estadoPush === 'activo' ? 'Activa' : 'Inactiva'}
-              </Badge>
-            </div>
-
-            {/* Aviso si el navegador no soporta push */}
-            {estadoPush === 'no-soportado' ? (
-              <p className="text-sm text-gray-500 mb-4">
-                Tu navegador no soporta notificaciones push.
-              </p>
+          <Seccion titulo="Penalizaciones" icono={<Shield className="w-4 h-4" />}>
+            {datosPerfil.noShows === 0 && !datosPerfil.suspendidoHasta ? (
+              <p className="text-sm text-muted-foreground">No tienes penalizaciones registradas. ✓</p>
             ) : (
-              <>
-                <p className="text-sm text-gray-600 mb-4">
-                  Recibirás avisos de reservas confirmadas, recordatorios y cancelaciones
-                  directamente en este dispositivo.
-                </p>
-
-                {/* Aviso si el permiso está denegado */}
-                {estadoPush === 'denegado' && (
-                  <p className="text-sm text-amber-600 mb-4">
-                    Debes permitir las notificaciones en tu navegador.
+              <div className="space-y-3">
+                {datosPerfil.noShows > 0 && (
+                  <div className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400">
+                    {datosPerfil.noShows} no-shows acumulados
+                  </div>
+                )}
+                {datosPerfil.suspendidoHasta && new Date(datosPerfil.suspendidoHasta) > new Date() && (
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      Cuenta suspendida hasta{" "}
+                      {new Date(datosPerfil.suspendidoHasta).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                      {datosPerfil.motivoSuspension && <>. Motivo: {datosPerfil.motivoSuspension}</>}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {datosPerfil.suspendidoHasta && new Date(datosPerfil.suspendidoHasta) <= new Date() && (
+                  <p className="text-sm text-muted-foreground">
+                    Última suspensión finalizada el{" "}
+                    {new Date(datosPerfil.suspendidoHasta).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </p>
                 )}
+              </div>
+            )}
+          </Seccion>
+        )}
 
+        {/* Notificaciones push — solo CIUDADANO */}
+        {datosPerfil?.rol === "CIUDADANO" && (
+          <Seccion titulo="Notificaciones push" icono={<Bell className="w-4 h-4" />}>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-foreground">Estado</p>
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                estadoPush === "activo"
+                  ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {estadoPush === "activo" ? "● Activas" : "○ Inactivas"}
+              </span>
+            </div>
+            {estadoPush === "no-soportado" ? (
+              <p className="text-sm text-muted-foreground">Tu navegador no soporta notificaciones push.</p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Recibirás avisos de reservas confirmadas, recordatorios y cancelaciones en este dispositivo.
+                </p>
+                {estadoPush === "denegado" && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mb-3">
+                    Debes permitir las notificaciones en la configuración de tu navegador.
+                  </p>
+                )}
                 <Button
                   onClick={toggleNotificaciones}
-                  variant={estadoPush === 'activo' ? 'destructive' : 'default'}
+                  variant={estadoPush === "activo" ? "outline" : "default"}
                   size="sm"
+                  className={estadoPush === "activo" ? "text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30" : ""}
                 >
-                  {estadoPush === 'activo' ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+                  {estadoPush === "activo" ? "Desactivar notificaciones" : "Activar notificaciones"}
                 </Button>
               </>
             )}
-          </div>
+          </Seccion>
         )}
 
-        {/* Sección preferencias de notificación — solo visible para CIUDADANO */}
+        {/* Preferencias de notificación — solo CIUDADANO */}
         {datosPerfil?.rol === "CIUDADANO" && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 className="text-base font-semibold text-gray-800 mb-4">Preferencias de notificación</h2>
-            <PreferenciasNotificacion
-              onGuardado={() => {
-                toast({ title: "Preferencias guardadas" })
-              }}
-            />
-          </div>
+          <Seccion titulo="Preferencias de notificación" icono={<Bell className="w-4 h-4" />}>
+            <PreferenciasNotificacion onGuardado={() => toast({ title: "Preferencias guardadas" })} />
+          </Seccion>
         )}
 
-        {/* Tarjeta de exportación de datos (RGPD) */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-1">Mis datos</h2>
-          <p className="text-sm text-gray-600 mb-4">
+        {/* Mis datos RGPD */}
+        <Seccion titulo="Mis datos (RGPD)" icono={<Download className="w-4 h-4" />}>
+          <p className="text-sm text-muted-foreground mb-4">
             Conforme al RGPD, puedes descargar una copia de todos tus datos en cualquier momento.
           </p>
-          <Button
-            variant="outline"
-            onClick={alExportarDatos}
-            disabled={exportando}
-          >
-            {exportando ? "Exportando..." : "Exportar mis datos"}
+          <Button variant="outline" size="sm" onClick={alExportarDatos} disabled={exportando} className="gap-2">
+            {exportando ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Exportando...</> : <><Download className="h-3.5 w-3.5" />Exportar mis datos</>}
           </Button>
-        </div>
+        </Seccion>
 
         {/* Zona de peligro */}
-        <div className="bg-red-50 rounded-xl border border-red-200 p-6 mb-8">
-          <h2 className="text-base font-semibold text-red-800 mb-2">Zona de peligro</h2>
-          <p className="text-sm text-red-700 mb-4">
-            Eliminar tu cuenta es una acción permanente. No podrás recuperar tus datos.
-          </p>
-          <Button
-            variant="destructive"
-            onClick={() => setDialogAbierto(true)}
-          >
-            Eliminar mi cuenta
-          </Button>
-        </div>
+        <section className="bg-card border border-red-200 dark:border-red-900/50 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-red-200 dark:border-red-900/50 flex items-center gap-2.5">
+            <Trash2 className="w-4 h-4 text-red-500" />
+            <h2 className="font-semibold text-red-700 dark:text-red-400 text-sm">Zona de peligro</h2>
+          </div>
+          <div className="p-5">
+            <p className="text-sm text-muted-foreground mb-4">
+              Eliminar tu cuenta es una acción permanente. No podrás recuperar tus datos.
+            </p>
+            <Button variant="destructive" size="sm" onClick={() => setDialogAbierto(true)} className="gap-2">
+              <Trash2 className="h-3.5 w-3.5" />
+              Eliminar mi cuenta
+            </Button>
+          </div>
+        </section>
       </div>
 
-      {/* Dialog de confirmación de eliminación */}
+      {/* Dialog eliminación */}
       <Dialog open={dialogAbierto} onOpenChange={setDialogAbierto}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>¿Eliminar tu cuenta?</DialogTitle>
             <DialogDescription>
-              Esta acción es irreversible. Se cancelarán todas tus reservas activas y se
-              eliminarán permanentemente todos tus datos.
+              Esta acción es irreversible. Se cancelarán todas tus reservas activas y se eliminarán permanentemente todos tus datos.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogAbierto(false)}
-              disabled={eliminando}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={alEliminarCuenta}
-              disabled={eliminando}
-            >
+            <Button variant="outline" onClick={() => setDialogAbierto(false)} disabled={eliminando}>Cancelar</Button>
+            <Button variant="destructive" onClick={alEliminarCuenta} disabled={eliminando}>
               {eliminando ? "Eliminando..." : "Confirmar eliminación"}
             </Button>
           </DialogFooter>

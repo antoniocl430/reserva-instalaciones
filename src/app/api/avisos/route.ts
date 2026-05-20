@@ -51,19 +51,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Si no es admin, ignoramos el parámetro y aplicamos los filtros normales
     }
 
-    // Ruta pública: solo avisos activos y no caducados
+    // Ruta pública: solo avisos activos y no caducados.
     // Un aviso es visible si:
     //   - activo === true
-    //   - Y (caducaEn es null   →  sin fecha de expiración, siempre visible)
-    //     O (caducaEn > ahora   →  aún no ha caducado)
-    const ahora = new Date()
+    //   - Y (caducaEn es null          →  sin fecha de expiración, siempre visible)
+    //     O (caducaEn >= hoy 00:00 UTC →  caduca hoy o más adelante, aún visible)
+    // Comparamos contra el inicio del día UTC para que caducaEn = "3 abril" sea
+    // visible todo el día 3 y desaparezca a partir del 4.
+    const inicioDia = new Date()
+    inicioDia.setUTCHours(0, 0, 0, 0)
     const avisos = await prisma.aviso.findMany({
       where: {
         tenantId,
         activo: true,
         OR: [
           { caducaEn: null },
-          { caducaEn: { gt: ahora } },
+          { caducaEn: { gte: inicioDia } },
         ],
       },
       orderBy: { fecha: "desc" },

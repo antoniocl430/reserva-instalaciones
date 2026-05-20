@@ -22,6 +22,19 @@ vi.mock('next/link', () => ({
     React.createElement('a', { href, className }, children),
 }))
 
+// Mock de lucide-react: incluye todos los iconos que usa mis-reservas/page.tsx
+vi.mock('lucide-react', () => ({
+  Loader2: () => React.createElement('span', { 'data-testid': 'icon-loader' }),
+  ChevronLeft: () => React.createElement('span', { 'data-testid': 'icon-chevron-left' }),
+  Calendar: () => React.createElement('span', { 'data-testid': 'icon-calendar' }),
+  Clock: () => React.createElement('span', { 'data-testid': 'icon-clock' }),
+  QrCode: () => React.createElement('span', { 'data-testid': 'icon-qr' }),
+  X: () => React.createElement('span', { 'data-testid': 'icon-x' }),
+  Star: () => React.createElement('span', { 'data-testid': 'icon-star' }),
+  ClockIcon: () => React.createElement('span', { 'data-testid': 'icon-clock2' }),
+  ListOrdered: () => React.createElement('span', { 'data-testid': 'icon-list' }),
+}))
+
 // Mock de react-qr-code para evitar SVG real en tests
 vi.mock('react-qr-code', () => ({
   default: ({ value }: { value: string }) =>
@@ -157,7 +170,7 @@ describe('PaginaMisReservas — Botón Ver QR', () => {
     render(React.createElement(PaginaMisReservas))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ver qr/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^QR$/i })).toBeInTheDocument()
     })
   })
 
@@ -167,14 +180,14 @@ describe('PaginaMisReservas — Botón Ver QR', () => {
 
     // Esperar a que el botón aparezca (datos cargados)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ver qr/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^QR$/i })).toBeInTheDocument()
     })
 
     // El dialog no debe estar visible aún
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     // Hacer clic en Ver QR
-    fireEvent.click(screen.getByRole('button', { name: /ver qr/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^QR$/i }))
 
     // El dialog debe abrirse con el QR
     await waitFor(() => {
@@ -188,10 +201,10 @@ describe('PaginaMisReservas — Botón Ver QR', () => {
     render(React.createElement(PaginaMisReservas))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ver qr/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^QR$/i })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /ver qr/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^QR$/i }))
 
     await waitFor(() => {
       const qr = screen.getByTestId('qr-code')
@@ -211,6 +224,6 @@ describe('PaginaMisReservas — Botón Ver QR', () => {
     })
 
     // Pero el botón Ver QR no debe existir
-    expect(screen.queryByRole('button', { name: /ver qr/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^QR$/i })).not.toBeInTheDocument()
   })
 })

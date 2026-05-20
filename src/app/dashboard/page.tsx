@@ -31,23 +31,23 @@ export default async function PaginaDashboard() {
   const totalActivas = reservasActivas.length
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-4 sm:py-8 space-y-6">
         {/* Saludo de bienvenida */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
               Bienvenido/a, {sesion.user.name ?? "usuario"}
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Gestiona tus reservas de instalaciones deportivas
             </p>
           </div>
           <Link
             href="/perfil"
-            className="flex items-center gap-1.5 shrink-0 mt-1 text-sm font-medium text-gray-700 bg-white border border-gray-200 px-3 py-1.5 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            className="flex items-center gap-1.5 shrink-0 mt-1 text-sm font-medium text-foreground bg-card border border-border px-3 py-1.5 rounded-full hover:bg-muted transition-colors"
           >
-            <UserCircle className="h-4 w-4 text-gray-500" />
+            <UserCircle className="h-4 w-4 text-muted-foreground" />
             Mi perfil
           </Link>
         </div>
@@ -66,13 +66,13 @@ export default async function PaginaDashboard() {
           </Link>
           <Link
             href="/mis-reservas"
-            className="flex flex-col items-start gap-1 bg-white border border-gray-200 text-gray-800 font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-gray-50 transition-colors"
+            className="flex flex-col items-start gap-1 bg-card border border-border text-foreground font-medium px-4 sm:px-5 py-3 sm:py-4 rounded-xl hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4 text-gray-600" />
+              <CalendarCheck className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm sm:text-base font-semibold">Mis reservas</span>
             </div>
-            <span className="text-xs sm:text-sm text-gray-500">
+            <span className="text-xs sm:text-sm text-muted-foreground">
               {totalActivas === 0
                 ? "No tienes reservas activas"
                 : totalActivas === 1
@@ -83,11 +83,11 @@ export default async function PaginaDashboard() {
         </div>
 
         {/* Seccion: reservas activas */}
-        <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800">Reservas activas</h2>
+        <section className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <h2 className="font-semibold text-foreground">Reservas activas</h2>
             {totalActivas > 0 && (
-              <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 px-2 py-0.5 rounded-full">
                 {totalActivas}
               </span>
             )}
@@ -95,7 +95,7 @@ export default async function PaginaDashboard() {
 
           {reservasActivas.length === 0 ? (
             <div className="px-4 py-8 text-center space-y-2">
-              <p className="text-sm text-gray-500">No tienes reservas activas</p>
+              <p className="text-sm text-muted-foreground">No tienes reservas activas</p>
               <Link
                 href="/pistas"
                 className="inline-block text-sm text-blue-600 hover:underline font-medium"
@@ -104,27 +104,27 @@ export default async function PaginaDashboard() {
               </Link>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-border">
               {reservasActivas.map((reserva, indice) => (
                 <li
                   key={reserva.id}
                   className={`px-4 py-3 flex items-center justify-between gap-2 ${
-                    indice === 0 ? "border-l-4 border-blue-600 bg-blue-50" : ""
+                    indice === 0 ? "border-l-4 border-blue-600 bg-blue-50 dark:bg-blue-950/20" : ""
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {indice === 0 && <span className="text-blue-600 font-bold" aria-hidden="true">⭐ </span>}
                       {reserva.instalacion.nombre}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 flex-wrap">
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
                       <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
                       <span>{formatearFechaCorta(reserva.horaInicio)}</span>
                       <span aria-hidden="true">·</span>
                       <span>{formatearHora(reserva.horaInicio)} – {formatearHora(reserva.horaFin)}</span>
                     </p>
                   </div>
-                  <span className="shrink-0 text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  <span className="shrink-0 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 px-2 py-0.5 rounded-full">
                     Activa
                   </span>
                 </li>
@@ -134,9 +134,9 @@ export default async function PaginaDashboard() {
         </section>
 
         {/* Sección: Mis datos (RGPD) */}
-        <section aria-labelledby="titulo-mis-datos" className="border border-gray-200 rounded-lg p-5 sm:p-6 bg-white">
-          <h2 id="titulo-mis-datos" className="text-base font-semibold text-gray-900 mb-1">Mis datos</h2>
-          <p className="text-sm text-gray-600 mb-4">
+        <section aria-labelledby="titulo-mis-datos" className="border border-border rounded-lg p-5 sm:p-6 bg-card">
+          <h2 id="titulo-mis-datos" className="text-base font-semibold text-foreground mb-1">Mis datos</h2>
+          <p className="text-sm text-muted-foreground mb-4">
             Conforme al RGPD, puedes exportar o eliminar tu cuenta desde tu perfil.
           </p>
           <BotonesRGPD />

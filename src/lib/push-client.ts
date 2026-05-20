@@ -44,9 +44,13 @@ export async function suscribirAPush(): Promise<boolean> {
   }
 
   try {
-    // Registrar o recuperar el service worker existente
-    const registro = await registrarServiceWorker()
-    if (!registro) return false
+    // Registrar el service worker si aún no está registrado
+    await registrarServiceWorker()
+
+    // Esperar a que el SW esté completamente activo antes de suscribirse.
+    // navigator.serviceWorker.ready resuelve SOLO cuando hay un SW en estado "active",
+    // a diferencia del objeto devuelto por register() que puede estar aún en "installing".
+    const registro = await navigator.serviceWorker.ready
 
     // Solicitar permiso de notificaciones al usuario
     const permiso = await Notification.requestPermission()
@@ -57,6 +61,24 @@ export async function suscribirAPush(): Promise<boolean> {
     if (!clavePublica) {
       console.error('NEXT_PUBLIC_VAPID_PUBLIC_KEY no está configurada')
       return false
+    }
+
+    // Si ya hay una suscripción activa, reutilizarla en lugar de crear una nueva
+    const suscripcionExistente = await registro.pushManager.getSubscription()
+    if (suscripcionExistente) {
+      // Reenviar al servidor por si el endpoint cambió o no estaba guardado
+      const claveP256dh = suscripcionExistente.getKey('p256dh')
+      const claveAuth = suscripcionExistente.getKey('auth')
+      if (claveP256dh && claveAuth) {
+        const p256dh = btoa(String.fromCharCode(...Array.from(new Uint8Array(claveP256dh))))
+        const auth = btoa(String.fromCharCode(...Array.from(new Uint8Array(claveAuth))))
+        const respuesta = await fetch('/api/push/suscribir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: suscripcionExistente.endpoint, keys: { p256dh, auth } }),
+        })
+        return respuesta.ok
+      }
     }
 
     // Suscribir al PushManager con la clave VAPID

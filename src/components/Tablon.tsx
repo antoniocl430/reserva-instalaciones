@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
-import { Clock, Bell, AlertCircle, CheckCircle, LogIn } from "lucide-react"
+import { Clock, Bell, AlertCircle, CheckCircle, ChevronRight, Info, MapPin } from "lucide-react"
 import StarRating from "@/components/StarRating"
 
 interface Instalacion {
@@ -14,16 +12,13 @@ interface Instalacion {
   descripcion: string | null
   horario: string
   activa: boolean
-  /** Media de valoraciones (0-5). Null si no hay valoraciones. */
   mediaValoracion?: number | null
-  /** Número total de valoraciones recibidas. */
   totalValoraciones?: number
 }
 
-// Tipo canónico de aviso proveniente de la API (tipos en mayúsculas)
 export interface Aviso {
   id: string
-  fecha: string   // ISO date o string formateado
+  fecha: string
   titulo: string
   descripcion: string
   tipo: "INFO" | "AVISO" | "CIERRE"
@@ -31,107 +26,99 @@ export interface Aviso {
 
 interface TablonProps {
   pistas: Instalacion[]
-  /** Avisos del tablón de anuncios obtenidos desde la API. */
   avisos: Aviso[]
-  /** Municipio del tenant actual. Si se pasa, el título muestra "Instalaciones — {municipio}". */
   municipio?: string
-  /** Si el usuario ya tiene sesión activa, oculta el banner de "Inicia sesión". */
   sesionActiva?: boolean
 }
 
-const TIPO_COLORES: Record<string, { badge: string; icono: string }> = {
-  PADEL: { badge: "bg-blue-100 text-blue-700", icono: "🎾" },
-  TENIS: { badge: "bg-yellow-100 text-yellow-700", icono: "🏸" },
-  FUTBOL: { badge: "bg-green-100 text-green-700", icono: "⚽" },
-  BASQUETBOL: { badge: "bg-orange-100 text-orange-700", icono: "🏀" },
+// Configuración visual por tipo de deporte
+const CONFIG_TIPO: Record<string, { color: string; bgLight: string; bgDark: string; emoji: string; label: string }> = {
+  PADEL:     { color: "bg-blue-500",   bgLight: "bg-blue-50 dark:bg-blue-950/30",   bgDark: "border-blue-500",   emoji: "🏓", label: "Pádel" },
+  TENIS:     { color: "bg-yellow-500", bgLight: "bg-yellow-50 dark:bg-yellow-950/30", bgDark: "border-yellow-500", emoji: "🎾", label: "Tenis" },
+  FUTBOL:    { color: "bg-green-500",  bgLight: "bg-green-50 dark:bg-green-950/30",  bgDark: "border-green-500",  emoji: "⚽", label: "Fútbol" },
+  BASQUETBOL:{ color: "bg-orange-500", bgLight: "bg-orange-50 dark:bg-orange-950/30",bgDark: "border-orange-500", emoji: "🏀", label: "Baloncesto" },
+  PISCINA:   { color: "bg-cyan-500",   bgLight: "bg-cyan-50 dark:bg-cyan-950/30",   bgDark: "border-cyan-500",   emoji: "🏊", label: "Piscina" },
 }
 
-// Renderiza el icono de tipo de instalación con aria-hidden para que los lectores de
-// pantalla no lean el emoji — el tipo ya está indicado en texto por el Badge
-function IconoTipo({ icono }: { icono: string }) {
-  return <span aria-hidden="true">{icono}</span>
+function obtenerConfig(tipo: string) {
+  return CONFIG_TIPO[tipo] ?? { color: "bg-slate-500", bgLight: "bg-slate-50 dark:bg-slate-900/30", bgDark: "border-slate-500", emoji: "📍", label: tipo }
 }
 
 function TarjetaInstalacion({ instalacion }: { instalacion: Instalacion }) {
-  const config =
-    TIPO_COLORES[instalacion.tipo] || { badge: "bg-gray-100 text-gray-700", icono: "📍" }
+  const cfg = obtenerConfig(instalacion.tipo)
 
   const contenido = (
-    <Card className={`flex flex-col gap-3 p-4 md:p-5 border border-gray-200 transition-all duration-200 ${
+    <div className={`group relative bg-card border border-border rounded-xl overflow-hidden transition-all duration-200 ${
       instalacion.activa
-        ? "hover:border-blue-300 hover:shadow-md cursor-pointer"
-        : "opacity-60 grayscale cursor-not-allowed bg-gray-50"
+        ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+        : "opacity-50 cursor-not-allowed"
     }`}>
-      {/* Encabezado con nombre y tipo */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 text-sm md:text-base leading-tight">
-            {instalacion.nombre}
-          </h3>
+      {/* Franja de color superior */}
+      <div className={`h-1 w-full ${cfg.color}`} />
+
+      <div className="p-5">
+        {/* Cabecera */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-xl shrink-0" aria-hidden="true">{cfg.emoji}</span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-foreground text-sm leading-tight truncate">{instalacion.nombre}</h3>
+              <span className="text-xs text-muted-foreground">{cfg.label}</span>
+            </div>
+          </div>
+          {/* Indicador de disponibilidad */}
+          <div className={`shrink-0 flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+            instalacion.activa
+              ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
+              : "bg-muted text-muted-foreground"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${instalacion.activa ? "bg-green-500" : "bg-gray-400"}`} />
+            {instalacion.activa ? "Disponible" : "Cerrada"}
+          </div>
         </div>
-        <Badge className={`${config.badge} font-medium text-xs whitespace-nowrap flex-shrink-0`}>
-          {instalacion.tipo}
-        </Badge>
-      </div>
 
-      {/* Descripción */}
-      {instalacion.descripcion && (
-        <p className="text-xs text-gray-600 line-clamp-3 md:line-clamp-none">{instalacion.descripcion}</p>
-      )}
-
-      {/* Media de valoraciones — solo si hay valoraciones */}
-      {instalacion.totalValoraciones && instalacion.totalValoraciones > 0 && instalacion.mediaValoracion != null && (
-        <div className="flex items-center gap-1.5">
-          <StarRating value={Math.round(instalacion.mediaValoracion)} size="sm" />
-          <span className="text-xs text-gray-500">
-            {instalacion.mediaValoracion.toFixed(1)}
-            {" "}
-            <span className="text-gray-400">({instalacion.totalValoraciones})</span>
-          </span>
-        </div>
-      )}
-
-      {/* Horario */}
-      <div className="flex items-center gap-2 text-xs text-gray-700">
-        <Clock className="w-4 h-4 flex-shrink-0 text-gray-500" aria-hidden="true" />
-        <span>{instalacion.horario}</span>
-      </div>
-
-      {/* Estado */}
-      <div className="flex items-center gap-2 pt-1">
-        {instalacion.activa ? (
-          <>
-            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs font-medium text-green-600">Disponible</span>
-          </>
-        ) : (
-          <>
-            <AlertCircle className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
-            <span className="text-xs font-medium text-gray-400">No disponible</span>
-          </>
+        {/* Descripción */}
+        {instalacion.descripcion && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{instalacion.descripcion}</p>
         )}
+
+        {/* Valoraciones */}
+        {(instalacion.totalValoraciones ?? 0) > 0 && instalacion.mediaValoracion != null && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <StarRating value={Math.round(instalacion.mediaValoracion)} size="sm" />
+            <span className="text-xs text-muted-foreground">
+              {instalacion.mediaValoracion.toFixed(1)}
+              <span className="ml-1 opacity-60">({instalacion.totalValoraciones})</span>
+            </span>
+          </div>
+        )}
+
+        {/* Horario */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-3 border-t border-border">
+          <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="truncate">{instalacion.horario}</span>
+        </div>
       </div>
-    </Card>
+
+      {/* Flecha hover */}
+      {instalacion.activa && (
+        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </div>
+      )}
+    </div>
   )
 
   if (!instalacion.activa) return contenido
-  return (
-    <Link href={`/pistas/${instalacion.id}`} className="block">
-      {contenido}
-    </Link>
-  )
+  return <Link href={`/pistas/${instalacion.id}`} className="block">{contenido}</Link>
 }
 
-// Formatea una fecha ISO a texto legible en español con hora.
-// Usa formatToParts() para extraer solo los valores numéricos y montar el string
-// manualmente, evitando que el ICU de Node.js añada conectores como "a las"
-// que no genera Chrome (causa hydration mismatch en SSR).
 function formatearFechaAviso(fechaIso: string): string {
   try {
     const fecha = new Date(fechaIso)
     const partes = new Intl.DateTimeFormat("es-ES", {
       day: "numeric",
-      month: "long",
+      month: "short",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
@@ -139,95 +126,110 @@ function formatearFechaAviso(fechaIso: string): string {
     }).formatToParts(fecha)
 
     const get = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? ""
-    const dia = get("day")
-    const mes = get("month")
-    const hora = get("hour").padStart(2, "0")
-    const minuto = get("minute").padStart(2, "0")
-
-    return `${dia} de ${mes}, ${hora}:${minuto}`
+    return `${get("day")} ${get("month")}, ${get("hour").padStart(2, "0")}:${get("minute")}`
   } catch {
     return fechaIso
   }
 }
 
 function TarjetaAviso({ aviso }: { aviso: Aviso }) {
-  // Renderizar la fecha solo en el cliente para evitar hydration mismatch:
-  // Node.js ICU (servidor) y el navegador formatean fechas es-ES de forma diferente.
   const [fechaTexto, setFechaTexto] = useState("")
-  useEffect(() => {
-    setFechaTexto(formatearFechaAviso(aviso.fecha))
-  }, [aviso.fecha])
+  useEffect(() => { setFechaTexto(formatearFechaAviso(aviso.fecha)) }, [aviso.fecha])
 
-  const iconoTipo =
-    aviso.tipo === "CIERRE" ? (
-      <AlertCircle className="w-5 h-5 text-red-600" aria-hidden="true" />
-    ) : aviso.tipo === "AVISO" ? (
-      <Bell className="w-5 h-5 text-amber-600" aria-hidden="true" />
-    ) : (
-      <CheckCircle className="w-5 h-5 text-blue-600" aria-hidden="true" />
-    )
+  const config = {
+    CIERRE: { icon: <AlertCircle className="w-4 h-4 text-red-500" />, bg: "bg-red-50 dark:bg-red-950/20", border: "border-red-200 dark:border-red-900" },
+    AVISO:  { icon: <Bell className="w-4 h-4 text-amber-500" />, bg: "bg-amber-50 dark:bg-amber-950/20", border: "border-amber-200 dark:border-amber-900" },
+    INFO:   { icon: <Info className="w-4 h-4 text-blue-500" />, bg: "bg-blue-50 dark:bg-blue-950/20", border: "border-blue-200 dark:border-blue-900" },
+  }[aviso.tipo] ?? { icon: <CheckCircle className="w-4 h-4 text-green-500" />, bg: "bg-muted", border: "border-border" }
 
   return (
-    <div className="flex gap-3 pb-4 border-b border-gray-200 last:border-b-0 last:pb-0">
-      <div className="flex-shrink-0 pt-0.5">{iconoTipo}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 font-medium tabular-nums">{fechaTexto}</p>
-        <h4 className="font-semibold text-sm text-gray-900 mt-1 leading-snug">{aviso.titulo}</h4>
-        <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">{aviso.descripcion}</p>
+    <div className={`rounded-lg border p-3 ${config.bg} ${config.border}`}>
+      <div className="flex gap-2.5">
+        <div className="shrink-0 mt-0.5">{config.icon}</div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground tabular-nums mb-0.5">{fechaTexto}</p>
+          <p className="text-sm font-medium text-foreground leading-snug">{aviso.titulo}</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{aviso.descripcion}</p>
+        </div>
       </div>
     </div>
   )
 }
 
 export default function Tablon({ pistas, avisos, municipio, sesionActiva }: TablonProps) {
+  const pistasActivas = pistas.filter((p) => p.activa).length
+
   if (pistas.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-96 bg-gray-50">
-        <p className="text-gray-600 text-base">No hay instalaciones disponibles en este momento.</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center px-4">
+        <MapPin className="w-10 h-10 text-muted-foreground/40" />
+        <p className="text-muted-foreground">No hay instalaciones disponibles en este momento.</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
-        {/* Grid de dos columnas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Columna izquierda: Instalaciones (2/3 del ancho en desktop) */}
-          <div className="lg:col-span-2">
-            <div className="mb-6">
-              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
-                {municipio ? `Instalaciones — ${municipio}` : "Instalaciones disponibles"}
-              </h2>
-              <p className="text-sm text-gray-600 mt-2">
-                Consulta el estado y horarios de todas nuestras instalaciones deportivas
-              </p>
+    <div className="min-h-screen bg-background">
+      {/* Hero */}
+      <section className="border-b border-border bg-gradient-to-b from-blue-50/80 to-background dark:from-blue-950/20 dark:to-background py-10 md:py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="max-w-2xl">
+            {/* Indicador de instalaciones activas */}
+            <div className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 px-3 py-1 rounded-full mb-5">
+              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shrink-0" />
+              {pistasActivas} {pistasActivas === 1 ? "instalación disponible" : "instalaciones disponibles"}
             </div>
 
-            {/* Aviso de acceso — solo visible si no hay sesión activa */}
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight tracking-tight">
+              {municipio ? (
+                <>Instalaciones de<br /><span className="text-blue-600">{municipio}</span></>
+              ) : (
+                "Instalaciones deportivas"
+              )}
+            </h1>
+            <p className="text-muted-foreground mt-3 text-base md:text-lg leading-relaxed">
+              Consulta disponibilidad y reserva tu pista en segundos
+            </p>
+
+            {/* CTAs para usuarios no registrados */}
             {!sesionActiva && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5">
-                <div className="flex items-start gap-3">
-                  <LogIn className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-blue-800 font-medium">Consulta la disponibilidad sin cuenta</p>
-                    <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                      Haz clic en cualquier instalación para ver los horarios.
-                      Para reservar,{" "}
-                      <Link href="/registro" className="font-semibold underline underline-offset-2 hover:text-blue-900">
-                        crea tu cuenta gratis
-                      </Link>
-                      {" "}o{" "}
-                      <Link href="/login" className="underline underline-offset-2 hover:text-blue-900">
-                        inicia sesión
-                      </Link>.
-                    </p>
-                  </div>
-                </div>
+              <div className="flex flex-wrap gap-3 mt-7">
+                <Link
+                  href="/registro"
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                >
+                  Crear cuenta gratis
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 border border-border bg-background hover:bg-muted text-foreground px-5 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                >
+                  Ya tengo cuenta
+                </Link>
               </div>
             )}
+          </div>
+        </div>
+      </section>
 
-            {/* Grid de tarjetas */}
+      {/* Contenido principal */}
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+          {/* Instalaciones (2/3) */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Instalaciones
+              </h2>
+              <Link
+                href="/pistas"
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+              >
+                Ver todas
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {pistas.map((instalacion) => (
                 <TarjetaInstalacion key={instalacion.id} instalacion={instalacion} />
@@ -235,31 +237,30 @@ export default function Tablon({ pistas, avisos, municipio, sesionActiva }: Tabl
             </div>
           </div>
 
-          {/* Columna derecha: Tablón de avisos (1/3 del ancho en desktop) */}
+          {/* Tablón de avisos (1/3) */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <div className="mb-4">
-                <h3 className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-gray-700 shrink-0" aria-hidden="true" />
+            <div className="sticky top-20">
+              <div className="flex items-center gap-2 mb-5">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   Tablón de avisos
                 </h3>
               </div>
 
-              <Card className="bg-white border border-gray-200 p-4 space-y-4">
+              <div className="space-y-3">
                 {avisos.length > 0 ? (
                   avisos.map((aviso) => (
                     <TarjetaAviso key={aviso.id} aviso={aviso} />
                   ))
                 ) : (
-                  <p className="text-xs text-gray-500 text-center py-2">
-                    No hay avisos publicados en este momento.
-                  </p>
+                  <div className="bg-card border border-border rounded-xl p-6 text-center">
+                    <Bell className="w-6 h-6 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No hay avisos publicados</p>
+                  </div>
                 )}
-              </Card>
+              </div>
 
-              {/* Pie de avisos */}
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                Últimas actualizaciones del ayuntamiento
+              <p className="text-xs text-muted-foreground/60 mt-4 text-center">
+                Información del ayuntamiento
               </p>
             </div>
           </div>

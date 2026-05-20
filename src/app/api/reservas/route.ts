@@ -101,28 +101,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Leer el límite de reservas activas del tenant (configurable).
-  // Por defecto es 2 si no está configurado en el JSON del tenant.
-  const limiteReservasActivas = configTenant.limiteReservasActivas ?? 2
-
   // Crear reserva en transacción.
-  // El conteo de reservas activas del ciudadano se realiza DENTRO de la transacción
-  // para evitar que dos peticiones simultáneas superen el límite configurado (BUG-03).
+  // El conteo de reservas del día se realiza DENTRO de la transacción
+  // para evitar que dos peticiones simultáneas superen el límite (BUG-03).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let reserva: any
   try {
     reserva = await prisma.$transaction(async (tx) => {
-      // Verificar límite de reservas activas simultáneas (solo ciudadanos).
-      // El límite es configurable por tenant mediante `limiteReservasActivas` en la config JSON.
+      // Verificar que el ciudadano no tiene ya una reserva activa ese mismo día.
       if (sesion.user.rol === "CIUDADANO") {
-        const reservasActivas = await tx.reserva.count({
+        const reservasDelDia = await tx.reserva.count({
           where: {
             usuarioId: sesion.user.id,
             estado: "ACTIVA",
-            horaInicio: { gte: new Date() },
+            fecha: new Date(fecha + "T00:00:00.000Z"),
           },
         })
-        if (reservasActivas >= limiteReservasActivas) {
+        if (reservasDelDia >= 1) {
           throw new Error("LIMITE_RESERVAS")
         }
       }
@@ -157,7 +152,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (err instanceof Error && err.message === "LIMITE_RESERVAS") {
       return NextResponse.json(
-        { error: `No puedes tener más de ${limiteReservasActivas} reservas activas simultáneas` },
+        { error: "Ya tienes una reserva activa para este día" },
         { status: 409 }
       )
     }

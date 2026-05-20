@@ -5,6 +5,16 @@ function getResend() {
 }
 
 /**
+ * Devuelve la URL base de la app.
+ * En producción usa NEXTAUTH_URL (siempre definida).
+ * En desarrollo sin NEXTAUTH_URL, usa localhost como fallback — los links de email
+ * en dev apuntan a localhost, lo cual es correcto para debug local.
+ */
+function obtenerBaseUrl(): string {
+  return process.env.NEXTAUTH_URL ?? "http://localhost:3000"
+}
+
+/**
  * Devuelve el destinatario real del email.
  * Si EMAIL_REDIRECCION_DEV está configurada, todos los emails se redirigen a esa dirección.
  * Útil para pruebas con el plan gratuito de Resend (solo permite enviar al email del propietario).
@@ -164,7 +174,7 @@ function plantillaReserva(datos: DatosReserva): string {
             <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
           </tr>
         </table>
-        <p style="font-size: 14px; color: #6b7280;">Puedes cancelar tu reserva en cualquier momento desde <a href="${process.env.NEXTAUTH_URL}/mis-reservas">Mis Reservas</a>.</p>
+        <p style="font-size: 14px; color: #6b7280;">Puedes cancelar tu reserva en cualquier momento desde <a href="${obtenerBaseUrl()}/mis-reservas">Mis Reservas</a>.</p>
       </div>
     </body>
     </html>
@@ -364,7 +374,7 @@ export async function enviarEmailSlotDisponible(datos: DatosReserva): Promise<vo
 }
 
 function plantillaSlotDisponible(datos: DatosReserva): string {
-  const urlConfirmar = `${process.env.NEXTAUTH_URL}/mis-reservas`
+  const urlConfirmar = `${obtenerBaseUrl()}/mis-reservas`
   return `
     <!DOCTYPE html>
     <html lang="es">
@@ -620,7 +630,7 @@ function plantillaConfirmacionGrupo(
         <ul style="padding-left: 20px; color: #4b5563;">
           ${sesionesHtml}
         </ul>
-        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Puedes gestionar tu clase en: <a href="${process.env.NEXTAUTH_URL}/instructor/mis-clases" style="color: #2563eb; text-decoration: none;">Mis Clases</a></p>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Puedes gestionar tu clase en: <a href="${obtenerBaseUrl()}/instructor/mis-clases" style="color: #2563eb; text-decoration: none;">Mis Clases</a></p>
       </div>
     </body>
     </html>

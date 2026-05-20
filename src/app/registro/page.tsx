@@ -90,19 +90,19 @@ export default function PaginaRegistro() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           {/* Cabecera */}
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Crear cuenta</h1>
-            <p className="text-sm text-gray-500 mt-1">Reservas Deportivas Municipales</p>
+            <h1 className="text-2xl font-bold text-foreground">Crear cuenta</h1>
+            <p className="text-sm text-muted-foreground mt-1">Reservas Deportivas Municipales</p>
           </div>
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div role="alert" aria-live="assertive" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div role="alert" aria-live="assertive" className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-400">
               {error}
             </div>
           )}
@@ -169,7 +169,7 @@ export default function PaginaRegistro() {
               required
               className="mt-0.5 shrink-0"
             />
-            <label htmlFor="aceptaPrivacidad" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
+            <label htmlFor="aceptaPrivacidad" className="text-sm text-foreground leading-relaxed cursor-pointer">
               He leído y acepto la{" "}
               <Link
                 href="/privacidad"
@@ -204,14 +204,14 @@ export default function PaginaRegistro() {
           </form>
 
           {/* Pie */}
-          <div className="space-y-2 text-center text-sm text-gray-500 mt-6">
+          <div className="space-y-2 text-center text-sm text-muted-foreground mt-6">
             <p>
               ¿Ya tienes cuenta?{" "}
               <Link href="/login" className="font-medium text-blue-600 hover:underline">
                 Inicia sesión
               </Link>
             </p>
-            <Link href="/" className="block text-gray-400 hover:text-gray-600">
+            <Link href="/" className="block text-muted-foreground/60 hover:text-muted-foreground transition-colors">
               ← Volver al inicio
             </Link>
           </div>

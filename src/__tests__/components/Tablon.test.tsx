@@ -57,6 +57,10 @@ vi.mock('lucide-react', () => ({
   AlertCircle: () => React.createElement('span', { 'data-testid': 'icon-alert' }),
   CheckCircle: () => React.createElement('span', { 'data-testid': 'icon-check' }),
   LogIn: () => React.createElement('span', { 'data-testid': 'icon-login' }),
+  ChevronRight: () => React.createElement('span', { 'data-testid': 'icon-chevron-right' }),
+  MapPin: () => React.createElement('span', { 'data-testid': 'icon-map-pin' }),
+  Info: () => React.createElement('span', { 'data-testid': 'icon-info' }),
+  Star: () => React.createElement('span', { 'data-testid': 'icon-star' }),
 }))
 
 // --- Datos de prueba ---
@@ -93,15 +97,16 @@ const AVISOS_EJEMPLO = [
 // --- Suite de tests ---
 
 describe('Tablon — personalización por tenant', () => {
-  it('muestra "Instalaciones disponibles" cuando no se pasa municipio', async () => {
+  it('muestra "Instalaciones deportivas" cuando no se pasa municipio', async () => {
     const { default: Tablon } = await import('@/components/Tablon')
 
     render(React.createElement(Tablon, { pistas: PISTAS_EJEMPLO, avisos: [] }))
 
-    expect(screen.getByText('Instalaciones disponibles')).toBeInTheDocument()
+    // El componente ahora muestra "Instalaciones deportivas" como título principal
+    expect(screen.getByText('Instalaciones deportivas')).toBeInTheDocument()
   })
 
-  it('muestra "Instalaciones — Sevilla" cuando municipio="Sevilla"', async () => {
+  it('muestra el nombre del municipio en el título cuando se pasa municipio="Sevilla"', async () => {
     const { default: Tablon } = await import('@/components/Tablon')
 
     render(
@@ -112,18 +117,20 @@ describe('Tablon — personalización por tenant', () => {
       })
     )
 
-    expect(screen.getByText('Instalaciones — Sevilla')).toBeInTheDocument()
-    expect(screen.queryByText('Instalaciones disponibles')).not.toBeInTheDocument()
+    // El componente muestra "Instalaciones de" + municipio (puede estar en nodos distintos)
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('Sevilla')
+    expect(body).not.toContain('Instalaciones deportivas')
   })
 
-  it('muestra el aviso de login cuando no hay sesión', async () => {
+  it('muestra el enlace a /login cuando no hay sesión', async () => {
     const { default: Tablon } = await import('@/components/Tablon')
 
     render(React.createElement(Tablon, { pistas: PISTAS_EJEMPLO, avisos: [] }))
 
-    // El aviso de login contiene el enlace a /login
-    const enlaceLogin = screen.getByRole('link', { name: /inicia sesión/i })
-    expect(enlaceLogin).toHaveAttribute('href', '/login')
+    // El enlace a /login muestra "Ya tengo cuenta"
+    const enlaceLogin = document.querySelector('[href="/login"]')
+    expect(enlaceLogin).toBeInTheDocument()
   })
 
   it('muestra mensaje de sin instalaciones cuando pistas está vacío', async () => {

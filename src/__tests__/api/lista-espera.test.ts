@@ -196,6 +196,58 @@ describe("POST /api/lista-espera", () => {
   })
 })
 
+// ─── Regla: ciudadano con reserva activa en un slot no puede apuntarse a la lista de espera ──
+// El chequeo de reserva propia ocurre tras verificar que el slot está ocupado.
+// Flujo de findFirst: 1ª llamada = slot ocupado (devuelve reserva), 2ª llamada = reserva propia.
+
+describe("POST /api/lista-espera — no apuntarse si ya tienes reserva en ese slot", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it("devuelve 409 cuando el ciudadano ya tiene una reserva activa en ese slot exacto", async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.instalacion.findFirst.mockResolvedValue({ id: "inst-1", activa: true })
+    // 1ª llamada a reserva.findFirst: el slot está ocupado (por otro usuario)
+    prismaMock.reserva.findFirst.mockResolvedValueOnce({ id: "reserva-otro" })
+    // 2ª llamada a reserva.findFirst: el ciudadano también tiene una reserva en ese slot
+    prismaMock.reserva.findFirst.mockResolvedValueOnce({ id: "reserva-propia" })
+
+    const res = await POST(
+      req("http://localhost/api/lista-espera", "POST", {
+        instalacionId: "inst-1",
+        fecha: "2099-06-15",
+        horaInicio: "10:00",
+      })
+    )
+
+    expect(res.status).toBe(409)
+    const data = await res.json()
+    expect(data.error).toBe("Ya tienes una reserva activa para este slot")
+  })
+
+  it("devuelve 201 cuando el slot está ocupado pero el ciudadano NO tiene reserva en ese slot (camino feliz)", async () => {
+    mockGetServerSession.mockResolvedValue(sesionCiudadano)
+    prismaMock.instalacion.findFirst.mockResolvedValue({ id: "inst-1", activa: true })
+    // 1ª llamada: slot ocupado por otro usuario
+    prismaMock.reserva.findFirst.mockResolvedValueOnce({ id: "reserva-otro" })
+    // 2ª llamada: el ciudadano no tiene reserva propia en ese slot
+    prismaMock.reserva.findFirst.mockResolvedValueOnce(null)
+    prismaMock.usuario.findUnique.mockResolvedValue({ suspendidoHasta: null })
+    prismaMock.listaEspera.create.mockResolvedValue(entradaMock)
+
+    const res = await POST(
+      req("http://localhost/api/lista-espera", "POST", {
+        instalacionId: "inst-1",
+        fecha: "2099-06-15",
+        horaInicio: "10:00",
+      })
+    )
+
+    expect(res.status).toBe(201)
+    const data = await res.json()
+    expect(data).toHaveProperty("entrada")
+  })
+})
+
 // ─── DELETE /api/lista-espera/[id] ───────────────────────────────────────────
 
 describe("DELETE /api/lista-espera/[id]", () => {

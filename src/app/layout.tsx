@@ -70,9 +70,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
     const colorTema = configuracion?.colores?.primario ?? "#2563eb"
 
+    // Logo del tenant como favicon dinámico
+    const logoUrl = (tenant as any).logoUrl ?? null
+
     return {
       title: { template: `%s | ${nombreBase}`, default: nombreBase },
       description: descripcion,
+      // Favicon dinámico usando el logo del tenant
+      ...(logoUrl && {
+        icons: {
+          icon: logoUrl,
+          apple: logoUrl,
+        },
+      }),
       // Meta tags PWA para iOS (Safari no usa Web App Manifest para instalación)
       appleWebApp: {
         capable: true,

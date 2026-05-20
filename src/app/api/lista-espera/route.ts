@@ -107,6 +107,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Verificar que el ciudadano no tiene ya una reserva activa en ese slot
+  const reservaPropia = await prisma.reserva.findFirst({
+    where: {
+      tenantId,
+      instalacionId,
+      usuarioId: sesion.user.id,
+      estado: "ACTIVA",
+      horaInicio: horaInicioDate,
+    },
+  })
+  if (reservaPropia) {
+    return NextResponse.json(
+      { error: "Ya tienes una reserva activa para este slot" },
+      { status: 409 }
+    )
+  }
+
   // Verificar que el ciudadano no está suspendido
   const usuario = await prisma.usuario.findUnique({
     where: { id: sesion.user.id },

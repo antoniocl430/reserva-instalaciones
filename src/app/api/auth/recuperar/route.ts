@@ -66,8 +66,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Construir URL de reset
-    const urlReset = `${process.env.NEXTAUTH_URL}/nueva-password?token=${token}`
+    // Construir URL de reset usando la URL real de la petición (funciona con localhost Y devtunnels)
+    const proto = request.headers.get("x-forwarded-proto") ?? "http"
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "localhost:3000"
+    const baseUrl = process.env.NEXTAUTH_URL ?? `${proto}://${host}`
+    const urlReset = `${baseUrl}/nueva-password?token=${token}`
 
     // Enviar email (no bloquea respuesta si falla)
     enviarEmailRecuperacion(usuario.email, usuario.nombre, urlReset).catch((error) => {

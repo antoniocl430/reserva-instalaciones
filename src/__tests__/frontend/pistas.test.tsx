@@ -16,6 +16,19 @@ vi.mock('next-auth', () => ({
   getServerSession: vi.fn(),
 }))
 
+// Mock de lucide-react: incluye todos los iconos que usa pistas/page.tsx y Tablon.tsx
+vi.mock('lucide-react', () => ({
+  Clock: () => React.createElement('span', { 'data-testid': 'icon-clock' }),
+  ChevronLeft: () => React.createElement('span', { 'data-testid': 'icon-chevron-left' }),
+  ChevronRight: () => React.createElement('span', { 'data-testid': 'icon-chevron-right' }),
+  MapPin: () => React.createElement('span', { 'data-testid': 'icon-map-pin' }),
+  Bell: () => React.createElement('span', { 'data-testid': 'icon-bell' }),
+  AlertCircle: () => React.createElement('span', { 'data-testid': 'icon-alert' }),
+  CheckCircle: () => React.createElement('span', { 'data-testid': 'icon-check' }),
+  Info: () => React.createElement('span', { 'data-testid': 'icon-info' }),
+  Star: () => React.createElement('span', { 'data-testid': 'icon-star' }),
+}))
+
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`)
@@ -180,7 +193,9 @@ describe('PaginaPistas', () => {
     const elemento = await PaginaPistas()
     render(elemento)
 
-    expect(screen.getByText('Pádel')).toBeInTheDocument()
+    // La etiqueta incluye el emoji "🏓 Pádel" — puede haber múltiples coincidencias (también en el nombre)
+    const etiquetas = screen.getAllByText(/Pádel/i)
+    expect(etiquetas.length).toBeGreaterThanOrEqual(1)
   })
 
   it('debería mostrar la descripción de la pista cuando existe', async () => {

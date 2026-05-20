@@ -75,7 +75,7 @@ Esta funcionalidad está pensada para que los nuevos ciudadanos vean si hay disp
 - Por defecto: **8:00–13:00** (franja mañana) y **16:45–20:30** (franja tarde)
 - **7 slots de 75 minutos** por día: 08:00, 09:15, 10:30, 11:45, 16:45, 18:00, 19:15
 
-**Límite de reservas activas**: por defecto, cada ciudadano puede tener hasta **2 reservas activas simultáneas**. Este límite es configurable por el ayuntamiento.
+**Límite de reservas por día**: cada ciudadano puede tener como máximo **1 reserva activa por día**. Si ya tiene una reserva en ese día, no puede hacer otra aunque sea en diferente instalación o franja horaria.
 
 **Bloqueo por suspensión**: si el ciudadano tiene la cuenta suspendida (por no presentarse repetidamente), el sistema le informa de la fecha hasta la que está suspendido y no puede hacer nuevas reservas.
 
@@ -128,6 +128,7 @@ Cuando todos los slots de un horario están ocupados, el ciudadano puede apuntar
 - Un ciudadano no puede apuntarse dos veces al mismo slot.
 - Solo se puede apuntar a slots que estén realmente ocupados (si queda libre, puede reservarlo directamente).
 - Los ciudadanos suspendidos no pueden unirse a listas de espera.
+- Un ciudadano que ya tiene una reserva activa en ese slot no puede apuntarse a la lista de espera de ese mismo slot.
 
 ### 3.8 Valoraciones de instalaciones
 
@@ -243,7 +244,7 @@ El admin puede gestionar las cuentas de su propio ayuntamiento:
 El admin gestiona los avisos que aparecen en la página principal del ciudadano:
 - **Ver** todos los avisos con tipo y fecha
 - **Crear aviso**: título, descripción, tipo (Informativo / Aviso / Cierre) y fecha del aviso
-- **Fecha de caducidad** (opcional): si se establece, el aviso desaparece automáticamente del tablón público al llegar esa fecha. En el panel admin se muestra con badge "Caducado" pero no se elimina.
+- **Fecha de caducidad** (opcional): si se establece, el aviso es visible hasta el final del día indicado y desaparece automáticamente a partir del día siguiente. Si no se establece, el aviso permanece visible indefinidamente. En el panel admin los avisos caducados se muestran con badge "Caducado" pero no se eliminan.
 - **Editar** y **eliminar** avisos existentes
 
 ### 4.8 Comunicados masivos
@@ -297,7 +298,7 @@ El admin puede personalizar su espacio del ayuntamiento sin necesidad de interve
 - Vista previa en tiempo real de los slots que se generarán con la configuración elegida
 
 **Reservas**:
-- Límite de reservas activas por ciudadano (de 1 a 10, por defecto 2)
+- Límite de reservas por día por ciudadano: máximo 1 reserva activa por día (fijo, no configurable)
 
 **Penalizaciones**:
 - Número de no-shows para activar suspensión automática (de 1 a 10, por defecto 3)

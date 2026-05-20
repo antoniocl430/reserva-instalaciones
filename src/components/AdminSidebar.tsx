@@ -88,15 +88,7 @@ export function AdminSidebar({ logoUrl, nombreServicio = "Reservas Deportivas" }
   return (
     <>
       {/* Botón de menú móvil */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-700 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-2 min-w-0">
-          {logoUrl ? (
-            <img src={logoUrl} alt={nombreServicio} className="h-7 w-auto object-contain max-w-[100px]" />
-          ) : (
-            <span className="text-xl">🏓</span>
-          )}
-          <div className="text-white font-semibold text-sm truncate">{nombreServicio}</div>
-        </div>
+      <div className="md:hidden bg-slate-900 border-b border-slate-700 px-4 py-3 flex items-center justify-end sticky top-0 z-20">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="text-slate-400 hover:text-white transition-colors"
@@ -145,23 +137,6 @@ export function AdminSidebar({ logoUrl, nombreServicio = "Reservas Deportivas" }
 
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-700 min-h-screen fixed left-0 top-0">
-        {/* Logo/Título */}
-        <div className="px-6 py-6 border-b border-slate-700">
-          <div className="flex items-center gap-3 min-w-0">
-            {logoUrl ? (
-              <img src={logoUrl} alt={nombreServicio} className="h-9 w-auto object-contain max-w-[140px]" />
-            ) : (
-              <span className="text-2xl">🏓</span>
-            )}
-            {!logoUrl && (
-              <div className="text-white font-semibold leading-tight">{nombreServicio}</div>
-            )}
-          </div>
-          {logoUrl && (
-            <div className="text-slate-400 text-xs mt-2 truncate">{nombreServicio}</div>
-          )}
-        </div>
-
         {/* Navegación */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
