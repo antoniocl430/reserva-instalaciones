@@ -7,6 +7,7 @@ import { Header } from "@/components/header"
 import { TransicionPagina } from "@/components/TransicionPagina"
 import Footer from "@/components/Footer"
 import BannerCookies from "@/components/BannerCookies"
+import NextTopLoader from "nextjs-toploader"
 import { extraerSlugDelHost, obtenerTenantPorSlug } from "@/lib/tenant"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -206,6 +207,7 @@ export default async function LayoutRaiz({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
+        <NextTopLoader color={colores.primario} height={3} showSpinner={false} />
         {/* Enlace de salto al contenido principal — accesibilidad WCAG 2.1 */}
         <a
           href="#contenido-principal"
