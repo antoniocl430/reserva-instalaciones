@@ -109,12 +109,17 @@ export async function POST(request: NextRequest) {
   try {
     reserva = await prisma.$transaction(async (tx) => {
       // Verificar que el ciudadano no tiene ya una reserva activa ese mismo día.
+      // Solo cuentan las reservas cuya horaInicio aún no ha pasado, igual criterio
+      // que usa GET /api/reservas/mis-reservas para mostrar "Activas" (hallazgo H1
+      // auditoría UX 2026-07-02): una reserva ACTIVA ya finalizada no debe bloquear
+      // una reserva futura el mismo día.
       if (sesion.user.rol === "CIUDADANO") {
         const reservasDelDia = await tx.reserva.count({
           where: {
             usuarioId: sesion.user.id,
             estado: "ACTIVA",
             fecha: new Date(fecha + "T00:00:00.000Z"),
+            horaInicio: { gte: new Date() },
           },
         })
         if (reservasDelDia >= 1) {

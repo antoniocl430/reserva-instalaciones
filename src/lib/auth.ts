@@ -135,6 +135,9 @@ export const opcionesAuth: NextAuthOptions = {
   pages: {
     signIn: "/login",
     error: "/login",
+    // Página personalizada en español — sustituye a la plantilla por defecto
+    // de NextAuth (en inglés) al navegar directamente a /api/auth/signout (H9)
+    signOut: "/cerrar-sesion",
   },
   session: {
     strategy: "jwt",

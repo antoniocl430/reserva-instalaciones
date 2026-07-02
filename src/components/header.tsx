@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
+import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Menu, X, ShieldCheck, Zap } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
@@ -20,6 +21,7 @@ interface HeaderProps {
 export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: HeaderProps) {
   const { data: sesion, status } = useSession()
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const pathname = usePathname()
 
   const cargandoSesion = status === "loading"
   const esAdmin = sesion?.user?.rol === "ADMIN"
@@ -30,6 +32,18 @@ export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: Head
   async function cerrarSesion() {
     await signOut({ redirect: false })
     window.location.href = "/"
+  }
+
+  // Los paneles de administración (/admin, /superadmin) tienen su propia
+  // cabecera/sidebar (AdminHeader, SuperadminSidebar) — mostrar este Header
+  // global ahí produciría una barra de navegación duplicada.
+  const esRutaDePanelPropio =
+    pathname === "/admin" ||
+    pathname?.startsWith("/admin/") ||
+    pathname === "/superadmin" ||
+    pathname?.startsWith("/superadmin/")
+  if (esRutaDePanelPropio) {
+    return null
   }
 
   return (

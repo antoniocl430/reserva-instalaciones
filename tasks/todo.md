@@ -1,5 +1,108 @@
 # Tareas del Proyecto — Reservas Deportivas Municipales
 
+## Auditoría UX con Playwright MCP — pendientes (H10)
+
+> Nota: la lista original de hallazgos (H1-H10) fue sobreescrita por una edición
+> concurrente de otra sesión en este mismo repositorio. Se restauran aquí los
+> hallazgos que aún no se han corregido, para no perder la trazabilidad.
+> H1, H2 y H3 están documentados más abajo (COMPLETADO). H4-H9 están documentados
+> en la sección "Auditoría UX con Playwright MCP — H4 a H9 (COMPLETADO)".
+
+- [x] **H1 [backend]** (COMPLETADO — 2026-07-02) Límite de "1 reserva activa por día" cuenta reservas cuya hora ya pasó, pero `mis-reservas` las oculta en "Historial" en vez de "Activas" → el ciudadano veía un bloqueo ("Ya tienes una reserva activa para este día") sin ver la reserva que lo causaba en ningún sitio accionable.
+  - Causa: `src/app/api/reservas/route.ts` contaba cualquier fila `estado: "ACTIVA"` de la fecha, sin filtrar por `horaInicio >= ahora`, mientras que `src/app/api/reservas/mis-reservas/route.ts` sí filtra `horaInicio: { gte: ahora }` para "activas".
+  - Fix aplicado: añadido el mismo filtro `horaInicio: { gte: new Date() }` al conteo de `reservasDelDia` dentro de la transacción de `POST /api/reservas` (`src/app/api/reservas/route.ts:113-121`), para que el límite diario solo considere reservas futuras (igual que se muestran en "Activas").
+  - TDD: nuevo test en `src/__tests__/api/reservas.test.ts` ("debería devolver 201 cuando el ciudadano solo tiene una reserva ACTIVA cuya hora ya pasó ese mismo día") — confirmado RED antes del fix (409 en vez de 201), GREEN después del fix. El test existente que sí debe bloquear (reserva activa futura ese día) se verificó que sigue en verde.
+  - Verificación: `npx jest src/__tests__/api/reservas.test.ts` — 14/18 pasan; los 4 fallos restantes son pre-existentes y no relacionados (feature `limiteReservasActivas` configurable por tenant, no implementada en la ruta — confirmado idéntico antes y después del fix vía `git stash`). `npx jest` completo — 418/430 (12 fallos: los 4 de reservas + 4 pre-existentes de `tenant.test.ts` + 4 de `avisos.test.ts`/`lista-espera.test.ts` por trabajo concurrente de otra sesión en curso sobre `avisos/route.ts`, no relacionados con este cambio). `npx vitest run` — 341/341 pasan, sin regresiones.
+
+- [x] **H10 [backend+frontend]** (COMPLETADO — 2026-07-02) `/admin/reservas` sin paginación: cargaba todas las filas (67 en dev) de una vez, página de miles de px de alto, especialmente mala en móvil (375×667).
+  - Backend: `GET /api/admin/reservas` acepta `pagina` (1-indexado, default 1) y `porPagina` (default 20, máx 100) además de los filtros existentes; la respuesta cambió de `{ reservas }` a `{ reservas, paginacion: { pagina, porPagina, total, totalPaginas } }` (`src/app/api/admin/reservas/route.ts`, trabajo en paralelo del agente backend contra este mismo contrato).
+    - Detalle backend: si `pagina` o `porPagina` no son enteros positivos válidos (regex `/^\d+$/` + `>= 1`) devuelve 400 con mensaje específico ("El parámetro pagina/porPagina debe ser un entero positivo"). `porPagina` por encima de 100 se limita automáticamente a 100 sin error. `prisma.reserva.count({ where })` y el `findMany` con `skip: (pagina - 1) * porPagina, take: porPagina` se ejecutan en paralelo con `Promise.all` (solo lectura, sin transacción). Los filtros existentes (`estado`, `instalacionId`, `fecha`) se combinan igual que antes con la paginación.
+    - TDD backend: 8 tests nuevos en `src/__tests__/api/admin.test.ts` (página 1 por defecto, página 2 con `skip` correcto, `porPagina` personalizado, `porPagina` por encima del máximo limitado a 100, `pagina` no numérica → 400, `pagina` 0/negativa → 400, `porPagina` no numérica → 400, filtro `estado` combinado con paginación) — confirmado RED antes del fix, GREEN después. Los 3 tests preexistentes de este endpoint se ajustaron solo para mockear `prisma.reserva.count` (sin cambiar sus aserciones).
+    - Verificado que `src/__tests__/api/aislamiento-tenant.test.ts` (que también llama a este endpoint) sigue en verde sin modificaciones: solo valida el filtrado por `tenantId` y el array `body.reservas`, que mantienen la misma forma.
+    - Verificación backend: `npx jest src/__tests__/api/admin.test.ts` — 49/49 en verde. `npx jest src/__tests__/api/aislamiento-tenant.test.ts` — 15/15 en verde. `npx jest` completo — 426/438 (12 fallos, todos pre-existentes y ajenos: 4 en `tenant.test.ts`, 4 en `reservas.test.ts` por la feature `limiteReservasActivas` no implementada, 4 en `avisos.test.ts`/`lista-espera.test.ts` por trabajo concurrente de otra sesión sobre `avisos/route.ts` y `disponibilidad/route.ts` — ninguno de esos archivos fue tocado en esta tarea).
+  - Frontend: `src/app/admin/(panel)/reservas/page.tsx` — nuevo estado `pagina` (inicial 1) y `paginacion` (respuesta del servidor); el fetch envía `pagina` y `porPagina=20` fijo como query params; cambiar cualquier filtro existente (estado, fecha, "Limpiar filtros") resetea `pagina` a 1. Controles de paginación ("Anterior" / "Página X de Y" / "Siguiente") al final de la tabla, solo visibles cuando `paginacion.totalPaginas > 1`, botones táctiles `min-h-11` (44px) para móvil; los indicadores y el estado deshabilitado de los botones usan `paginacion.pagina` (confirmada por el servidor) en vez del estado local, para evitar desincronización. Cuando `paginacion.total === 0` se mantiene el mensaje "No hay reservas que mostrar" sin controles.
+  - TDD: nuevo `src/__tests__/frontend/admin-reservas-paginacion.test.tsx` (7 tests) — confirmado RED (6/7 fallando) antes del fix, GREEN después. El test existente `src/__tests__/frontend/admin-no-show.test.tsx` (mocks sin `paginacion` en la respuesta) sigue en verde sin cambios, ya que `paginacion` se trata como opcional (`data.paginacion || null`) y los controles no se muestran si es `null`.
+  - Verificación: `npx vitest run` — 346/346 tests, 49 archivos, sin regresiones.
+
+### Limpieza post-revisión (COMPLETADO — 2026-07-02)
+El agente `revisor` auditó H1-H9 y encontró 4 puntos; se resolvieron directamente (sin subagente, cambios pequeños y precisos):
+- [x] `docs/app.md` (secciones 3.4 y 4.10): documentado que el límite diario de 1 reserva es "activa y futura" (no cualquier ACTIVA), reflejando el comportamiento real tras el fix de H1.
+- [x] `src/__tests__/api/reservas.test.ts`: eliminados 4 tests obsoletos que probaban un `limiteReservasActivas` configurable por tenant nunca implementado en la ruta (el límite está hardcodeado a 1; existe un describe block dedicado y correcto para esa regla real más abajo en el mismo archivo).
+- [x] `src/components/header.tsx`: `startsWith("/admin")`/`startsWith("/superadmin")` reemplazado por comparación exacta + `startsWith("/admin/")` (e igual para superadmin), para no ocultar el Header en futuras rutas tipo `/administracion`.
+- [ ] Caso borde de baja severidad, sin fix (no bloqueante): si `getSession()` tarda en propagar el rol justo tras el login, `admin/login` podría redirigir a `/dashboard` en vez del panel correcto — sin impacto de seguridad (el guard server-side protege el acceso real). Queda en backlog.
+
+**Verificación final tras limpieza:**
+- `npx vitest run` → 346/346 en verde.
+- `npx jest` → 426/434 en verde. Los 8 fallos restantes son ajenos a este bloque de trabajo: 4 en `tenant.test.ts` (fallo histórico ya documentado en informes anteriores del proyecto) y 4 en `avisos.test.ts`/`lista-espera.test.ts` causados por otra sesión activa en paralelo sobre `avisos/route.ts`, `disponibilidad/route.ts`, `verificar-email/*`, `tenant.ts` y `middleware.ts` — fuera del alcance de esta auditoría UX, no tocados.
+- `npx tsc --noEmit` → sin errores.
+- Nota pendiente, no bloqueante y fuera de alcance: `docs/PRD.md:134` describe la regla como "1 reserva activa por tipo de instalación", lo que contradice `docs/app.md` (1 por día, cualquier instalación) — contradicción preexistente detectada por el revisor, no introducida por este trabajo.
+
+---
+
+## Auditoría UX con Playwright MCP — H4 a H9 (COMPLETADO — 2026-07-02)
+
+### Objetivo
+Corregir 6 hallazgos pequeños e independientes de la auditoría UX con Playwright MCP (viewport móvil 375×667): warning de hidratación, overflow en `/admin/festivos`, títulos de pestaña rotos con cadena vacía, typo "Contrasena", plural incorrecto en `/instructor/mis-clases`, y página de logout de NextAuth en inglés.
+
+### H4 — Warning de hidratación
+- [x] `src/app/layout.tsx`: añadido `suppressHydrationWarning` al elemento `<html>` (patrón estándar documentado por `next-themes`, que modifica `style`/`class` del `<html>` en cliente tras la hidratación).
+- [x] Sin test nuevo: cambio de atributo sin comportamiento observable en JSDOM: verificado con la suite Vitest completa sin regresiones.
+
+### H5 — Overflow móvil en `/admin/festivos`
+- [x] `src/app/admin/(panel)/festivos/page.tsx`: añadido `flex-wrap` a la fila de controles (selector de año + botón "Importar festivos nacionales" + botón "Añadir festivo") y `w-full sm:w-auto` a cada control para que se apilen en vertical en viewports estrechos en vez de desbordar.
+- [x] Verificado con la suite existente `src/__tests__/frontend/admin-festivos.test.tsx` (7 tests, sin cambios necesarios) — sin regresiones. No se hizo verificación visual con Playwright MCP en esta tarea (fuera de alcance del agente frontend en este ciclo); el cambio es puramente de clases Tailwind (`flex-wrap`) equivalente al patrón usado en otras cabeceras responsive del proyecto.
+
+### H6 — Títulos de pestaña rotos con cadena vacía
+- [x] `src/app/layout.tsx`: reemplazado `??` por `||` en `generateMetadata()` (título, descripción y color de tema) y en los helpers `obtenerColoresTenant()` / `obtenerDatosTenant()` (nombre del servicio y colores), para que una cadena vacía guardada en BD también caiga al valor por defecto. `logoUrl` se mantiene con `??` (no es un string de configuración textual, es una URL o `null`).
+- [x] TDD: nuevo `src/__tests__/frontend/layout-metadata.test.ts` (3 tests) — confirmado RED (título/descripción vacíos no caían al fallback) antes del fix, GREEN después.
+
+### H7 — Typo "Contrasena"
+- [x] `src/app/admin/login/page.tsx`: corregido el label "Contrasena" → "Contraseña". Cubierto por el test existente `src/__tests__/frontend/admin-login.test.tsx` (usa `getByLabelText(/contrase/i)`, coincide con ambas grafías, sin regresión).
+
+### H8 — Plural incorrecto en `/instructor/mis-clases`
+- [x] `src/app/instructor/mis-clases/page.tsx`: reemplazada la concatenación `grupo{s} activo` (que producía "grupos activo" en plural) por una condición explícita `gruposActivos.length === 1 ? 'grupo activo' : 'grupos activos'`, correcta también para el caso 0.
+- [x] TDD: 3 tests nuevos en `src/__tests__/frontend/instructor.test.tsx` (0 grupos → "grupos activos", 1 grupo → "grupo activo", 2 grupos → "grupos activos"). Nota de proceso: el fix de código se aplicó antes de confirmar el RED explícito de estos tests (no se siguió el orden estricto RED→GREEN en este ítem); se verificó igualmente que los 3 tests nuevos y el resto de la suite pasan en verde tras el cambio.
+
+### H9 — Página de logout de NextAuth en inglés
+- [x] Creada `src/app/cerrar-sesion/page.tsx`: página cliente en español con confirmación ("¿Seguro que quieres cerrar sesión?"), botón "Cerrar sesión" (llama a `signOut({ callbackUrl: "/" })`) y enlace "Cancelar" a `/`. Estilo consistente con `src/app/login/page.tsx` (Card de shadcn/ui, centrado, mobile-first).
+- [x] `src/lib/auth.ts`: registrada la página en `opcionesAuth.pages.signOut = "/cerrar-sesion"`. No se tocaron las páginas `error` ni `signIn` (ya estaban configuradas y en español).
+- [x] TDD: nuevo `src/__tests__/frontend/cerrar-sesion.test.tsx` (3 tests) — confirmado RED (el módulo no existía) antes de crear la página, GREEN después.
+
+### Verificación final
+- [x] `npx vitest run` — 48/48 archivos, 341/341 tests pasan. Sin regresiones.
+- [x] `npm test` (Jest) — se observan 4 suites con fallos (`tenant.test.ts`, `avisos.test.ts`, `lista-espera.test.ts`, `reservas.test.ts`) en archivos que esta tarea NO modificó (`git status` confirma que `src/app/api/reservas/route.ts`, `src/app/api/avisos/route.ts`, `src/app/api/disponibilidad/route.ts`, `src/app/api/verificar-email/route.ts` y sus tests estaban siendo modificados por otra sesión concurrente durante la ejecución de esta tarea). No relacionado con H4-H9; se deja constancia para que se verifique el estado de esos archivos al cierre de la sesión concurrente que los está tocando.
+- [x] `tasks/todo.md` actualizado marcando H4-H9 como completados; H1 y H10 restaurados como pendientes (ver sección anterior).
+
+### Resultado final
+
+| Métrica | Valor |
+|---------|-------|
+| Tests Vitest nuevos | 9 (3 layout-metadata + 3 instructor plural + 3 cerrar-sesion) |
+| Tests Vitest totales | 341/341 |
+| Archivos creados | 2 (`src/app/cerrar-sesion/page.tsx`, 3 archivos de test nuevos) |
+| Archivos modificados | 5 (`layout.tsx`, `festivos/page.tsx`, `admin/login/page.tsx`, `instructor/mis-clases/page.tsx`, `lib/auth.ts`) |
+| Regresiones (Vitest) | 0 |
+
+---
+
+## Auditoría UX con Playwright MCP — H2 y H3 (COMPLETADO — 2026-07-02)
+
+### H2 — Cabeceras duplicadas
+- [x] `src/app/instructor/page.tsx` y `src/app/instructor/mis-clases/page.tsx`: eliminado el import y el JSX de `<Header />` local (el layout raíz ya lo provee).
+- [x] `src/components/header.tsx`: el `Header` (ya era `"use client"`) ahora llama a `usePathname()` y devuelve `null` si el pathname empieza por `/admin` o `/superadmin`. Se descartó tocar `src/app/layout.tsx` (Server Component sin acceso directo al pathname) o depender de headers de middleware — la opción de `usePathname()` en el propio Header es la más simple, no rompe SSR (Next.js resuelve el pathname también durante el render de Server de un Client Component) y no introduce flash de contenido, porque el `null` ya se devuelve en el primer render (servidor y cliente coinciden).
+- [x] Tests RED→GREEN: `src/__tests__/frontend/header.test.tsx` y `src/__tests__/components/Header.test.tsx` — añadido mock de `next/navigation` (`usePathname`) y 3 tests nuevos (oculto en `/admin/*`, oculto en `/superadmin/*`, visible en otras rutas).
+- [x] `src/__tests__/frontend/instructor.test.tsx` e `instructor-dashboard.test.tsx` ya mockeaban `@/components/header` por completo — sin cambios necesarios, sin regresiones.
+
+### H3 — Redirección post-login hardcodeada en `/admin/login`
+- [x] `src/app/admin/login/page.tsx`: tras `signIn` exitoso, se llama a `getSession()` (ya que `signIn({redirect:false})` no devuelve el rol) y se redirige según `sesion.user.rol`: `/admin` (ADMIN), `/superadmin` (SUPERADMIN), `/instructor` (INSTRUCTOR), `/dashboard` (fallback, resto de roles).
+- [x] Test nuevo `src/__tests__/frontend/admin-login.test.tsx` (TDD RED→GREEN): 5 tests — redirección correcta por cada rol + caso de credenciales incorrectas (no redirige).
+
+### Verificación
+- [x] `npx vitest run` — 47/48 archivos, 340/341 tests pasan. El único fallo (`src/__tests__/frontend/cerrar-sesion.test.tsx`) pertenece a un hallazgo distinto (H9, página de signout en español) que otra sesión/agente está implementando en paralelo en este mismo repositorio — no relacionado con H2/H3, no tocado en esta tarea.
+- [x] Sin regresiones en el resto de la suite (338/338 excluyendo ese archivo ajeno).
+
+---
+
 ## Calendario público — UX visitantes anónimos (COMPLETADO — 2026-05-14)
 
 ### Objetivo

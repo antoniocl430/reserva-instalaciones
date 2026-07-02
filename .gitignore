@@ -153,3 +153,8 @@ e2e/results.json
 *.jpg
 *.jpeg
 *.webp
+.vercel
+.env*
+
+# Cache de compilación SWC (Jest/Next.js)
+.swc

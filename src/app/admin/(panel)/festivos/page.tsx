@@ -131,9 +131,9 @@ export default function PaginaFestivos() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
-              className="border rounded px-3 py-2 text-sm"
+              className="border rounded px-3 py-2 text-sm w-full sm:w-auto"
               value={año}
               onChange={(e) => setAño(Number(e.target.value))}
               aria-label="Filtrar por año"
@@ -142,11 +142,11 @@ export default function PaginaFestivos() {
                 <option key={a} value={a}>{a}</option>
               ))}
             </select>
-            <Button variant="outline" size="sm" onClick={handleImportar} disabled={importando}>
+            <Button variant="outline" size="sm" onClick={handleImportar} disabled={importando} className="w-full sm:w-auto">
               <Download className="h-4 w-4 mr-1" />
               Importar festivos nacionales
             </Button>
-            <Button size="sm" onClick={() => { setErrForm(null); setDialogNuevo(true) }}>
+            <Button size="sm" onClick={() => { setErrForm(null); setDialogNuevo(true) }} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-1" />
               Añadir festivo
             </Button>

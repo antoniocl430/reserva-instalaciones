@@ -209,6 +209,40 @@ describe('MisClases', () => {
     })
   })
 
+  it('debería usar el plural "grupos activos" cuando hay 0 grupos', async () => {
+    mockSesionInstructor()
+    mockFetchGrupos([])
+
+    render(React.createElement(MisClases))
+
+    await waitFor(() => {
+      expect(screen.getByText(/gestiona tus 0 grupos activos/i)).toBeInTheDocument()
+    })
+  })
+
+  it('debería usar el singular "grupo activo" cuando hay exactamente 1 grupo', async () => {
+    mockSesionInstructor()
+    mockFetchGrupos([grupoActivo])
+
+    render(React.createElement(MisClases))
+
+    await waitFor(() => {
+      expect(screen.getByText(/gestiona tus 1 grupo activo\b/i)).toBeInTheDocument()
+    })
+  })
+
+  it('debería usar el plural "grupos activos" cuando hay más de 1 grupo', async () => {
+    const otroGrupo = { ...grupoActivo, id: 'g2', instalacion: { nombre: 'Pádel 2' } }
+    mockSesionInstructor()
+    mockFetchGrupos([grupoActivo, otroGrupo])
+
+    render(React.createElement(MisClases))
+
+    await waitFor(() => {
+      expect(screen.getByText(/gestiona tus 2 grupos activos/i)).toBeInTheDocument()
+    })
+  })
+
   it('debería mostrar lista de grupos activos con nombre de instalación y badge de frecuencia', async () => {
     mockSesionInstructor()
     mockFetchGrupos([grupoActivo])

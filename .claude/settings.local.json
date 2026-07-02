@@ -19,7 +19,19 @@
       "mcp__playwright__browser_evaluate",
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_handle_dialog",
-      "PowerShell(Get-Process *)"
+      "PowerShell(Get-Process *)",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_network_requests",
+      "Bash(npx --yes vercel --version)",
+      "Bash(where vercel *)",
+      "Bash(ls src/app/auth)",
+      "Bash(find src/__tests__/frontend -iname \"*festivo*\" -o -iname \"*admin-login*\" -o -iname \"*instructor*\" -o -iname \"*layout*\")",
+      "Bash(npx vercel *)",
+      "Bash(npx jest *)",
+      "Bash(git stash *)",
+      "Bash(npx vitest *)"
     ]
   },
   "enableAllProjectMcpServers": true,

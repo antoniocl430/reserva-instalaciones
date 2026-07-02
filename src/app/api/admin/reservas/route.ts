@@ -9,6 +9,13 @@ import { parsearConfiguracion } from "@/lib/tenant"
 // Regex para validar formato YYYY-MM-DD
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
+// Regex para validar enteros positivos (sin signo, sin decimales)
+const REGEX_ENTERO_POSITIVO = /^\d+$/
+
+// Límites de paginación
+const POR_PAGINA_DEFECTO = 20
+const POR_PAGINA_MAXIMO = 100
+
 // GET /api/admin/reservas — lista todas las reservas del tenant con filtros opcionales
 export async function GET(request: NextRequest) {
   const sesion = await getServerSession(opcionesAuth)
@@ -39,6 +46,27 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Parámetros de paginación (opcionales, con valores por defecto)
+    const paginaParam = searchParams.get("pagina") ?? "1"
+    const porPaginaParam = searchParams.get("porPagina") ?? String(POR_PAGINA_DEFECTO)
+
+    if (!REGEX_ENTERO_POSITIVO.test(paginaParam) || Number(paginaParam) < 1) {
+      return NextResponse.json(
+        { error: "El parámetro pagina debe ser un entero positivo" },
+        { status: 400 }
+      )
+    }
+
+    if (!REGEX_ENTERO_POSITIVO.test(porPaginaParam) || Number(porPaginaParam) < 1) {
+      return NextResponse.json(
+        { error: "El parámetro porPagina debe ser un entero positivo" },
+        { status: 400 }
+      )
+    }
+
+    const pagina = Number(paginaParam)
+    const porPagina = Math.min(Number(porPaginaParam), POR_PAGINA_MAXIMO)
+
     // Construir objeto where con tenantId siempre presente
     type WhereInput = {
       tenantId: string
@@ -64,16 +92,27 @@ export async function GET(request: NextRequest) {
       where.fecha = { gte: fechaDate, lt: fechaProxima }
     }
 
-    const reservas = await prisma.reserva.findMany({
-      where,
-      include: {
-        usuario: { select: { nombre: true, email: true } },
-        instalacion: { select: { nombre: true } },
-      },
-      orderBy: [{ fecha: "desc" }, { horaInicio: "desc" }],
-    })
+    // Contar el total y obtener la página solicitada en paralelo (solo lectura)
+    const [total, reservas] = await Promise.all([
+      prisma.reserva.count({ where }),
+      prisma.reserva.findMany({
+        where,
+        include: {
+          usuario: { select: { nombre: true, email: true } },
+          instalacion: { select: { nombre: true } },
+        },
+        orderBy: [{ fecha: "desc" }, { horaInicio: "desc" }],
+        skip: (pagina - 1) * porPagina,
+        take: porPagina,
+      }),
+    ])
 
-    return NextResponse.json({ reservas })
+    const totalPaginas = Math.ceil(total / porPagina)
+
+    return NextResponse.json({
+      reservas,
+      paginacion: { pagina, porPagina, total, totalPaginas },
+    })
   } catch (err) {
     console.error("Error al obtener reservas:", err)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })

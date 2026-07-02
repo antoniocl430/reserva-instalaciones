@@ -13,7 +13,6 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -80,7 +79,6 @@ export default function DashboardInstructor() {
   if (status === 'loading' || cargando) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -94,7 +92,6 @@ export default function DashboardInstructor() {
   if (status === 'unauthenticated' || sesion?.user?.rol !== 'INSTRUCTOR') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <div className="text-center">
             <p className="text-gray-600">No tienes acceso a esta sección</p>
@@ -106,8 +103,6 @@ export default function DashboardInstructor() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-
       <main className="w-full px-4 md:px-6 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">

@@ -36,10 +36,12 @@ El sistema tiene cuatro tipos de usuarios con distintos niveles de acceso:
 
 ### 3.1 Registro y acceso
 
-- **Registro**: el ciudadano crea una cuenta con su nombre, email y contraseña. El registro es instantáneo y gratuito.
-- **Inicio de sesión**: accede con email y contraseña. La sesión dura 8 horas.
+- **Registro**: el ciudadano crea una cuenta con su nombre, email y contraseña, aceptando obligatoriamente la política de privacidad (checkbox RGPD).
+- **Verificación de email obligatoria**: tras registrarse, el ciudadano recibe un email con un enlace de verificación (caduca en 24 horas) y **no puede iniciar sesión hasta verificarlo**. Si intenta hacer login sin verificar, el sistema se lo indica y le ofrece reenviar el enlace desde el propio formulario de login o desde la página de verificación.
+- **Inicio de sesión**: accede con email y contraseña, una vez verificado el email. La sesión dura 8 horas.
 - **Recuperación de contraseña**: si olvida su contraseña, puede solicitar un enlace de recuperación por email. El enlace es de un solo uso y caduca en 1 hora.
 - **Protección ante ataques**: el sistema bloquea automáticamente un email o IP tras 5 intentos fallidos de login en 15 minutos.
+- **Cierre de sesión**: página propia en español (`/cerrar-sesion`) con confirmación antes de cerrar sesión, sustituyendo la plantilla en inglés por defecto de NextAuth.
 
 ### 3.2 Página principal
 
@@ -75,7 +77,7 @@ Esta funcionalidad está pensada para que los nuevos ciudadanos vean si hay disp
 - Por defecto: **8:00–13:00** (franja mañana) y **16:45–20:30** (franja tarde)
 - **7 slots de 75 minutos** por día: 08:00, 09:15, 10:30, 11:45, 16:45, 18:00, 19:15
 
-**Límite de reservas por día**: cada ciudadano puede tener como máximo **1 reserva activa por día**. Si ya tiene una reserva en ese día, no puede hacer otra aunque sea en diferente instalación o franja horaria.
+**Límite de reservas por día**: cada ciudadano puede tener como máximo **1 reserva activa y futura por día**. Si ya tiene una reserva pendiente ese día (su hora de inicio aún no ha llegado), no puede hacer otra aunque sea en diferente instalación o franja horaria. Una reserva cuya hora ya pasó deja de contar para este límite, coherente con que ya no aparece en "Activas" dentro de Mis reservas (ver 3.5) sino en el historial.
 
 **Bloqueo por suspensión**: si el ciudadano tiene la cuenta suspendida (por no presentarse repetidamente), el sistema le informa de la fecha hasta la que está suspendido y no puede hacer nuevas reservas.
 
@@ -154,10 +156,13 @@ Tras el uso de una instalación, el ciudadano puede dejar su opinión para ayuda
 El ciudadano puede acceder a su perfil desde la cabecera, donde puede:
 
 - **Editar su nombre**
+- **Cambiar su foto de perfil (avatar)**: sube una imagen desde su dispositivo, con vista previa inmediata. Si no tiene avatar propio, se muestra uno generado automáticamente a partir de sus iniciales.
 - **Cambiar su contraseña** (se le pide la contraseña actual por seguridad)
 - **Activar o desactivar notificaciones push** en el dispositivo actual (ver sección 3.9)
 - **Gestionar sus preferencias de notificación**: elegir qué tipo de avisos recibir (confirmaciones de reserva, recordatorios, cancelaciones, avisos del ayuntamiento)
 - **Consultar sus penalizaciones**: ver cuántos no-shows acumula y, si está suspendido, la fecha de fin y el motivo
+- **Exportar sus datos personales (RGPD)**: descarga un archivo JSON con sus datos de cuenta y el historial completo de reservas.
+- **Eliminar su cuenta**: desde la "Zona de peligro" del perfil, con confirmación explícita. Es una acción irreversible y cierra la sesión inmediatamente.
 
 ### 3.10 Notificaciones
 
@@ -199,6 +204,7 @@ Vista completa de todas las reservas del ayuntamiento con:
 
 - **Filtros**: por instalación, fecha, estado (activa/cancelada) y ciudadano
 - **Tabla** con: ciudadano, instalación, fecha, hora, estado
+- **Paginación**: la lista se sirve en páginas de 20 reservas (configurable hasta un máximo de 100 por página) en lugar de cargar todas las reservas del ayuntamiento de una vez, para mantener la página ligera y navegable en móvil.
 - **Cancelar reserva**: el admin puede cancelar cualquier reserva sin restricción de tiempo. El ciudadano recibe un email de notificación.
 - **Crear reserva manualmente**: el admin puede hacer una reserva a nombre de cualquier ciudadano registrado (útil para reservas telefónicas o presenciales).
 - **Marcar como "No presentado"**: para reservas pasadas, el admin puede marcar que el ciudadano no se presentó. Esto acumula penalizaciones en la cuenta del ciudadano (ver sección 4.9).
@@ -298,7 +304,7 @@ El admin puede personalizar su espacio del ayuntamiento sin necesidad de interve
 - Vista previa en tiempo real de los slots que se generarán con la configuración elegida
 
 **Reservas**:
-- Límite de reservas por día por ciudadano: máximo 1 reserva activa por día (fijo, no configurable)
+- Límite de reservas por día por ciudadano: máximo 1 reserva activa y futura por día (fijo, no configurable — ver 3.4)
 
 **Penalizaciones**:
 - Número de no-shows para activar suspensión automática (de 1 a 10, por defecto 3)
@@ -376,7 +382,10 @@ El sistema incorpora múltiples capas de seguridad:
 - **Protección frente a fuerza bruta**: 5 intentos fallidos de login bloquean el acceso durante 15 minutos.
 - **Protección de enumeración**: los mensajes de error de login son siempre genéricos para no revelar si un email existe.
 - **Protección de timing attacks**: el servidor siempre tarda el mismo tiempo en responder a un intento de login, independientemente de si el email existe o no.
+- **Verificación de email obligatoria**: ningún ciudadano puede iniciar sesión sin haber confirmado su email mediante un enlace de un solo uso.
+- **Row Level Security (RLS)** a nivel de base de datos: capa adicional de aislamiento por `tenantId` directamente en PostgreSQL, como defensa en profundidad complementaria al filtrado por tenant en la aplicación.
 - **Transacciones de base de datos**: las operaciones críticas (crear reserva, cancelar, crear grupo recurrente) usan transacciones para garantizar la consistencia de los datos.
+- **Cumplimiento RGPD**: consentimiento explícito de la política de privacidad en el registro (con fecha de aceptación registrada), páginas legales públicas (Aviso legal, Política de privacidad, Accesibilidad), banner de cookies técnicas, y derecho al olvido y portabilidad desde el perfil del ciudadano (exportar datos y eliminar cuenta).
 
 ---
 
@@ -417,6 +426,7 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Funcionalidad | Disponible |
 |---------------|-----------|
 | Registro y login | ✓ |
+| Verificación de email obligatoria | ✓ |
 | Recuperación de contraseña | ✓ |
 | Consultar disponibilidad sin cuenta | ✓ |
 | Reservar instalación | ✓ |
@@ -425,11 +435,13 @@ Las siguientes funcionalidades están planificadas para próximas versiones:
 | Ver mis reservas e historial | ✓ |
 | Lista de espera para slots ocupados | ✓ |
 | Valorar instalaciones tras el uso | ✓ |
-| Editar perfil y contraseña | ✓ |
+| Editar perfil, avatar y contraseña | ✓ |
 | Notificaciones por email | ✓ |
 | Notificaciones push en el móvil | ✓ |
 | Preferencias de notificación | ✓ |
 | Ver mis penalizaciones | ✓ |
+| Exportar mis datos (RGPD) | ✓ |
+| Eliminar mi cuenta | ✓ |
 
 ### Administrador
 | Funcionalidad | Disponible |

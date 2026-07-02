@@ -58,18 +58,20 @@ export async function generateMetadata(): Promise<Metadata> {
       }
     }
 
+    // Se usa `||` en vez de `??` porque una cadena vacía guardada en BD
+    // también debe caer al valor por defecto (H6: `??` no cubre "" ).
     const nombreBase =
-      configuracion?.metadata?.title ??
+      configuracion?.metadata?.title ||
       `Reservas Deportivas — ${tenant.municipio}`
 
     const nombreServicioMeta =
-      configuracion?.nombreServicio ?? nombreBase
+      configuracion?.nombreServicio || nombreBase
 
     const descripcion =
-      configuracion?.metadata?.description ??
+      configuracion?.metadata?.description ||
       "Sistema de reservas de instalaciones deportivas municipales"
 
-    const colorTema = configuracion?.colores?.primario ?? "#2563eb"
+    const colorTema = configuracion?.colores?.primario || "#2563eb"
 
     // Logo del tenant como favicon dinámico
     const logoUrl = (tenant as any).logoUrl ?? null
@@ -143,8 +145,8 @@ async function obtenerColoresTenant(): Promise<ColoresTenant> {
     }
 
     return {
-      primario: configuracion?.colores?.primario ?? "#2563eb",
-      secundario: configuracion?.colores?.secundario ?? "#16a34a",
+      primario: configuracion?.colores?.primario || "#2563eb",
+      secundario: configuracion?.colores?.secundario || "#16a34a",
     }
   } catch {
     return { primario: "#2563eb", secundario: "#16a34a" }
@@ -174,7 +176,7 @@ async function obtenerDatosTenant(): Promise<{ nombreServicio: string; logoUrl: 
     }
 
     return {
-      nombreServicio: configuracion?.nombreServicio ?? (tenant as any).nombre ?? "Reservas Deportivas",
+      nombreServicio: configuracion?.nombreServicio || (tenant as any).nombre || "Reservas Deportivas",
       logoUrl: (tenant as any).logoUrl ?? null,
     }
   } catch {
@@ -193,6 +195,7 @@ export default async function LayoutRaiz({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       style={
         {
           "--color-primario": colores.primario,

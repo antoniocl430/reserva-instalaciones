@@ -19,6 +19,10 @@ vi.mock('next-auth/react', () => ({
   signOut: vi.fn(),
 }))
 
+vi.mock('next/navigation', () => ({
+  usePathname: vi.fn(() => '/'),
+}))
+
 vi.mock('next/link', () => ({
   default: ({
     href,
