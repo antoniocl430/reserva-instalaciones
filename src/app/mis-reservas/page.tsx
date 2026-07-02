@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ChevronLeft, Calendar, Clock, QrCode, X, Star, ClockIcon, ListOrdered } from "lucide-react"
+import { Loader2, ChevronLeft, Calendar, Clock, X, Star, ClockIcon, ListOrdered } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dialog"
 import { formatearFecha, formatearHora } from "@/lib/formato"
 import { useToast } from "@/hooks/use-toast"
-import QRCode from "react-qr-code"
 import StarRating from "@/components/StarRating"
 
 interface Valoracion {
@@ -33,7 +32,6 @@ interface Reserva {
   horaInicio: string
   horaFin: string
   estado: "ACTIVA" | "CANCELADA"
-  qrToken: string | null
   instalacion: { id: string; nombre: string }
   valoracion: Valoracion | null
 }
@@ -69,8 +67,6 @@ export default function PaginaMisReservas() {
   const [dialogAbierto, setDialogAbierto] = useState(false)
   const [cancelando, setCancelando] = useState(false)
   const [errorCancelacion, setErrorCancelacion] = useState("")
-  const [reservaQR, setReservaQR] = useState<Reserva | null>(null)
-  const [dialogQRAbierto, setDialogQRAbierto] = useState(false)
   const [reservaAValorar, setReservaAValorar] = useState<Reserva | null>(null)
   const [dialogValoracionAbierto, setDialogValoracionAbierto] = useState(false)
   const [puntuacionSeleccionada, setPuntuacionSeleccionada] = useState(0)
@@ -320,17 +316,6 @@ export default function PaginaMisReservas() {
                           </div>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          {reserva.qrToken && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => { setReservaQR(reserva); setDialogQRAbierto(true) }}
-                              className="gap-1.5"
-                            >
-                              <QrCode className="w-3.5 h-3.5" />
-                              QR
-                            </Button>
-                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -522,24 +507,6 @@ export default function PaginaMisReservas() {
               {enviandoValoracion ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Enviando...</> : "Enviar valoración"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog QR */}
-      <Dialog open={dialogQRAbierto} onOpenChange={setDialogQRAbierto}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Código QR de tu reserva</DialogTitle>
-            <DialogDescription>Muestra este código en la entrada para verificar tu reserva.</DialogDescription>
-          </DialogHeader>
-          {reservaQR?.qrToken && (
-            <div className="flex flex-col items-center gap-4 py-4">
-              <div className="bg-white p-4 rounded-xl">
-                <QRCode value={`${typeof window !== "undefined" ? window.location.origin : ""}/verificar/${reservaQR.qrToken}`} size={200} />
-              </div>
-              <p className="text-sm text-muted-foreground text-center">{reservaQR.instalacion.nombre}</p>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
 

@@ -127,11 +127,43 @@ async function main() {
     console.log(`✓ Instructor creado: ${instructor.email} (contraseña: ${instructorPassword})`)
   }
 
+  // ─── Ciudadano de prueba (para tests E2E) ──────────────────────────────────
+  const ciudadanoEmail = "ciudadano@test.es"
+  const ciudadanoPassword = "Test1234!"
+  const ciudadanoHash = await bcrypt.hash(ciudadanoPassword, 12)
+
+  const ciudadanoExistente = await prisma.usuario.findFirst({
+    where: { email: ciudadanoEmail, tenantId: tenant.id },
+  })
+
+  if (ciudadanoExistente) {
+    // Garantizar que el email está verificado (importante para tests E2E)
+    await prisma.usuario.update({
+      where: { id: ciudadanoExistente.id },
+      data: { emailVerificado: true, passwordHash: ciudadanoHash },
+    })
+    console.log(`✓ Ciudadano de prueba actualizado: ${ciudadanoExistente.email}`)
+  } else {
+    const ciudadano = await prisma.usuario.create({
+      data: {
+        email: ciudadanoEmail,
+        nombre: "Ciudadano de prueba",
+        passwordHash: ciudadanoHash,
+        rol: "CIUDADANO",
+        activo: true,
+        emailVerificado: true,
+        tenantId: tenant.id,
+      },
+    })
+    console.log(`✓ Ciudadano creado: ${ciudadano.email} (contraseña: ${ciudadanoPassword})`)
+  }
+
   console.log("\nBase de datos lista.")
   console.log("\n── Credenciales ──")
   console.log(`Admin:      admin@ayuntamiento.es / admin123`)
   console.log(`Superadmin: ${superadminEmail} / ${superadminPassword}`)
   console.log(`Instructor: ${instructorEmail} / ${instructorPassword}`)
+  console.log(`Ciudadano:  ${ciudadanoEmail} / ${ciudadanoPassword}`)
 }
 
 main()

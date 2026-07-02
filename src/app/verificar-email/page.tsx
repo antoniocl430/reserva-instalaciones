@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Loader2, CheckCircle2, XCircle, Mail } from "lucide-react"
@@ -13,6 +13,22 @@ import { useToast } from "@/hooks/use-toast"
 type EstadoVerificacion = "cargando" | "exito" | "error"
 
 export default function PaginaVerificarEmail() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+        </main>
+      }
+    >
+      <ContenidoVerificarEmail />
+    </Suspense>
+  )
+}
+
+// useSearchParams() requiere que el componente que lo usa esté envuelto en
+// un Suspense boundary para poder optimizarse durante el build (ver arriba).
+function ContenidoVerificarEmail() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const token = searchParams.get("token")

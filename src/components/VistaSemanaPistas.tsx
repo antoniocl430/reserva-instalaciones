@@ -22,6 +22,7 @@ interface DatosDelDia {
 interface Props {
   instalacionId: string
   semanaBase: string // YYYY-MM-DD — lunes de la semana
+  refreshTrigger?: number // incrementar desde el padre para forzar recarga
   onSeleccionarSlot: (
     fecha: string,
     slot: { horaInicio: string; horaFin: string; estado: string }
@@ -187,6 +188,7 @@ function CeldaSlot({ slot, esFestivo, cargando, onClick }: PropsCeldaSlot) {
 export default function VistaSemanaPistas({
   instalacionId,
   semanaBase,
+  refreshTrigger = 0,
   onSeleccionarSlot,
 }: Props) {
   const [semanaActual, setSemanaActual] = useState<string>(semanaBase)
@@ -225,10 +227,10 @@ export default function VistaSemanaPistas({
     }
   }
 
-  // Recarga cuando cambia la semana actual
+  // Recarga cuando cambia la semana actual o se fuerza desde el padre (reserva completada)
   useEffect(() => {
     cargarSemana(semanaActual)
-  }, [semanaActual, instalacionId])
+  }, [semanaActual, instalacionId, refreshTrigger])
 
   // Navegación de semana
   function semanaAnterior() {

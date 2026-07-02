@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { extraerSlugDelHost, obtenerTenantIdPorSlug, parsearConfiguracion } from "@/lib/tenant"
 import { generarSlots, crearHoraEnMadrid, SLOTS_CONFIG_DEFAULT } from "@/lib/slots"
 
+// Fuerza renderizado dinámico: la ruta depende de headers/query por petición
+// y no debe intentar optimizarse como página estática durante el build.
+export const dynamic = "force-dynamic"
+
 // Resuelve el tenantId desde x-tenant-slug (inyectado por el middleware) o el host.
 // NO se acepta x-tenant-id desde el cliente — podría usarse para acceder a datos de otro tenant.
 async function resolverTenantId(request: NextRequest): Promise<string | null> {

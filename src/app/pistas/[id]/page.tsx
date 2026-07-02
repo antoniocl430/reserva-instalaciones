@@ -56,6 +56,7 @@ export default function PaginaDetallePista({ params }: Props) {
   // Control de vista: día individual o semana completa
   const [vista, setVista] = useState<"dia" | "semana">("dia")
   const [semanaBase, setSemanaBase] = useState<string>(() => obtenerLunesDeHoy())
+  const [semanaRefreshTrigger, setSemanaRefreshTrigger] = useState(0)
 
   // Datos de la pista
   const [pista, setPista] = useState<Instalacion | null>(null)
@@ -264,6 +265,7 @@ export default function PaginaDetallePista({ params }: Props) {
         description: "Tu instalación queda reservada.",
       })
       await cargarDisponibilidad()
+      setSemanaRefreshTrigger((t) => t + 1)
     } catch {
       setErrorConfirmacion("Error de conexión. Inténtalo de nuevo.")
     } finally {
@@ -495,6 +497,7 @@ export default function PaginaDetallePista({ params }: Props) {
           <VistaSemanaPistas
             instalacionId={id}
             semanaBase={semanaBase}
+            refreshTrigger={semanaRefreshTrigger}
             onSeleccionarSlot={(fechaSlot, slot) => {
               if (!sesion) {
                 setMostrarDialogoConversion(true)

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+// Fuerza renderizado dinámico: la ruta lee el token de la query string en cada petición
+// y no debe intentar optimizarse como página estática durante el build.
+export const dynamic = "force-dynamic"
+
 /**
  * GET /api/verificar-email?token=xxx
  *

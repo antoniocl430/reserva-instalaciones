@@ -1,7 +1,11 @@
 import { getToken } from "next-auth/jwt"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { extraerSlugDelHost } from "@/lib/tenant"
+// Se importa desde tenant-slug.ts (no desde @/lib/tenant) porque el middleware
+// corre en el Edge Runtime: tenant.ts importa Prisma dinámicamente, y aunque no
+// se use aquí, el bundler de Next lo incluiría igualmente en el bundle del
+// middleware (sin code-splitting en Edge), superando el límite de 1MB de Vercel.
+import { extraerSlugDelHost } from "@/lib/tenant-slug"
 
 // Rutas que requieren estar autenticado
 const RUTAS_PROTEGIDAS = ["/dashboard", "/mis-reservas", "/perfil"]

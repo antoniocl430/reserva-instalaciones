@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { QrCode, Download } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import QRCode from "react-qr-code"
 
 interface Pista {
   id: string
@@ -49,6 +51,8 @@ export default function PaginaPistasAdmin() {
   const [dialogEliminar, setDialogEliminar] = useState(false)
   const [pistaEliminar, setPistaEliminar] = useState<Pista | null>(null)
   const [eliminando, setEliminando] = useState(false)
+  const [pistaQR, setPistaQR] = useState<Pista | null>(null)
+  const [dialogQR, setDialogQR] = useState(false)
 
   // Cargar pistas
   async function cargarPistas() {
@@ -194,6 +198,20 @@ export default function PaginaPistasAdmin() {
     }
   }
 
+  function descargarQR(pista: Pista) {
+    const svg = document.getElementById(`qr-pista-${pista.id}`)
+    if (!svg) return
+    const serializer = new XMLSerializer()
+    const svgStr = serializer.serializeToString(svg)
+    const blob = new Blob([svgStr], { type: "image/svg+xml" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `QR-${pista.nombre.replace(/\s+/g, "-")}.svg`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -281,6 +299,16 @@ export default function PaginaPistasAdmin() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => { setPistaQR(pista); setDialogQR(true) }}
+                          className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                          title="Ver código QR de la instalación"
+                        >
+                          <QrCode className="w-3.5 h-3.5 mr-1" />
+                          QR
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => abrirEditar(pista)}
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
@@ -315,6 +343,44 @@ export default function PaginaPistasAdmin() {
           )}
         </div>
       </div>
+
+      {/* Dialog QR de instalación */}
+      <Dialog open={dialogQR} onOpenChange={setDialogQR}>
+        <DialogContent className="max-w-sm w-[calc(100%-2rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Código QR — {pistaQR?.nombre}</DialogTitle>
+            <DialogDescription>
+              Escanea este código para ir directamente a la página de reserva de esta instalación.
+            </DialogDescription>
+          </DialogHeader>
+          {pistaQR && (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div className="bg-white p-4 rounded-xl border border-gray-100">
+                <QRCode
+                  id={`qr-pista-${pistaQR.id}`}
+                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/pistas/${pistaQR.id}`}
+                  size={200}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center break-all">
+                {typeof window !== "undefined" ? window.location.origin : ""}/pistas/{pistaQR.id}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogQR(false)}>
+              Cerrar
+            </Button>
+            <Button
+              onClick={() => pistaQR && descargarQR(pistaQR)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Descargar SVG
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de crear nueva pista */}
       <Dialog open={dialogNueva} onOpenChange={setDialogNueva}>
