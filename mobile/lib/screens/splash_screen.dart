@@ -36,16 +36,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
 
     final token = await SecureStorage.instance.obtenerToken();
-    final tenantSlug = await SecureStorage.instance.obtenerTenantSlug();
 
     if (!mounted) return;
 
-    if (token != null && tenantSlug != null) {
+    // Ayuntamiento fijo (Herrera): no hay selección de municipio.
+    if (token != null) {
       context.go('/home');
-    } else if (tenantSlug != null) {
-      context.go('/login');
     } else {
-      context.go('/seleccionar-municipio');
+      context.go('/login');
     }
   }
 

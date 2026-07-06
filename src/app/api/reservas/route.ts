@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
 import { randomUUID } from "crypto"
-import { opcionesAuth } from "@/lib/auth"
+import { obtenerSesion } from "@/lib/auth-movil-web"
 import { prisma } from "@/lib/prisma"
 import { enviarEmailReserva } from "@/lib/email"
 import { enviarPushReservaConfirmada } from "@/lib/push"
@@ -11,7 +10,7 @@ import { parsearConfiguracion } from "@/lib/tenant"
 
 // POST /api/reservas — crea una reserva con todas las validaciones de negocio
 export async function POST(request: NextRequest) {
-  const sesion = await getServerSession(opcionesAuth)
+  const sesion = await obtenerSesion(request)
   if (!sesion) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }

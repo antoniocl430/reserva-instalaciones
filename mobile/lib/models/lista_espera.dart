@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../core/formato_fecha.dart';
 import 'instalacion.dart';
 
 class ListaEspera extends Equatable {
@@ -30,12 +31,9 @@ class ListaEspera extends Equatable {
       instalacion: Instalacion.fromJson(
         json['instalacion'] as Map<String, dynamic>? ?? {},
       ),
-      fecha: json['fecha']?.toString() ?? '',
-      horaInicio: json['horaInicio']?.toString() ??
-          json['hora_inicio']?.toString() ??
-          '',
-      horaFin:
-          json['horaFin']?.toString() ?? json['hora_fin']?.toString() ?? '',
+      fecha: normalizarFecha(json['fecha']),
+      horaInicio: normalizarHora(json['horaInicio'] ?? json['hora_inicio']),
+      horaFin: normalizarHora(json['horaFin'] ?? json['hora_fin']),
       estado: json['estado']?.toString() ?? 'ESPERANDO',
       posicion: (json['posicion'] as num?)?.toInt(),
       expiraEn: json['expiraEn'] != null

@@ -4,9 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
 import bcrypt from "bcryptjs"
-import { opcionesAuth } from "@/lib/auth"
+import { obtenerSesion } from "@/lib/auth-movil-web"
 import { prisma } from "@/lib/prisma"
 
 // =============================================================================
@@ -19,9 +18,9 @@ import { prisma } from "@/lib/prisma"
  * motivoSuspension, creadoEn.
  * NO se devuelve el passwordHash.
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   // 1. Verificar sesión activa
-  const sesion = await getServerSession(opcionesAuth)
+  const sesion = await obtenerSesion(request)
   if (!sesion?.user) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
@@ -83,7 +82,7 @@ export async function GET(_request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   // 1. Verificar sesión activa
-  const sesion = await getServerSession(opcionesAuth)
+  const sesion = await obtenerSesion(request)
   if (!sesion?.user) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/instalacion.dart';
+import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/aviso_provider.dart';
 import '../../providers/instalacion_provider.dart';
-import '../../providers/tenant_provider.dart';
 import '../../widgets/aviso_card.dart';
 import '../../widgets/instalacion_card.dart';
 
@@ -85,7 +85,6 @@ class _HomePrincipalTabState extends ConsumerState<_HomePrincipalTab> {
 
   @override
   Widget build(BuildContext context) {
-    final tenantState = ref.watch(tenantProvider);
     final authState = ref.watch(authProvider);
     final instalacionesAsync = ref.watch(instalacionesProvider);
     final avisosAsync = ref.watch(avisosProvider);
@@ -94,9 +93,9 @@ class _HomePrincipalTabState extends ConsumerState<_HomePrincipalTab> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          tenantState.seleccionado?.nombre ?? 'Deportes municipales',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+        title: const Text(
+          AppConstants.tenantNombre,
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
         actions: [
           Padding(

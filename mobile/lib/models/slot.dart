@@ -16,10 +16,12 @@ class Slot extends Equatable {
   });
 
   factory Slot.fromJson(Map<String, dynamic> json) {
+    // El backend devuelve el estado en minúscula: libre|ocupado|bloqueado|pasado.
+    // Lo normalizamos a mayúscula para el resto de la app.
     return Slot(
-      horaInicio: json['horaInicio'] as String,
-      horaFin: json['horaFin'] as String,
-      estado: json['estado'] as String? ?? 'LIBRE',
+      horaInicio: json['horaInicio']?.toString() ?? '',
+      horaFin: json['horaFin']?.toString() ?? '',
+      estado: (json['estado']?.toString() ?? 'libre').toUpperCase(),
       motivo: json['motivo'] as String?,
       reservaId: json['reservaId'] as String?,
     );
@@ -34,7 +36,8 @@ class Slot extends Equatable {
       };
 
   bool get esLibre => estado == 'LIBRE';
-  bool get esBloqueado => estado == 'BLOQUEADO';
+  // "PASADO" (slot cuya hora ya pasó) se trata como no disponible, igual que bloqueado.
+  bool get esBloqueado => estado == 'BLOQUEADO' || estado == 'PASADO';
   bool get esOcupado => estado == 'OCUPADO';
   bool get esPropio => estado == 'PROPIO';
 

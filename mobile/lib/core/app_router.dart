@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../screens/splash_screen.dart';
-import '../screens/onboarding/seleccion_municipio_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/registro_screen.dart';
 import '../screens/auth/recuperar_password_screen.dart';
@@ -25,7 +24,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
-      final hasTenant = authState.tenantSlug != null;
       final isLoading = authState.isLoading;
 
       if (isLoading) return null;
@@ -34,18 +32,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/login',
         '/registro',
         '/recuperar-password',
-        '/seleccionar-municipio',
         '/',
       ];
 
       if (!isAuthenticated && !publicRoutes.contains(state.matchedLocation)) {
         return '/login';
-      }
-
-      if (isAuthenticated &&
-          !hasTenant &&
-          state.matchedLocation != '/seleccionar-municipio') {
-        return '/seleccionar-municipio';
       }
 
       return null;
@@ -54,10 +45,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: '/seleccionar-municipio',
-        builder: (context, state) => const SeleccionMunicipioScreen(),
       ),
       GoRoute(
         path: '/login',

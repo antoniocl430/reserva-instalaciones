@@ -14,40 +14,42 @@ class AuthRepository {
     ));
   }
 
+  // Ayuntamiento fijo (Herrera): siempre se envía este slug.
+  Future<String> _slug() async =>
+      (await SecureStorage.instance.obtenerTenantSlug()) ?? AppConstants.tenantSlug;
+
   Future<Usuario> login(String email, String password) async {
     try {
-      final tenantSlug = await SecureStorage.instance.obtenerTenantSlug();
       final response = await _dio.post(
         '/api/auth/mobile/login',
         data: {'email': email, 'password': password},
-        options: Options(headers: {
-          if (tenantSlug != null) 'x-tenant-slug': tenantSlug,
-        }),
+        options: Options(headers: {'x-tenant-slug': await _slug()}),
       );
       final token = response.data['token'] as String;
       await SecureStorage.instance.guardarToken(token);
       return Usuario.fromJson(response.data['usuario'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final msg = e.response?.data?['mensaje'] ?? e.message ?? 'Error al iniciar sesión';
+      final msg = e.response?.data?['error'] ??
+          e.response?.data?['mensaje'] ??
+          'Error al iniciar sesión';
       throw Exception(msg);
     }
   }
 
   Future<Usuario> registro(String nombre, String email, String password) async {
     try {
-      final tenantSlug = await SecureStorage.instance.obtenerTenantSlug();
       final response = await _dio.post(
         '/api/auth/mobile/registro',
         data: {'nombre': nombre, 'email': email, 'password': password},
-        options: Options(headers: {
-          if (tenantSlug != null) 'x-tenant-slug': tenantSlug,
-        }),
+        options: Options(headers: {'x-tenant-slug': await _slug()}),
       );
       final token = response.data['token'] as String;
       await SecureStorage.instance.guardarToken(token);
       return Usuario.fromJson(response.data['usuario'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final msg = e.response?.data?['mensaje'] ?? e.message ?? 'Error al registrarse';
+      final msg = e.response?.data?['error'] ??
+          e.response?.data?['mensaje'] ??
+          'Error al registrarse';
       throw Exception(msg);
     }
   }
@@ -58,13 +60,10 @@ class AuthRepository {
 
   Future<void> recuperarPassword(String email) async {
     try {
-      final tenantSlug = await SecureStorage.instance.obtenerTenantSlug();
       await _dio.post(
         '/api/auth/mobile/recuperar',
         data: {'email': email},
-        options: Options(headers: {
-          if (tenantSlug != null) 'x-tenant-slug': tenantSlug,
-        }),
+        options: Options(headers: {'x-tenant-slug': await _slug()}),
       );
     } catch (_) {
       // Siempre retornamos éxito para no revelar si el email existe
@@ -75,12 +74,11 @@ class AuthRepository {
     final token = await SecureStorage.instance.obtenerToken();
     if (token == null) return null;
     try {
-      final slug = await SecureStorage.instance.obtenerTenantSlug();
       final response = await _dio.get(
         '/api/perfil',
         options: Options(headers: {
           'Authorization': 'Bearer $token',
-          if (slug != null) 'x-tenant-slug': slug,
+          'x-tenant-slug': await _slug(),
         }),
       );
       return Usuario.fromJson(response.data as Map<String, dynamic>);

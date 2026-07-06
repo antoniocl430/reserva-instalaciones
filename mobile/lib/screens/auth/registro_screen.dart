@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/tenant_provider.dart';
 
 class RegistroScreen extends ConsumerStatefulWidget {
   const RegistroScreen({super.key});
@@ -65,7 +65,6 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final tenantState = ref.watch(tenantProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -101,17 +100,16 @@ class _RegistroScreenState extends ConsumerState<RegistroScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (tenantState.seleccionado != null)
-                  Center(
-                    child: Chip(
-                      avatar: const Icon(Icons.location_city, size: 16),
-                      label: Text(tenantState.seleccionado!.nombre),
-                      backgroundColor: colorScheme.secondaryContainer,
-                      labelStyle: textTheme.labelMedium?.copyWith(
-                        color: colorScheme.onSecondaryContainer,
-                      ),
+                Center(
+                  child: Chip(
+                    avatar: const Icon(Icons.location_city, size: 16),
+                    label: const Text(AppConstants.tenantNombre),
+                    backgroundColor: colorScheme.secondaryContainer,
+                    labelStyle: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
                     ),
                   ),
+                ),
                 const SizedBox(height: 20),
 
                 // Campo nombre

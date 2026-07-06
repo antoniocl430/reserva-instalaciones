@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../core/formato_fecha.dart';
 import 'instalacion.dart';
 
 class Reserva extends Equatable {
@@ -27,17 +28,21 @@ class Reserva extends Equatable {
   });
 
   factory Reserva.fromJson(Map<String, dynamic> json) {
+    // El backend devuelve fecha/horaInicio/horaFin como datetimes ISO (UTC).
+    // Los normalizamos a "YYYY-MM-DD" y "HH:MM" en hora local.
+    final horaInicio = normalizarHora(json['horaInicio'] ?? json['hora_inicio']);
+    // La fecha se deriva del instante de inicio para evitar desfases de zona horaria.
+    final fecha = json['horaInicio'] != null
+        ? normalizarFecha(json['horaInicio'])
+        : normalizarFecha(json['fecha']);
     return Reserva(
       id: json['id']?.toString() ?? '',
       instalacion: Instalacion.fromJson(
-        json['instalacion'] as Map<String, dynamic>? ?? {},
+        (json['instalacion'] as Map<String, dynamic>?) ?? const {},
       ),
-      fecha: json['fecha']?.toString() ?? '',
-      horaInicio: json['horaInicio']?.toString() ??
-          json['hora_inicio']?.toString() ??
-          '',
-      horaFin:
-          json['horaFin']?.toString() ?? json['hora_fin']?.toString() ?? '',
+      fecha: fecha,
+      horaInicio: horaInicio,
+      horaFin: normalizarHora(json['horaFin'] ?? json['hora_fin']),
       estado: json['estado']?.toString() ?? 'ACTIVA',
       qrToken: json['qrToken']?.toString() ?? json['qr_token']?.toString(),
       noShow: json['noShow'] as bool? ?? json['no_show'] as bool? ?? false,
@@ -46,7 +51,8 @@ class Reserva extends Equatable {
           : json['creada_en'] != null
               ? DateTime.tryParse(json['creada_en'].toString())
               : null,
-      valorada: json['valorada'] as bool?,
+      // El historial incluye el objeto `valoracion` (o null). Si existe, ya está valorada.
+      valorada: json['valorada'] as bool? ?? (json['valoracion'] != null),
     );
   }
 

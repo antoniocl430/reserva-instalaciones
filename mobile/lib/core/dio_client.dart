@@ -28,10 +28,10 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          // Ayuntamiento fijo: siempre se envía el slug del tenant por defecto
+          // (Herrera) salvo que haya otro guardado.
           final slug = await SecureStorage.instance.obtenerTenantSlug();
-          if (slug != null) {
-            options.headers['x-tenant-slug'] = slug;
-          }
+          options.headers['x-tenant-slug'] = slug ?? AppConstants.tenantSlug;
           handler.next(options);
         },
         onError: (error, handler) {
@@ -67,7 +67,8 @@ class DioClient {
       case 500:
         return 'Error del servidor, inténtalo más tarde';
       default:
-        return error.response?.data?['mensaje'] ??
+        return error.response?.data?['error'] ??
+            error.response?.data?['mensaje'] ??
             error.response?.data?['message'] ??
             'Ha ocurrido un error inesperado';
     }

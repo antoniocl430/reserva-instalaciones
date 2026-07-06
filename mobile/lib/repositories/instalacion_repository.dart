@@ -9,7 +9,8 @@ class InstalacionRepository {
   Future<List<Instalacion>> obtenerInstalaciones([String? tenantId]) async {
     try {
       final response = await _dio.get('/api/instalaciones');
-      final data = response.data as List<dynamic>;
+      // El backend devuelve { instalaciones: [...] }
+      final data = (response.data['instalaciones'] ?? response.data) as List<dynamic>;
       return data
           .map((e) => Instalacion.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -26,7 +27,8 @@ class InstalacionRepository {
         '/api/disponibilidad',
         queryParameters: {'instalacionId': instalacionId, 'fecha': fecha},
       );
-      final data = response.data as List<dynamic>;
+      // El backend devuelve { slots: [...] }
+      final data = (response.data['slots'] ?? response.data) as List<dynamic>;
       return data.map((e) => Slot.fromJson(e as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
       final msg = e.message ?? 'Error al cargar disponibilidad';

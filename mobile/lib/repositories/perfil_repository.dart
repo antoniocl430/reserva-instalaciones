@@ -21,7 +21,9 @@ class PerfilRepository {
         '/api/perfil',
         data: {'nombre': nombre},
       );
-      return Usuario.fromJson(response.data as Map<String, dynamic>);
+      // El backend devuelve { ok: true, usuario: {...} }
+      final data = (response.data['usuario'] ?? response.data) as Map<String, dynamic>;
+      return Usuario.fromJson(data);
     } on DioException catch (e) {
       final msg = e.message ?? 'Error al actualizar nombre';
       throw Exception(msg);

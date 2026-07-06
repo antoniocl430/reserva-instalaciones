@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/tenant_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -48,7 +48,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final tenantState = ref.watch(tenantProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -80,18 +79,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Nombre del ayuntamiento
-                if (tenantState.seleccionado != null)
-                  Center(
-                    child: Chip(
-                      avatar: const Icon(Icons.location_city, size: 16),
-                      label: Text(tenantState.seleccionado!.nombre),
-                      backgroundColor: colorScheme.secondaryContainer,
-                      labelStyle: textTheme.labelMedium?.copyWith(
-                        color: colorScheme.onSecondaryContainer,
-                      ),
+                // Nombre del ayuntamiento (fijo: Herrera)
+                Center(
+                  child: Chip(
+                    avatar: const Icon(Icons.location_city, size: 16),
+                    label: const Text(AppConstants.tenantNombre),
+                    backgroundColor: colorScheme.secondaryContainer,
+                    labelStyle: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
                     ),
                   ),
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Iniciar sesión',
@@ -228,24 +226,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: const Text(
                     '¿No tienes cuenta? Regístrate',
                     style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Cambiar municipio
-                Center(
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.swap_horiz, size: 18),
-                    label: const Text('Cambiar municipio'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () async {
-                      await ref.read(tenantProvider.notifier).limpiarTenant();
-                      if (context.mounted) {
-                        context.go('/seleccionar-municipio');
-                      }
-                    },
                   ),
                 ),
               ],

@@ -9,7 +9,8 @@ class ListaEsperaRepository {
   Future<List<ListaEspera>> obtenerListaEspera() async {
     try {
       final response = await _dio.get('/api/lista-espera');
-      final lista = response.data as List<dynamic>;
+      // El backend devuelve { entradas: [...] }
+      final lista = (response.data['entradas'] ?? response.data) as List<dynamic>;
       return lista
           .map((e) => ListaEspera.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -33,7 +34,9 @@ class ListaEsperaRepository {
           'horaInicio': horaInicio,
         },
       );
-      return ListaEspera.fromJson(response.data as Map<String, dynamic>);
+      // El backend devuelve { entrada: {...} }
+      final data = (response.data['entrada'] ?? response.data) as Map<String, dynamic>;
+      return ListaEspera.fromJson(data);
     } on DioException catch (e) {
       final msg = e.message ?? 'Error al unirse a la lista de espera';
       throw Exception(msg);
@@ -52,7 +55,9 @@ class ListaEsperaRepository {
   Future<Reserva> confirmarTurno(String id) async {
     try {
       final response = await _dio.post('/api/lista-espera/$id/confirmar');
-      return Reserva.fromJson(response.data as Map<String, dynamic>);
+      // El backend devuelve { reserva: {...} }
+      final data = (response.data['reserva'] ?? response.data) as Map<String, dynamic>;
+      return Reserva.fromJson(data);
     } on DioException catch (e) {
       final msg = e.message ?? 'Error al confirmar turno';
       throw Exception(msg);

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { opcionesAuth } from "@/lib/auth"
+import { obtenerSesion } from "@/lib/auth-movil-web"
 import { prisma } from "@/lib/prisma"
 import { schemaUnirseListaEspera } from "@/lib/validaciones"
 import { crearHoraEnMadrid } from "@/lib/slots"
 
 // GET /api/lista-espera — lista las entradas activas del ciudadano autenticado con posición en cola
 export async function GET(request: NextRequest) {
-  const sesion = await getServerSession(opcionesAuth)
+  const sesion = await obtenerSesion(request)
   if (!sesion) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
@@ -49,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/lista-espera — el ciudadano se apunta a la lista de espera de un slot ocupado
 export async function POST(request: NextRequest) {
-  const sesion = await getServerSession(opcionesAuth)
+  const sesion = await obtenerSesion(request)
   if (!sesion) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }

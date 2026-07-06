@@ -23,14 +23,17 @@ class Instalacion extends Equatable {
 
   factory Instalacion.fromJson(Map<String, dynamic> json) {
     return Instalacion(
-      id: json['id'] as String,
-      nombre: json['nombre'] as String,
-      tipo: json['tipo'] as String,
+      id: json['id']?.toString() ?? '',
+      nombre: json['nombre']?.toString() ?? 'Instalación',
+      tipo: json['tipo']?.toString() ?? '',
       descripcion: json['descripcion'] as String?,
       horario: json['horario'] as String?,
       activa: json['activa'] as bool? ?? true,
-      mediaValoraciones: (json['mediaValoraciones'] as num?)?.toDouble(),
-      numValoraciones: (json['numValoraciones'] as num?)?.toInt(),
+      // El backend usa "mediaValoracion" / "totalValoraciones"; aceptamos ambos nombres.
+      mediaValoraciones: (json['mediaValoracion'] as num?)?.toDouble() ??
+          (json['mediaValoraciones'] as num?)?.toDouble(),
+      numValoraciones: (json['totalValoraciones'] as num?)?.toInt() ??
+          (json['numValoraciones'] as num?)?.toInt(),
     );
   }
 

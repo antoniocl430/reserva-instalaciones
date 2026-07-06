@@ -10,15 +10,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-
-import { opcionesAuth } from "@/lib/auth"
+import { obtenerSesion } from "@/lib/auth-movil-web"
 import { prisma } from "@/lib/prisma"
 import { schemaCrearValoracion } from "@/lib/validaciones"
 
 export async function POST(request: NextRequest) {
   // Validar sesión
-  const sesion = await getServerSession(opcionesAuth)
+  const sesion = await obtenerSesion(request)
   if (!sesion) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
