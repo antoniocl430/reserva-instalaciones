@@ -1,6 +1,7 @@
 class AppConstants {
-  // Cambiar por la URL real del backend en producción
-  static const String apiBaseUrl = 'http://10.0.2.2:3000';
+  // Backend en producción (Vercel). Para desarrollo local con el emulador
+  // Android, usar 'http://10.0.2.2:3000'.
+  static const String apiBaseUrl = 'https://reserva-instalaciones.vercel.app';
 
   static const String tokenKey = 'auth_token';
   static const String tenantSlugKey = 'tenant_slug';
