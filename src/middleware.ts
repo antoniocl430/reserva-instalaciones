@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { extraerSlugDelHost } from "@/lib/tenant"
+import { extraerSlugDelHost } from "@/lib/tenant-slug"
 
 // Rutas que requieren estar autenticado
 const RUTAS_PROTEGIDAS = ["/dashboard", "/mis-reservas", "/perfil"]
