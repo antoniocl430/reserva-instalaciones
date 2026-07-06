@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../models/reserva.dart';
 
 class ReservaCard extends StatelessWidget {
@@ -72,27 +71,6 @@ class ReservaCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  if (reserva.qrToken != null)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.push(
-                          '/qr/${reserva.qrToken}',
-                          extra: {
-                            'instalacion': reserva.instalacion.nombre,
-                            'fecha': reserva.fecha,
-                            'hora':
-                                '${reserva.horaInicio} - ${reserva.horaFin}',
-                          },
-                        ),
-                        icon: const Icon(Icons.qr_code, size: 16),
-                        label: const Text('Ver QR'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          textStyle: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  if (reserva.qrToken != null) const SizedBox(width: 8),
                   if (reserva.sePuedeCancelar && onCancelar != null)
                     Expanded(
                       child: OutlinedButton.icon(

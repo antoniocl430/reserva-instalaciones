@@ -116,6 +116,8 @@ model Reserva {
   estado             String    @default("ACTIVA") // "ACTIVA" | "CANCELADA"
   qrToken            String?   @unique            // Token único para verificación QR. Null en reservas pre-feature.
   noShow             Boolean   @default(false)    // true si el ciudadano no se presentó
+  asistenciaConfirmada Boolean @default(false)    // true cuando el ciudadano confirma asistencia escaneando el QR de la pista
+  confirmadaEn       DateTime?                    // Momento en que se confirmó la asistencia
   creadoEn           DateTime  @default(now())
   canceladoEn        DateTime?
   canceladoPor       String?

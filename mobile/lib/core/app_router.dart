@@ -9,7 +9,7 @@ import '../screens/auth/recuperar_password_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/instalaciones/instalacion_detalle_screen.dart';
 import '../screens/reservas/mis_reservas_screen.dart';
-import '../screens/reservas/qr_reserva_screen.dart';
+import '../screens/asistencia/verificar_qr_screen.dart';
 import '../screens/valoracion/valorar_screen.dart';
 import '../screens/perfil/perfil_screen.dart';
 import '../screens/perfil/editar_perfil_screen.dart';
@@ -87,15 +87,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MisReservasScreen(),
       ),
       GoRoute(
-        path: '/qr/:token',
-        builder: (context, state) {
-          final token = state.pathParameters['token']!;
-          final reserva = state.extra is Reserva ? state.extra as Reserva : null;
-          return QrReservaScreen(
-            qrToken: token,
-            reserva: reserva,
-          );
-        },
+        path: '/verificar-qr',
+        builder: (context, state) => const VerificarQrScreen(),
       ),
       GoRoute(
         path: '/valorar/:reservaId',

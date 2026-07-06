@@ -445,40 +445,21 @@ class _ReservaCard extends StatelessWidget {
                 ],
               ),
             ],
-            // Activas: botones QR y Cancelar
-            if (modoActiva) ...[
+            // Activas: botón Cancelar (el QR ya no se muestra; la asistencia se
+            // confirma escaneando el QR de la pista desde "Verificar QR").
+            if (modoActiva && puedeCancelar) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (reserva.qrToken != null)
-                    Expanded(
-                      child: FilledButton.icon(
-                        icon: const Icon(Icons.qr_code),
-                        label: const Text('Ver QR'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _colorPrimario,
-                        ),
-                        onPressed: () => context.push(
-                          '/qr/${reserva.qrToken}',
-                          extra: reserva,
-                        ),
-                      ),
-                    ),
-                  if (reserva.qrToken != null && puedeCancelar)
-                    const SizedBox(width: 8),
-                  if (puedeCancelar)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('Cancelar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        onPressed: onCancelar,
-                      ),
-                    ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancelar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                  ),
+                  onPressed: onCancelar,
+                ),
               ),
             ],
           ],

@@ -154,6 +154,53 @@ class _HomePrincipalTabState extends ConsumerState<_HomePrincipalTab> {
               ),
             ),
 
+            // ─── Verificar QR (confirmar asistencia) ─────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => context.push('/verificar-qr'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.qr_code_scanner,
+                          color: Colors.white, size: 32),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Verificar QR',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Escanea el QR de la pista para confirmar tu asistencia',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white70),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // ─── Instalaciones disponibles ───────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),

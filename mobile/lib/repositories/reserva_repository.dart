@@ -55,4 +55,20 @@ class ReservaRepository {
       throw Exception(msg);
     }
   }
+
+  /// Confirma la asistencia del ciudadano a su reserva escaneando el QR de la
+  /// pista. [instalacionId] se extrae del contenido del QR (/pistas/{id}).
+  /// Devuelve { ok, yaConfirmada, reserva }.
+  Future<Map<String, dynamic>> confirmarAsistencia(String instalacionId) async {
+    try {
+      final response = await _dio.post(
+        '/api/asistencia/confirmar',
+        data: {'instalacionId': instalacionId},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      final msg = e.message ?? 'Error al confirmar asistencia';
+      throw Exception(msg);
+    }
+  }
 }

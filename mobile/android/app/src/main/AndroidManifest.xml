@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Permiso de acceso a internet para comunicarse con el backend -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Cámara: necesaria para escanear el QR de las pistas y confirmar asistencia -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="Reservas Deportivas"
         android:name="${applicationName}"
