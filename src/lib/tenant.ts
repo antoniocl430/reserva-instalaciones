@@ -5,6 +5,7 @@
  * También incluye helpers para parsear y mergear la configuración JSON del tenant.
  */
 
+import type { NextRequest } from "next/server"
 import type { Tenant } from "@prisma/client"
 
 // ─── Tipos de configuración ───────────────────────────────────────────────────
@@ -147,4 +148,23 @@ export async function obtenerTenantIdPorSlug(slug: string): Promise<string | nul
     select: { id: true },
   })
   return tenant?.id ?? null
+}
+
+/**
+ * Obtiene el Tenant completo desde la petición HTTP.
+ * Primero intenta el header `x-tenant-slug` (para clientes móviles Flutter).
+ * Si no está presente, hace fallback al subdominio del host (comportamiento web existente).
+ *
+ * @param request  Petición Next.js
+ * @returns        El Tenant si existe y está activo, null en caso contrario
+ */
+export async function obtenerTenantDesdeRequest(request: NextRequest): Promise<Tenant | null> {
+  // Primero intenta el header x-tenant-slug (para mobile)
+  const headerSlug = request.headers.get("x-tenant-slug")
+  if (headerSlug) return obtenerTenantPorSlug(headerSlug)
+
+  // Fallback: subdominio (comportamiento web existente)
+  const host = request.headers.get("host") ?? ""
+  const slug = extraerSlugDelHost(host)
+  return obtenerTenantPorSlug(slug)
 }
