@@ -23,7 +23,7 @@ jest.mock('web-push', () => {
   return webpushMock
 })
 
-import { enviarPushUsuario, enviarRecordatorioReserva, enviarPushCancelacion } from '@/lib/push'
+import { enviarPushUsuario, enviarRecordatorioReserva, enviarPushCancelacion, enviarPushReservaConfirmada } from '@/lib/push'
 
 // Suscripciones de prueba
 const suscripcionActiva = {
@@ -165,5 +165,125 @@ describe('enviarPushCancelacion', () => {
     const payload = JSON.parse(llamada[1])
     expect(payload.titulo).toBeDefined()
     expect(payload.cuerpo).toContain('Padel 2')
+  })
+})
+
+describe('enviarPushUsuario — filtro por preferencias', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('debería NO enviar push cuando notificacionesPush es false', async () => {
+    // El usuario tiene suscripciones pero ha desactivado todas las push
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue({
+      notificacionesPush: false,
+      recordatorioReserva: true,
+      recordatorioCancel: true,
+    })
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+
+    await enviarPushUsuario('usuario-1', { titulo: 'Test', cuerpo: 'Cuerpo' })
+
+    expect(webpushMock.sendNotification).not.toHaveBeenCalled()
+  })
+
+  it('debería NO enviar push cuando tipo es "recordatorio" y recordatorioReserva es false', async () => {
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue({
+      notificacionesPush: true,
+      recordatorioReserva: false,
+      recordatorioCancel: true,
+    })
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+
+    await enviarPushUsuario('usuario-1', { titulo: 'Recordatorio', cuerpo: 'Cuerpo' }, 'recordatorio')
+
+    expect(webpushMock.sendNotification).not.toHaveBeenCalled()
+  })
+
+  it('debería NO enviar push cuando tipo es "cancelacion" y recordatorioCancel es false', async () => {
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue({
+      notificacionesPush: true,
+      recordatorioReserva: true,
+      recordatorioCancel: false,
+    })
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+
+    await enviarPushUsuario('usuario-1', { titulo: 'Cancelación', cuerpo: 'Cuerpo' }, 'cancelacion')
+
+    expect(webpushMock.sendNotification).not.toHaveBeenCalled()
+  })
+
+  it('debería enviar push cuando no existe registro de preferencias (usa defaults)', async () => {
+    // Sin registro de preferencias → asumir todos los valores como true
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue(null)
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+    webpushMock.sendNotification.mockResolvedValue({ statusCode: 201 })
+
+    await enviarPushUsuario('usuario-1', { titulo: 'Test', cuerpo: 'Cuerpo' }, 'recordatorio')
+
+    expect(webpushMock.sendNotification).toHaveBeenCalledTimes(1)
+  })
+
+  it('debería enviar push cuando notificacionesPush es true y tipo coincide con preferencia activa', async () => {
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue({
+      notificacionesPush: true,
+      recordatorioReserva: true,
+      recordatorioCancel: true,
+    })
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+    webpushMock.sendNotification.mockResolvedValue({ statusCode: 201 })
+
+    await enviarPushUsuario('usuario-1', { titulo: 'Recordatorio', cuerpo: 'Cuerpo' }, 'recordatorio')
+
+    expect(webpushMock.sendNotification).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('enviarPushReservaConfirmada', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('debería llamar a enviarPushUsuario con título y cuerpo de confirmación correctos', async () => {
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue({
+      notificacionesPush: true,
+      recordatorioReserva: true,
+      recordatorioCancel: true,
+    })
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+    webpushMock.sendNotification.mockResolvedValue({ statusCode: 201 })
+
+    await enviarPushReservaConfirmada('usuario-1', {
+      instalacion: 'Padel 1',
+      fecha: '15/06/2099',
+      horaInicio: '10:00',
+      horaFin: '11:15',
+    })
+
+    expect(webpushMock.sendNotification).toHaveBeenCalledTimes(1)
+    const llamada = webpushMock.sendNotification.mock.calls[0]
+    const payload = JSON.parse(llamada[1])
+    expect(payload.titulo).toBe('Reserva confirmada')
+    expect(payload.cuerpo).toContain('Padel 1')
+    expect(payload.cuerpo).toContain('15/06/2099')
+    expect(payload.cuerpo).toContain('10:00')
+  })
+
+  it('debería NO enviar si recordatorioReserva es false', async () => {
+    prismaMock.preferenciaNotificacion.findFirst.mockResolvedValue({
+      notificacionesPush: true,
+      recordatorioReserva: false,
+      recordatorioCancel: true,
+    })
+    prismaMock.suscripcionPush.findMany.mockResolvedValue([suscripcionActiva])
+
+    await enviarPushReservaConfirmada('usuario-1', {
+      instalacion: 'Padel 1',
+      fecha: '15/06/2099',
+      horaInicio: '10:00',
+      horaFin: '11:15',
+    })
+
+    expect(webpushMock.sendNotification).not.toHaveBeenCalled()
   })
 })

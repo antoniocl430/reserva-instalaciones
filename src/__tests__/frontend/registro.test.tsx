@@ -15,6 +15,11 @@ vi.mock('next-auth/react', () => ({
   signIn: vi.fn(),
 }))
 
+const mockToastRegistro = vi.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: () => ({ toast: mockToastRegistro }),
+}))
+
 const mockPush = vi.fn()
 
 vi.mock('next/navigation', () => ({
@@ -108,12 +113,13 @@ describe('PaginaRegistro', () => {
     expect(errorElement.textContent).toMatch(/8 caracteres/i)
   })
 
-  it('Si hay callbackUrl en params, redirige a esa URL tras registro exitoso', async () => {
+  it('Tras registro exitoso muestra pantalla de confirmación de email (sin redirección inmediata)', async () => {
     window.location.search = '?callbackUrl=%2Fpistas'
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ id: 'u123' }),
+        status: 201,
+        json: () => Promise.resolve({ mensaje: 'Revisa tu email para verificar tu cuenta' }),
       })
     ) as any
 
@@ -136,17 +142,20 @@ describe('PaginaRegistro', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }))
 
+    // Ahora el usuario debe ver la pantalla de confirmación en lugar de ser redirigido
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/pistas')
+      expect(screen.getByText(/revisa tu bandeja de entrada/i)).toBeInTheDocument()
     })
+    expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('Si callbackUrl es inválida, redirige a /dashboard tras registro', async () => {
+  it('Tras registro exitoso no redirige aunque callbackUrl sea inválida', async () => {
     window.location.search = '?callbackUrl=https://evil.com'
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ id: 'u123' }),
+        status: 201,
+        json: () => Promise.resolve({ mensaje: 'Revisa tu email para verificar tu cuenta' }),
       })
     ) as any
 
@@ -169,7 +178,8 @@ describe('PaginaRegistro', () => {
     fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }))
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/dashboard')
+      expect(screen.getByText(/revisa tu bandeja de entrada/i)).toBeInTheDocument()
     })
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })

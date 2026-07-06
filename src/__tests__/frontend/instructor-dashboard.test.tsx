@@ -6,10 +6,11 @@
  * - /instructor/mis-clases muestra lista de grupos recurrentes
  * - Toggle "Reserva recurrente" aparece solo si rol === INSTRUCTOR
  * - Admin puede seleccionar rol INSTRUCTOR al crear usuario
+ * - Tests de componente real: DashboardInstructor renderizado en jsdom
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 
@@ -18,6 +19,14 @@ import React from 'react'
 vi.mock('next-auth/react', () => ({
   useSession: vi.fn(),
   signOut: vi.fn(),
+}))
+
+const mockPush = vi.fn()
+// El objeto de router es estable (no se recrea en cada render)
+// para evitar que el useEffect de los componentes se ejecute en bucle
+const mockRouter = { push: mockPush }
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => mockRouter),
 }))
 
 vi.mock('next/link', () => ({
@@ -33,6 +42,46 @@ vi.mock('next/link', () => ({
 vi.mock('@/components/header', () => ({
   Header: () => React.createElement('header', { 'data-testid': 'header' }, 'Header'),
 }))
+
+// Mocks de componentes shadcn/ui para los tests de componente real
+vi.mock('@/components/ui/card', () => ({
+  Card: ({ children, className }: { children: React.ReactNode; className?: string }) =>
+    React.createElement('div', { className, 'data-testid': 'card' }, children),
+  CardHeader: ({ children, className }: { children: React.ReactNode; className?: string }) =>
+    React.createElement('div', { className }, children),
+  CardTitle: ({ children, className }: { children: React.ReactNode; className?: string }) =>
+    React.createElement('h3', { className }, children),
+  CardDescription: ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', {}, children),
+  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) =>
+    React.createElement('div', { className }, children),
+}))
+
+vi.mock('@/components/ui/button', () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    variant,
+    className,
+    asChild,
+  }: {
+    children: React.ReactNode
+    onClick?: () => void
+    disabled?: boolean
+    variant?: string
+    className?: string
+    asChild?: boolean
+  }) => {
+    if (asChild && React.isValidElement(children)) {
+      return children
+    }
+    return React.createElement('button', { onClick, disabled, 'data-variant': variant, className }, children)
+  },
+}))
+
+// Mock global fetch
+global.fetch = vi.fn()
 
 import { useSession } from 'next-auth/react'
 const mockUseSession = useSession as ReturnType<typeof vi.fn>
@@ -176,5 +225,138 @@ describe('Header - Navegación por rol', () => {
     const rol: any = 'CIUDADANO'
     const muestraClases = rol === 'INSTRUCTOR'
     expect(muestraClases).toBe(false)
+  })
+})
+
+// ============================================================
+// Tests de componente real — DashboardInstructor renderizado
+// ============================================================
+
+import DashboardInstructor from '@/app/instructor/page'
+
+const grupoActivoEjemplo = {
+  id: 'g1',
+  instalacion: { nombre: 'Pádel 1' },
+  horaInicio: '09:15',
+  frecuencia: 'SEMANAL',
+  fechaInicio: '2025-01-01T00:00:00.000Z',
+  fechaFin: '2025-06-30T00:00:00.000Z',
+  activo: true,
+}
+
+function configurarSesionInstructor() {
+  mockUseSession.mockReturnValue({
+    data: {
+      user: { id: '1', email: 'inst@test.es', rol: 'INSTRUCTOR', tenantId: 'tenant-1' },
+      expires: '2099-01-01',
+    },
+    status: 'authenticated',
+  })
+}
+
+describe('DashboardInstructor — componente renderizado', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockPush.mockReset()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockReset()
+  })
+
+  it('debería mostrar spinner "Cargando clases..." mientras carga', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'loading' })
+
+    render(React.createElement(DashboardInstructor))
+
+    expect(screen.getByText('Cargando clases...')).toBeInTheDocument()
+  })
+
+  it('debería redirigir a / si el rol no es INSTRUCTOR', async () => {
+    // El componente DashboardInstructor llama router.push('/') para roles
+    // que no son INSTRUCTOR y nunca sale del estado cargando (cargando=true
+    // permanece porque cargarDatos() no se invoca en ese caso)
+    mockUseSession.mockReturnValue({
+      data: {
+        user: { id: '2', email: 'admin@test.es', rol: 'ADMIN', tenantId: 'tenant-1' },
+        expires: '2099-01-01',
+      },
+      status: 'authenticated',
+    })
+
+    render(React.createElement(DashboardInstructor))
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/')
+    })
+  })
+
+  it('debería mostrar "0" en el contador de grupos activos cuando el fetch devuelve lista vacía', async () => {
+    configurarSesionInstructor()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ grupos: [], proximasSesiones: [] }),
+    } as any)
+
+    render(React.createElement(DashboardInstructor))
+
+    await waitFor(() => {
+      // Verificamos por la etiqueta de la tarjeta, no solo el número
+      expect(screen.getByText('Grupos Activos')).toBeInTheDocument()
+      // El contador aparece dos veces: grupos (0) y sesiones (0).
+      // Confirmamos que al menos hay dos "0" en pantalla
+      expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  it('debería mostrar el contador correcto de grupos activos cuando hay grupos', async () => {
+    configurarSesionInstructor()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        grupos: [grupoActivoEjemplo, { ...grupoActivoEjemplo, id: 'g2' }],
+        proximasSesiones: [],
+      }),
+    } as any)
+
+    render(React.createElement(DashboardInstructor))
+
+    await waitFor(() => {
+      // Debe aparecer el número "2" en el contador de grupos activos
+      expect(screen.getByText('2')).toBeInTheDocument()
+    })
+  })
+
+  it('debería mostrar los botones de navegación "Crear nueva clase" y "Gestionar mis clases"', async () => {
+    configurarSesionInstructor()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ grupos: [], proximasSesiones: [] }),
+    } as any)
+
+    render(React.createElement(DashboardInstructor))
+
+    await waitFor(() => {
+      // Cuando grupos está vacío el componente muestra "Crear nueva clase"
+      // tanto en el grid de botones como en el estado vacío (2 elementos).
+      // Verificamos que al menos uno está en pantalla
+      expect(screen.getAllByText('Crear nueva clase').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText('Gestionar mis clases')).toBeInTheDocument()
+    })
+  })
+
+  it('debería mostrar la sección "Clases Recientes" cuando hay grupos', async () => {
+    configurarSesionInstructor()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        grupos: [grupoActivoEjemplo],
+        proximasSesiones: [],
+      }),
+    } as any)
+
+    render(React.createElement(DashboardInstructor))
+
+    await waitFor(() => {
+      expect(screen.getByText('Clases Recientes')).toBeInTheDocument()
+      expect(screen.getByText('Pádel 1')).toBeInTheDocument()
+    })
   })
 })

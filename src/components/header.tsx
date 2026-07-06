@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useSession, signOut } from "next-auth/react"
+import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Menu, X, ShieldCheck, Zap } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
@@ -12,12 +13,15 @@ import InstalarPWA from "@/components/InstalarPWA"
 interface HeaderProps {
   /** Nombre del servicio a mostrar en el logo. Si no se pasa, usa el valor por defecto. */
   nombreServicio?: string
+  /** URL del logo del ayuntamiento. Si se pasa, se muestra en lugar del emoji. */
+  logoUrl?: string | null
 }
 
 // Cabecera de navegación principal — adaptativa según rol y estado de sesión
-export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) {
+export function Header({ nombreServicio = "Reservas Deportivas", logoUrl }: HeaderProps) {
   const { data: sesion, status } = useSession()
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const pathname = usePathname()
 
   const cargandoSesion = status === "loading"
   const esAdmin = sesion?.user?.rol === "ADMIN"
@@ -25,19 +29,47 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
   const esSuperadmin = sesion?.user?.rol === "SUPERADMIN"
   const esInstructor = sesion?.user?.rol === "INSTRUCTOR"
 
-  function cerrarSesion() {
-    signOut({ callbackUrl: "/login" })
+  async function cerrarSesion() {
+    await signOut({ redirect: false })
+    window.location.href = "/"
+  }
+
+  // Los paneles de administración (/admin, /superadmin) tienen su propia
+  // cabecera/sidebar (AdminHeader, SuperadminSidebar) — mostrar este Header
+  // global ahí produciría una barra de navegación duplicada.
+  const esRutaDePanelPropio =
+    pathname === "/admin" ||
+    pathname?.startsWith("/admin/") ||
+    pathname === "/superadmin" ||
+    pathname?.startsWith("/superadmin/")
+  if (esRutaDePanelPropio) {
+    return null
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border sticky top-0 z-50">
       <div className="w-full px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center gap-2 font-bold text-blue-700 text-lg shrink-0">
-            <span className="text-xl" aria-hidden="true">🏓</span>
-            <span className="hidden sm:inline">{nombreServicio}</span>
-            <span className="sm:hidden">Reservas</span>
+          <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center gap-2 font-bold text-blue-700 shrink-0 min-w-0">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={nombreServicio}
+                className="h-8 sm:h-10 w-auto object-contain max-w-[120px] sm:max-w-[180px]"
+              />
+            ) : (
+              <span className="text-xl" aria-hidden="true">🏓</span>
+            )}
+            {/* Con logo: nombre solo en pantallas grandes para no saturar el header */}
+            {logoUrl ? (
+              <span className="hidden lg:inline text-base leading-tight truncate max-w-[180px]">{nombreServicio}</span>
+            ) : (
+              <>
+                <span className="hidden sm:inline text-lg leading-tight">{nombreServicio}</span>
+                <span className="sm:hidden text-base leading-tight">Reservas</span>
+              </>
+            )}
           </Link>
 
           {/* Navegación desktop */}
@@ -209,7 +241,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
           {/* Botón hamburger — solo móvil */}
           {!cargandoSesion && (
             <button
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
               onClick={() => setMenuAbierto(!menuAbierto)}
               aria-label="Abrir menú"
             >
@@ -227,26 +259,26 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
       <AnimatePresence>
         {!cargandoSesion && menuAbierto && (
           <motion.div
-            className="md:hidden border-t border-gray-200 bg-white"
+            className="md:hidden border-t border-border bg-background shadow-md"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
           >
-            <nav aria-label="Menú de navegación" className="max-w-4xl mx-auto px-4 py-3 flex flex-col gap-1">
+            <nav aria-label="Menú de navegación" className="max-w-4xl mx-auto px-4 py-2 flex flex-col gap-0.5">
             {/* Sin sesión: solo login y registro */}
             {!sesion && !cargandoSesion && (
               <>
                 <Link
                   href="/login"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Iniciar sesión
                 </Link>
                 <Link
                   href="/registro"
-                  className="px-3 py-2 text-sm font-medium text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Crear cuenta
@@ -257,33 +289,33 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
             {/* Ciudadano logueado */}
             {esCiudadano && (
               <>
-                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
+                <div className="px-3 py-2.5 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1 truncate">
                   {sesion.user?.name}
                 </div>
                 <Link
                   href="/pistas"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Instalaciones
                 </Link>
                 <Link
                   href="/mis-reservas"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mis reservas
                 </Link>
                 <Link
                   href="/perfil"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mi perfil
                 </Link>
                 <button
                   onClick={() => { setMenuAbierto(false); cerrarSesion() }}
-                  className="px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                  className="px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
                 >
                   Cerrar sesión
                 </button>
@@ -293,33 +325,33 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
             {/* Instructor logueado */}
             {esInstructor && (
               <>
-                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
+                <div className="px-3 py-2.5 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1 truncate">
                   {sesion.user?.name}
                 </div>
                 <Link
                   href="/pistas"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Instalaciones
                 </Link>
                 <Link
                   href="/instructor"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mis Clases
                 </Link>
                 <Link
                   href="/perfil"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mi perfil
                 </Link>
                 <button
                   onClick={() => { setMenuAbierto(false); cerrarSesion() }}
-                  className="px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                  className="px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
                 >
                   Cerrar sesión
                 </button>
@@ -329,12 +361,12 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
             {/* Superadmin logueado */}
             {esSuperadmin && (
               <>
-                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
+                <div className="px-3 py-2.5 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1 truncate">
                   {sesion.user?.name}
                 </div>
                 <Link
                   href="/superadmin"
-                  className="px-3 py-2 text-sm font-semibold text-purple-700 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                  className="px-3 py-2.5 text-sm font-semibold text-purple-700 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
                   onClick={() => setMenuAbierto(false)}
                 >
                   <Zap className="w-4 h-4 shrink-0" aria-hidden="true" />
@@ -342,7 +374,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                 </Link>
                 <button
                   onClick={() => { setMenuAbierto(false); cerrarSesion() }}
-                  className="px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                  className="px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
                 >
                   Cerrar sesión
                 </button>
@@ -352,26 +384,26 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
             {/* Admin logueado — ve links de ciudadano más acceso al panel */}
             {esAdmin && (
               <>
-                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1">
+                <div className="px-3 py-2.5 text-sm text-gray-500 font-medium border-b border-gray-100 mb-1 truncate">
                   {sesion.user?.name}
                 </div>
                 <Link
                   href="/pistas"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Instalaciones
                 </Link>
                 <Link
                   href="/mis-reservas"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                 >
                   Mis reservas
                 </Link>
                 <Link
                   href="/perfil"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
                   onClick={() => setMenuAbierto(false)}
                   aria-label="Mi perfil"
                 >
@@ -381,7 +413,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                 <div className="border-t border-gray-100 my-1" aria-hidden="true" />
                 <Link
                   href="/admin"
-                  className="px-3 py-2 text-sm font-semibold text-blue-700 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  className="px-3 py-2.5 text-sm font-semibold text-blue-700 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
                   onClick={() => setMenuAbierto(false)}
                 >
                   <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
@@ -389,7 +421,7 @@ export function Header({ nombreServicio = "Reservas Deportivas" }: HeaderProps) 
                 </Link>
                 <button
                   onClick={() => { setMenuAbierto(false); cerrarSesion() }}
-                  className="px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                  className="px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
                 >
                   Cerrar sesión
                 </button>

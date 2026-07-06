@@ -1,7 +1,11 @@
 import { z } from "zod"
+import { SLOTS_CONFIG_DEFAULT, generarSlots } from "@/lib/slots"
 
-// Slots válidos disponibles para reservar
-const SLOTS_VALIDOS = ["08:00", "09:15", "10:30", "11:45", "16:45", "18:00", "19:15"]
+// Slots válidos para validación Zod — generados a partir de la config por defecto.
+// Los schemas Zod usan z.enum en tiempo de carga, por lo que se derivan de la
+// configuración por defecto. Los endpoints que usen config de tenant diferente
+// deberán validar el slot manualmente usando generarMapaSlots(config).
+const SLOTS_VALIDOS = generarSlots(SLOTS_CONFIG_DEFAULT).map((s) => s.horaInicio)
 
 // Regex para validar formato de fecha YYYY-MM-DD
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/
@@ -77,7 +81,7 @@ export const schemaCrearPistaAdmin = z.object({
   tipo: z.literal("PADEL").refine((val) => val === "PADEL", {
     message: "El tipo debe ser PADEL",
   }),
-  descripcion: z.string().optional(),
+  descripcion: z.string().nullable().optional(),
   horario: z.string().optional(),
 })
 
@@ -88,7 +92,7 @@ export type CrearPistaAdminInput = z.infer<typeof schemaCrearPistaAdmin>
  */
 export const schemaActualizarPistaAdmin = z.object({
   nombre: z.string().min(1, "El nombre no puede estar vacío").optional(),
-  descripcion: z.string().optional(),
+  descripcion: z.string().nullable().optional(),
   horario: z.string().optional(),
   activa: z.boolean().optional(),
 })
@@ -169,6 +173,13 @@ export type ResetearPasswordInput = z.infer<typeof schemaResetearPassword>
 // Tipos válidos para los avisos del tablón
 const TIPOS_AVISO_VALIDOS = ["INFO", "AVISO", "CIERRE"] as const
 
+// Valida que una cadena sea una fecha ISO 8601 parseable
+// Acepta formatos como "2026-12-31T23:59:59.000Z" o "2026-12-31"
+function esFechaIsoValida(valor: string): boolean {
+  const fecha = new Date(valor)
+  return !isNaN(fecha.getTime())
+}
+
 /**
  * Schema para crear un aviso del tablón de anuncios
  */
@@ -185,6 +196,13 @@ export const schemaCrearAviso = z.object({
     error: () => ({ message: "El tipo debe ser INFO, AVISO o CIERRE" }),
   }),
   fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  // Fecha opcional de caducidad: si se proporciona, debe ser una fecha ISO válida.
+  // Acepta null (caducidad sin valor) igual que el schema de actualización.
+  caducaEn: z
+    .string()
+    .refine(esFechaIsoValida, "La fecha de caducidad no es una fecha válida")
+    .nullable()
+    .optional(),
 })
 
 export type CrearAvisoInput = z.infer<typeof schemaCrearAviso>
@@ -211,6 +229,12 @@ export const schemaActualizarAviso = z
       .optional(),
     fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)").optional(),
     activo: z.boolean().optional(),
+    // Permite establecer o limpiar la fecha de caducidad (null elimina la caducidad)
+    caducaEn: z
+      .string()
+      .refine(esFechaIsoValida, "La fecha de caducidad no es una fecha válida")
+      .nullable()
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "Se debe proporcionar al menos un campo para actualizar",
@@ -235,6 +259,51 @@ export const schemaColores = z.object({
 export type ColoresInput = z.infer<typeof schemaColores>
 
 /**
+ * Schema para crear un festivo
+ */
+export const schemaCrearFestivo = z.object({
+  fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  nombre: z.string().min(1, "El nombre es obligatorio").max(100, "El nombre no puede superar 100 caracteres"),
+  repetirAnual: z.boolean().optional().default(false),
+})
+
+export type CrearFestivoInput = z.infer<typeof schemaCrearFestivo>
+
+/**
+ * Schema para apuntarse a la lista de espera de un slot
+ */
+export const schemaUnirseListaEspera = z.object({
+  instalacionId: z.string().min(1, "La instalación es obligatoria"),
+  fecha: z.string().regex(REGEX_FECHA, "Formato de fecha inválido (YYYY-MM-DD)"),
+  horaInicio: z.string().regex(/^\d{2}:\d{2}$/, "Formato de hora inválido (HH:MM)"),
+})
+
+export type UnirseListaEsperaInput = z.infer<typeof schemaUnirseListaEspera>
+
+/**
+ * Schema para validar una franja horaria en formato HH:MM
+ */
+const REGEX_HORA = /^\d{2}:\d{2}$/
+
+const schemaFranja = z.object({
+  inicio: z.string().regex(REGEX_HORA, "Formato de hora inválido (HH:MM)"),
+  fin: z.string().regex(REGEX_HORA, "Formato de hora inválido (HH:MM)"),
+})
+
+/**
+ * Schema para la configuración de slots del tenant
+ */
+const schemaSlotsConfig = z.object({
+  duracionMinutos: z
+    .number({ message: "duracionMinutos debe ser un número" })
+    .int("duracionMinutos debe ser un entero")
+    .positive("duracionMinutos debe ser positivo"),
+  franjas: z
+    .array(schemaFranja)
+    .min(1, "Debe haber al menos una franja horaria"),
+})
+
+/**
  * Schema para la configuración personalizable de un tenant
  */
 export const schemaConfiguracionTenant = z.object({
@@ -246,6 +315,8 @@ export const schemaConfiguracionTenant = z.object({
       description: z.string().max(300).optional(),
     })
     .optional(),
+  /** Configuración de slots de reserva (opcional — usa defaults si no se especifica) */
+  slots: schemaSlotsConfig.optional(),
 })
 
 export type ConfiguracionTenantInput = z.infer<typeof schemaConfiguracionTenant>
@@ -257,7 +328,13 @@ export type ConfiguracionTenantInput = z.infer<typeof schemaConfiguracionTenant>
 export const schemaActualizarTenant = z.object({
   nombre: z.string().min(1).max(200).optional(),
   municipio: z.string().min(1).max(200).optional(),
-  logoUrl: z.string().url("URL inválida").optional().nullable(),
+  logoUrl: z.union([
+    z.string().url("URL inválida"),
+    z.string().regex(
+      /^data:image\/(png|jpeg|jpg|gif|svg\+xml|webp);base64,/,
+      "Formato de imagen inválido"
+    ),
+  ]).optional().nullable(),
   configuracion: schemaConfiguracionTenant.optional(),
 })
 
@@ -330,3 +407,15 @@ export const schemaPreferenciasNotificacion = z.object({
 })
 
 export type PreferenciasNotificacionInput = z.infer<typeof schemaPreferenciasNotificacion>
+
+/**
+ * Schema para crear una valoración de una instalación
+ * Solo ciudadanos pueden valorar, una vez por reserva completada
+ */
+export const schemaCrearValoracion = z.object({
+  reservaId: z.string().min(1, "El ID de la reserva es obligatorio"),
+  puntuacion: z.number().int("La puntuación debe ser un entero").min(1, "La puntuación mínima es 1").max(5, "La puntuación máxima es 5"),
+  comentario: z.string().max(500, "El comentario no puede superar 500 caracteres").optional(),
+})
+
+export type CrearValoracionInput = z.infer<typeof schemaCrearValoracion>

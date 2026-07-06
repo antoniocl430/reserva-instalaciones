@@ -14,6 +14,9 @@ import {
   LogOut,
   Menu,
   X,
+  CalendarX2,
+  Megaphone,
+  Star,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -39,6 +42,11 @@ const navItems = [
     icon: Lock,
   },
   {
+    label: "Festivos",
+    href: "/admin/festivos",
+    icon: CalendarX2,
+  },
+  {
     label: "Usuarios",
     href: "/admin/usuarios",
     icon: Users,
@@ -49,13 +57,28 @@ const navItems = [
     icon: Bell,
   },
   {
+    label: "Comunicados",
+    href: "/admin/comunicados",
+    icon: Megaphone,
+  },
+  {
+    label: "Valoraciones",
+    href: "/admin/valoraciones",
+    icon: Star,
+  },
+  {
     label: "Configuración",
     href: "/admin/configuracion",
     icon: Settings,
   },
 ]
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  logoUrl?: string | null
+  nombreServicio?: string
+}
+
+export function AdminSidebar({ logoUrl, nombreServicio = "Reservas Deportivas" }: AdminSidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -65,11 +88,7 @@ export function AdminSidebar() {
   return (
     <>
       {/* Botón de menú móvil */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-700 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🏓</span>
-          <div className="text-white font-semibold text-sm">Reservas Deportivas</div>
-        </div>
+      <div className="md:hidden bg-slate-900 border-b border-slate-700 px-4 py-3 flex items-center justify-end sticky top-0 z-20">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="text-slate-400 hover:text-white transition-colors"
@@ -118,14 +137,6 @@ export function AdminSidebar() {
 
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-700 min-h-screen fixed left-0 top-0">
-        {/* Logo/Título */}
-        <div className="px-6 py-8 border-b border-slate-700">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🏓</span>
-            <div className="text-white font-semibold">Reservas Deportivas</div>
-          </div>
-        </div>
-
         {/* Navegación */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => {

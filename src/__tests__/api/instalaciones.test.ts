@@ -38,6 +38,8 @@ function crearRequest(url = 'http://localhost/api/instalaciones') {
 describe('GET /api/instalaciones', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // La ruta llama a valoracion.groupBy para calcular medias — mock por defecto vacío
+    prismaMock.valoracion.groupBy.mockResolvedValue([])
   })
 
   it('debería devolver la lista de instalaciones activas sin requerir autenticación', async () => {

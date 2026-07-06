@@ -18,6 +18,10 @@ vi.mock('next-auth/react', () => ({
   signOut: vi.fn(),
 }))
 
+vi.mock('next/navigation', () => ({
+  usePathname: vi.fn(() => '/'),
+}))
+
 vi.mock('next/link', () => ({
   default: ({ href, children, className, 'aria-label': ariaLabel }: {
     href: string
@@ -43,14 +47,17 @@ vi.mock('@/components/InstalarPWA', () => ({
 }))
 
 import { useSession } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 import { Header } from '@/components/header'
 
 // Tipado del mock de useSession
 const mockUseSession = useSession as ReturnType<typeof vi.fn>
+const mockUsePathname = usePathname as ReturnType<typeof vi.fn>
 
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUsePathname.mockReturnValue('/')
   })
 
   // ----- Sin sesión -----
@@ -171,5 +178,34 @@ describe('Header', () => {
 
     const linksPerfilAdmin = screen.getAllByRole('link', { name: /Mi perfil/i })
     expect(linksPerfilAdmin[0]).toHaveAttribute('href', '/perfil')
+  })
+
+  // ----- Ocultación en rutas de paneles propios (H2 auditoría UX) -----
+
+  it('no debería renderizar nada cuando el pathname empieza por /admin', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/admin/pistas')
+
+    const { container } = render(<Header />)
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('no debería renderizar nada cuando el pathname empieza por /superadmin', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/superadmin/tenants')
+
+    const { container } = render(<Header />)
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('debería renderizar normalmente en rutas fuera de /admin y /superadmin', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockUsePathname.mockReturnValue('/pistas')
+
+    render(<Header />)
+
+    expect(screen.getAllByRole('link', { name: /Iniciar sesión/i }).length).toBeGreaterThanOrEqual(1)
   })
 })

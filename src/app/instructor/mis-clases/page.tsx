@@ -3,7 +3,6 @@
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -115,7 +114,6 @@ export default function MisClases() {
   if (status === 'loading' || cargando) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -129,7 +127,6 @@ export default function MisClases() {
   if (status === 'unauthenticated' || sesion?.user?.rol !== 'INSTRUCTOR') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <div className="text-center">
             <p className="text-gray-600">No tienes acceso a esta sección</p>
@@ -143,14 +140,13 @@ export default function MisClases() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-
       <main className="w-full px-4 md:px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis Clases</h1>
             <p className="text-gray-600">
-              Gestiona tus {gruposActivos.length} grupo{gruposActivos.length !== 1 ? 's' : ''} activo
+              Gestiona tus {gruposActivos.length}{' '}
+              {gruposActivos.length === 1 ? 'grupo activo' : 'grupos activos'}
             </p>
           </div>
 

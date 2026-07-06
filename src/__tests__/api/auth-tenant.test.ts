@@ -55,6 +55,7 @@ describe("NextAuth con tenantId — authorize", () => {
       rol: "CIUDADANO",
       activo: true,
       tenantId,
+      emailVerificado: true,
     })
 
     const req = {

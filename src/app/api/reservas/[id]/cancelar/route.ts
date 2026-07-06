@@ -4,6 +4,7 @@ import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { enviarEmailCancelacion, enviarEmailCancelacionAdmins } from "@/lib/email"
 import { enviarPushCancelacion } from "@/lib/push"
+import { notificarSiguienteEnEspera } from "@/lib/lista-espera"
 
 // PATCH /api/reservas/[id]/cancelar — cancela una reserva del tenant del usuario autenticado
 export async function PATCH(
@@ -22,6 +23,7 @@ export async function PATCH(
   // datosReserva se usa después del try/catch para enviar el email y el push
   let datosReserva: {
     usuarioId: string
+    instalacionId: string
     horaInicio: Date
     horaFin: Date
     fecha: Date
@@ -110,6 +112,7 @@ export async function PATCH(
       // Devolver los datos necesarios para email y push — incluye usuarioId para el push
       return {
         usuarioId: reserva.usuarioId,
+        instalacionId: reserva.instalacionId,
         horaInicio: reserva.horaInicio,
         horaFin: reserva.horaFin,
         fecha: reserva.fecha,
@@ -134,6 +137,22 @@ default:
         console.error("Error al cancelar reserva:", err)
         return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
     }
+  }
+
+  // Notificar al siguiente en la lista de espera del slot liberado (fire-and-forget)
+  if (datosReserva) {
+    const horaInicioStr = datosReserva.horaInicio.toLocaleString("en-US", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+    notificarSiguienteEnEspera(
+      datosReserva.instalacionId,
+      datosReserva.fecha,
+      horaInicioStr,
+      sesion.user.tenantId!
+    ).catch(() => {})
   }
 
   // Enviar notificaciones de cancelación de forma asíncrona (el fallo no bloquea la respuesta)

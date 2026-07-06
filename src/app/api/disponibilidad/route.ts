@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { extraerSlugDelHost, obtenerTenantIdPorSlug } from "@/lib/tenant"
+import { extraerSlugDelHost, obtenerTenantIdPorSlug, parsearConfiguracion } from "@/lib/tenant"
+import { generarSlots, crearHoraEnMadrid, SLOTS_CONFIG_DEFAULT } from "@/lib/slots"
+
+// Fuerza renderizado dinámico: la ruta depende de headers/query por petición
+// y no debe intentar optimizarse como página estática durante el build.
+export const dynamic = "force-dynamic"
 
 // Resuelve el tenantId desde x-tenant-slug (inyectado por el middleware) o el host.
 // NO se acepta x-tenant-id desde el cliente — podría usarse para acceder a datos de otro tenant.
@@ -11,48 +16,8 @@ async function resolverTenantId(request: NextRequest): Promise<string | null> {
   return obtenerTenantIdPorSlug(slug)
 }
 
-// Slots disponibles: horarios fijos con duraciones variables
-const SLOTS_DISPONIBLES = [
-  { horaInicio: "08:00", horaFin: "09:15" },
-  { horaInicio: "09:15", horaFin: "10:30" },
-  { horaInicio: "10:30", horaFin: "11:45" },
-  { horaInicio: "11:45", horaFin: "13:00" },
-  { horaInicio: "16:45", horaFin: "18:00" },
-  { horaInicio: "18:00", horaFin: "19:15" },
-  { horaInicio: "19:15", horaFin: "20:30" },
-]
-
 // Expresión regular para validar formato de fecha YYYY-MM-DD
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/
-
-/**
- * Crea un objeto Date cuyo instante UTC corresponde a la hora indicada (en formato HH:MM)
- * en la zona horaria Europe/Madrid (UTC+1 invierno / UTC+2 verano).
- *
- * Ejemplo (horario de invierno, UTC+1):
- *   crearHoraEnMadrid("2026-03-25", "10:30") → 2026-03-25T09:30:00.000Z
- *   Formateado con timeZone "Europe/Madrid" → "10:30" ✓
- */
-function crearHoraEnMadrid(fechaStr: string, horaStr: string): Date {
-  const [horas, minutos] = horaStr.split(":").map(Number)
-  // Crear instante provisional asumiendo que la hora es UTC
-  const base = new Date(`${fechaStr}T${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:00.000Z`)
-  // Averiguar qué hora muestra Madrid para ese instante UTC provisional
-  const horaMadrid = parseInt(
-    base.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "numeric",
-      hour12: false,
-    })
-  )
-  // diff = cuántas horas está Madrid por delante de UTC en ese momento
-  // Ej: UTC+1 → horaMadrid=11, hora=10, diff=1
-  let diff = horaMadrid - horas
-  if (diff > 12) diff -= 24
-  if (diff < -12) diff += 24
-  // Restamos el offset para que Madrid muestre exactamente 'horas'
-  return new Date(base.getTime() - diff * 60 * 60 * 1000)
-}
 
 // GET /api/disponibilidad?instalacionId=xxx&fecha=2026-03-24
 // Ruta pública: no requiere autenticación (UI-FLOWS.md — disponibilidad es pública)
@@ -92,9 +57,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Instalación no encontrada" }, { status: 404 })
     }
 
+    // Cargar la configuración de slots del tenant desde BD
+    const tenantData = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { configuracion: true },
+    })
+    const configTenant = parsearConfiguracion(tenantData?.configuracion ?? null)
+    const slotsConfig = configTenant.slots ?? SLOTS_CONFIG_DEFAULT
+    const slotsDisponibles = generarSlots(slotsConfig)
+
     // Si la instalación está desactivada, devolver todos los slots como bloqueados
     if (!instalacion.activa) {
-      const slots = SLOTS_DISPONIBLES.map((slot) => ({
+      const slots = slotsDisponibles.map((slot) => ({
         horaInicio: slot.horaInicio,
         horaFin: slot.horaFin,
         estado: "bloqueado" as const,
@@ -107,6 +81,36 @@ export async function GET(request: NextRequest) {
     // capture correctamente los registros almacenados con UTC real español.
     const inicioDia = crearHoraEnMadrid(fecha, "00:00")
     const finDia = new Date(crearHoraEnMadrid(fecha, "00:00").getTime() + 24 * 60 * 60 * 1000 - 1)
+
+    // Comprobar si el día es festivo para este tenant (puntual o anual por mes/día)
+    const festivoPuntual = await prisma.festivo.findFirst({
+      where: { tenantId, repetirAnual: false, fecha: { gte: inicioDia, lte: finDia } },
+      select: { nombre: true },
+    })
+
+    // Para festivos anuales comparamos mes/día en memoria (número de festivos es pequeño)
+    const [, , mesStr, diaStr] = fecha.match(/^(\d{4})-(\d{2})-(\d{2})$/)!
+    const mes = parseInt(mesStr)
+    const dia = parseInt(diaStr)
+    const todosLosAnuales = await prisma.festivo.findMany({
+      where: { tenantId, repetirAnual: true },
+      select: { nombre: true, fecha: true },
+    })
+    const festivoAnual = todosLosAnuales.find(
+      (f) => f.fecha.getUTCMonth() + 1 === mes && f.fecha.getUTCDate() === dia
+    ) ?? null
+
+    const festivoDelDia = festivoPuntual ?? festivoAnual
+
+    // Si el día es festivo, devolver todos los slots como bloqueados
+    if (festivoDelDia) {
+      const slots = slotsDisponibles.map((slot) => ({
+        horaInicio: slot.horaInicio,
+        horaFin: slot.horaFin,
+        estado: "bloqueado" as const,
+      }))
+      return NextResponse.json({ slots, festivoDelDia })
+    }
 
     const reservasDelDia = await prisma.reserva.findMany({
       where: {
@@ -132,20 +136,20 @@ export async function GET(request: NextRequest) {
 
     const ahora = new Date()
 
-    // Construir los 7 slots fijos del día.
+    // Construir los slots del día según la configuración del tenant.
     // Las fechas se generan con UTC real para hora local española (Europe/Madrid).
-    const slots = SLOTS_DISPONIBLES.map((slot) => {
-      const horaInicio = crearHoraEnMadrid(fecha, slot.horaInicio)
-      const horaFin = crearHoraEnMadrid(fecha, slot.horaFin)
+    const slots = slotsDisponibles.map((slot) => {
+      const horaInicioDate = crearHoraEnMadrid(fecha, slot.horaInicio)
+      const horaFinDate = crearHoraEnMadrid(fecha, slot.horaFin)
 
       // Slot ya pasado
-      if (horaInicio <= ahora) {
+      if (horaInicioDate <= ahora) {
         return { horaInicio: slot.horaInicio, horaFin: slot.horaFin, estado: "pasado" as const }
       }
 
       // Slot bloqueado por admin
       const estaBloqueado = bloqueos.some(
-        (b) => b.fechaInicio < horaFin && b.fechaFin > horaInicio
+        (b) => b.fechaInicio < horaFinDate && b.fechaFin > horaInicioDate
       )
       if (estaBloqueado) {
         return { horaInicio: slot.horaInicio, horaFin: slot.horaFin, estado: "bloqueado" as const }
@@ -153,7 +157,7 @@ export async function GET(request: NextRequest) {
 
       // Slot con reserva activa (comparar por horaInicio exacta)
       const estaOcupado = reservasDelDia.some(
-        (r) => r.horaInicio.getTime() === horaInicio.getTime()
+        (r) => r.horaInicio.getTime() === horaInicioDate.getTime()
       )
       if (estaOcupado) {
         return { horaInicio: slot.horaInicio, horaFin: slot.horaFin, estado: "ocupado" as const }

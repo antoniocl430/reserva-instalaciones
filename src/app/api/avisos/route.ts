@@ -12,6 +12,10 @@ import { prisma } from "@/lib/prisma"
 import { schemaCrearAviso } from "@/lib/validaciones"
 import { extraerSlugDelHost, obtenerTenantIdPorSlug } from "@/lib/tenant"
 
+// Fuerza renderizado dinámico: la ruta depende de headers/query por petición
+// y no debe intentar optimizarse como página estática durante el build.
+export const dynamic = "force-dynamic"
+
 // Resuelve el tenantId desde x-tenant-slug (inyectado por el middleware) o el host.
 // NO se acepta x-tenant-id desde el cliente — podría usarse para acceder a datos de otro tenant.
 async function resolverTenantId(request: NextRequest): Promise<string | null> {
@@ -38,19 +42,37 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const pedidosTodos = searchParams.get("todos") === "true"
 
     // Si el cliente pide todos los avisos, verificar que es ADMIN
-    let where: { tenantId: string; activo?: boolean } = { tenantId, activo: true }
-
+    // El admin ve todos los avisos (activos e inactivos, incluidos los caducados)
     if (pedidosTodos) {
       const sesion = await getServerSession(opcionesAuth)
       if (sesion?.user.rol === "ADMIN") {
-        // Admin ve todos (activos e inactivos) del mismo tenant
-        where = { tenantId }
+        const avisos = await prisma.aviso.findMany({
+          where: { tenantId },
+          orderBy: { fecha: "desc" },
+        })
+        return NextResponse.json(avisos, { status: 200 })
       }
-      // Si no es admin, ignoramos el parámetro y devolvemos solo activos
+      // Si no es admin, ignoramos el parámetro y aplicamos los filtros normales
     }
 
+    // Ruta pública: solo avisos activos y no caducados.
+    // Un aviso es visible si:
+    //   - activo === true
+    //   - Y (caducaEn es null          →  sin fecha de expiración, siempre visible)
+    //     O (caducaEn >= hoy 00:00 UTC →  caduca hoy o más adelante, aún visible)
+    // Comparamos contra el inicio del día UTC para que caducaEn = "3 abril" sea
+    // visible todo el día 3 y desaparezca a partir del 4.
+    const inicioDia = new Date()
+    inicioDia.setUTCHours(0, 0, 0, 0)
     const avisos = await prisma.aviso.findMany({
-      where,
+      where: {
+        tenantId,
+        activo: true,
+        OR: [
+          { caducaEn: null },
+          { caducaEn: { gte: inicioDia } },
+        ],
+      },
       orderBy: { fecha: "desc" },
     })
 
@@ -94,7 +116,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    const { titulo, descripcion, tipo, fecha } = resultado.data
+    const { titulo, descripcion, tipo, fecha, caducaEn } = resultado.data
 
     // 4. Crear el aviso en el tenant del admin autenticado
     const aviso = await prisma.aviso.create({
@@ -104,6 +126,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         descripcion,
         tipo,
         fecha: new Date(fecha),
+        // caducaEn: null/undefined → no se establece (Prisma almacena null)
+        ...(caducaEn != null ? { caducaEn: new Date(caducaEn) } : {}),
       },
     })
 

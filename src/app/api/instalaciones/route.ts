@@ -27,7 +27,29 @@ export async function GET(request: NextRequest) {
       orderBy: { nombre: "asc" },
     })
 
-    return NextResponse.json({ instalaciones })
+    // Calcular la media de valoraciones por instalación
+    const mediasValoraciones = await prisma.valoracion.groupBy({
+      by: ["instalacionId"],
+      where: { tenantId },
+      _avg: { puntuacion: true },
+      _count: { id: true },
+    })
+
+    // Mapear instalaciones con su media y número de valoraciones
+    const mediasPorInstalacion = new Map(
+      mediasValoraciones.map((m) => [
+        m.instalacionId,
+        { mediaValoracion: m._avg.puntuacion, totalValoraciones: m._count.id },
+      ])
+    )
+
+    const instalacionesConMedia = instalaciones.map((inst) => ({
+      ...inst,
+      mediaValoracion: mediasPorInstalacion.get(inst.id)?.mediaValoracion ?? null,
+      totalValoraciones: mediasPorInstalacion.get(inst.id)?.totalValoraciones ?? 0,
+    }))
+
+    return NextResponse.json({ instalaciones: instalacionesConMedia })
   } catch (err) {
     console.error("Error al obtener instalaciones:", err)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })

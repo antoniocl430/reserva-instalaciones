@@ -1,9 +1,26 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+
+// Destino de redirección tras login correcto, según el rol del usuario.
+// Un login exitoso desde /admin/login puede pertenecer a cualquier rol
+// con acceso a paneles (ADMIN, SUPERADMIN, INSTRUCTOR); /dashboard es el
+// fallback para CIUDADANO u otros roles sin panel propio.
+function destinoSegunRol(rol: string | undefined): string {
+  switch (rol) {
+    case "ADMIN":
+      return "/admin"
+    case "SUPERADMIN":
+      return "/superadmin"
+    case "INSTRUCTOR":
+      return "/instructor"
+    default:
+      return "/dashboard"
+  }
+}
 
 export default function PaginaAdminLogin() {
   const router = useRouter()
@@ -40,7 +57,10 @@ export default function PaginaAdminLogin() {
     }
 
     if (result.ok) {
-      window.location.href = "/admin"
+      // signIn con redirect:false no devuelve el rol — se consulta la sesión
+      // recién creada para saber a qué panel corresponde redirigir.
+      const sesion = await getSession()
+      window.location.href = destinoSegunRol(sesion?.user?.rol)
       return
     }
 
@@ -103,7 +123,7 @@ export default function PaginaAdminLogin() {
 
           <div className="space-y-1">
             <label htmlFor="password" className="block text-sm font-medium text-gray-300">
-              Contrasena
+              Contraseña
             </label>
             <input
               id="password"

@@ -30,6 +30,7 @@ vi.mock('lucide-react', () => {
     Check: icono('check'),
     ChevronDown: icono('chevrondown'),
     ChevronUp: icono('chevronup'),
+    Lock: icono('lock'),
   }
 })
 
@@ -111,7 +112,7 @@ describe('SuperadminTenants — /superadmin/(panel)/tenants/page.tsx', () => {
     })
   })
 
-  it('deberia tener boton "Nuevo centro"', async () => {
+  it('deberia mostrar boton "Nuevo centro" deshabilitado (MVP mono-tenant)', async () => {
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => tenantsEjemplo,
@@ -120,7 +121,9 @@ describe('SuperadminTenants — /superadmin/(panel)/tenants/page.tsx', () => {
     render(<SuperadminTenants />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /nuevo centro/i })).toBeInTheDocument()
+      const boton = screen.getByRole('button', { name: /nuevo centro/i })
+      expect(boton).toBeInTheDocument()
+      expect(boton).toBeDisabled()
     })
   })
 

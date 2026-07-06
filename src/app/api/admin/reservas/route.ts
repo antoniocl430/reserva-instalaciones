@@ -3,39 +3,18 @@ import { getServerSession } from "next-auth"
 import { opcionesAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { schemaCrearReservaAdmin } from "@/lib/validaciones"
+import { crearHoraEnMadrid, generarMapaSlots, SLOTS_CONFIG_DEFAULT } from "@/lib/slots"
+import { parsearConfiguracion } from "@/lib/tenant"
 
 // Regex para validar formato YYYY-MM-DD
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
-// Slots válidos — deben coincidir con los de /api/reservas/route.ts
-const SLOTS_VALIDOS: Record<string, string> = {
-  "08:00": "09:15",
-  "09:15": "10:30",
-  "10:30": "11:45",
-  "11:45": "13:00",
-  "16:45": "18:00",
-  "18:00": "19:15",
-  "19:15": "20:30",
-}
+// Regex para validar enteros positivos (sin signo, sin decimales)
+const REGEX_ENTERO_POSITIVO = /^\d+$/
 
-/**
- * Crea un objeto Date cuyo instante UTC corresponde a la hora y minutos indicados
- * en la zona horaria Europe/Madrid (UTC+1 invierno / UTC+2 verano).
- */
-function crearHoraEnMadrid(fechaStr: string, hora: number, minutos: number = 0): Date {
-  const base = new Date(`${fechaStr}T${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:00.000Z`)
-  const horaMadrid = parseInt(
-    base.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "numeric",
-      hour12: false,
-    })
-  )
-  let diff = horaMadrid - hora
-  if (diff > 12) diff -= 24
-  if (diff < -12) diff += 24
-  return new Date(base.getTime() - diff * 60 * 60 * 1000)
-}
+// Límites de paginación
+const POR_PAGINA_DEFECTO = 20
+const POR_PAGINA_MAXIMO = 100
 
 // GET /api/admin/reservas — lista todas las reservas del tenant con filtros opcionales
 export async function GET(request: NextRequest) {
@@ -67,6 +46,27 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Parámetros de paginación (opcionales, con valores por defecto)
+    const paginaParam = searchParams.get("pagina") ?? "1"
+    const porPaginaParam = searchParams.get("porPagina") ?? String(POR_PAGINA_DEFECTO)
+
+    if (!REGEX_ENTERO_POSITIVO.test(paginaParam) || Number(paginaParam) < 1) {
+      return NextResponse.json(
+        { error: "El parámetro pagina debe ser un entero positivo" },
+        { status: 400 }
+      )
+    }
+
+    if (!REGEX_ENTERO_POSITIVO.test(porPaginaParam) || Number(porPaginaParam) < 1) {
+      return NextResponse.json(
+        { error: "El parámetro porPagina debe ser un entero positivo" },
+        { status: 400 }
+      )
+    }
+
+    const pagina = Number(paginaParam)
+    const porPagina = Math.min(Number(porPaginaParam), POR_PAGINA_MAXIMO)
+
     // Construir objeto where con tenantId siempre presente
     type WhereInput = {
       tenantId: string
@@ -92,16 +92,27 @@ export async function GET(request: NextRequest) {
       where.fecha = { gte: fechaDate, lt: fechaProxima }
     }
 
-    const reservas = await prisma.reserva.findMany({
-      where,
-      include: {
-        usuario: { select: { nombre: true, email: true } },
-        instalacion: { select: { nombre: true } },
-      },
-      orderBy: [{ fecha: "desc" }, { horaInicio: "desc" }],
-    })
+    // Contar el total y obtener la página solicitada en paralelo (solo lectura)
+    const [total, reservas] = await Promise.all([
+      prisma.reserva.count({ where }),
+      prisma.reserva.findMany({
+        where,
+        include: {
+          usuario: { select: { nombre: true, email: true } },
+          instalacion: { select: { nombre: true } },
+        },
+        orderBy: [{ fecha: "desc" }, { horaInicio: "desc" }],
+        skip: (pagina - 1) * porPagina,
+        take: porPagina,
+      }),
+    ])
 
-    return NextResponse.json({ reservas })
+    const totalPaginas = Math.ceil(total / porPagina)
+
+    return NextResponse.json({
+      reservas,
+      paginacion: { pagina, porPagina, total, totalPaginas },
+    })
   } catch (err) {
     console.error("Error al obtener reservas:", err)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
@@ -137,8 +148,16 @@ export async function POST(request: NextRequest) {
 
     const { usuarioId, instalacionId, fecha, horaInicio } = resultado.data
 
-    // Obtener la hora fin desde SLOTS_VALIDOS
-    const horaFin = SLOTS_VALIDOS[horaInicio]
+    // Cargar la configuración de slots del tenant desde BD
+    const tenantData = await prisma.tenant.findUnique({
+      where: { id: sesion.user.tenantId },
+      select: { configuracion: true },
+    })
+    const configTenant = parsearConfiguracion(tenantData?.configuracion ?? null)
+    const slotsValidos = generarMapaSlots(configTenant.slots ?? SLOTS_CONFIG_DEFAULT)
+
+    // Obtener la hora fin desde el mapa de slots del tenant
+    const horaFin = slotsValidos[horaInicio]
     if (!horaFin) {
       return NextResponse.json(
         { error: "La hora de inicio no corresponde a un slot válido" },
@@ -146,12 +165,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const [horas, minutos] = horaInicio.split(":").map(Number)
-    const [horasFin, minutosFin] = horaFin.split(":").map(Number)
-
     // Construir fechas UTC del slot usando hora local española (Europe/Madrid)
-    const horaInicioDate = crearHoraEnMadrid(fecha, horas, minutos)
-    const horaFinDate = crearHoraEnMadrid(fecha, horasFin, minutosFin)
+    const horaInicioDate = crearHoraEnMadrid(fecha, horaInicio)
+    const horaFinDate = crearHoraEnMadrid(fecha, horaFin)
 
     // Verificar que el usuario existe, está activo y pertenece al tenant del admin
     const usuario = await prisma.usuario.findFirst({
@@ -213,7 +229,7 @@ export async function POST(request: NextRequest) {
             tenantId: sesion.user.tenantId!,
             usuarioId,
             instalacionId,
-            fecha: crearHoraEnMadrid(fecha, 0),
+            fecha: crearHoraEnMadrid(fecha, "00:00"),
             horaInicio: horaInicioDate,
             horaFin: horaFinDate,
             estado: "ACTIVA",

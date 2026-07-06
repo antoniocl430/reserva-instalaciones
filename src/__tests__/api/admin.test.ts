@@ -126,6 +126,7 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
         user: { id: "admin-id", rol: "ADMIN" },
       })
 
+      prismaMock.reserva.count.mockResolvedValueOnce(1)
       prismaMock.reserva.findMany.mockResolvedValueOnce([
         {
           id: "res-1",
@@ -157,6 +158,7 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
         user: { id: "admin-id", rol: "ADMIN" },
       })
 
+      prismaMock.reserva.count.mockResolvedValueOnce(1)
       prismaMock.reserva.findMany.mockResolvedValueOnce([
         {
           id: "res-1",
@@ -189,6 +191,180 @@ describe("Admin API Routes — Bloque 3: Panel de Administración", () => {
       expect(response.status).toBe(400)
       const body = await response.json()
       expect(body.error).toContain("YYYY-MM-DD")
+    })
+
+    // ── Paginación (H10) ──────────────────────────────────────────────────
+
+    it("debería paginar con página 1 y porPagina 20 por defecto cuando no se pasan parámetros", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.reserva.count.mockResolvedValueOnce(67)
+      prismaMock.reserva.findMany.mockResolvedValueOnce([])
+
+      const request = new NextRequest("http://localhost:3000/api/admin/reservas")
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.paginacion).toEqual({
+        pagina: 1,
+        porPagina: 20,
+        total: 67,
+        totalPaginas: 4,
+      })
+      expect(prismaMock.reserva.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 20 })
+      )
+    })
+
+    it("debería devolver la página solicitada aplicando el skip correcto", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.reserva.count.mockResolvedValueOnce(67)
+      prismaMock.reserva.findMany.mockResolvedValueOnce([])
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?pagina=2"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.paginacion.pagina).toBe(2)
+      expect(prismaMock.reserva.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 20, take: 20 })
+      )
+    })
+
+    it("debería aceptar un porPagina personalizado", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.reserva.count.mockResolvedValueOnce(67)
+      prismaMock.reserva.findMany.mockResolvedValueOnce([])
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?porPagina=5"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.paginacion.porPagina).toBe(5)
+      expect(prismaMock.reserva.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 5 })
+      )
+    })
+
+    it("debería limitar porPagina a 100 cuando se solicita un valor mayor", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.reserva.count.mockResolvedValueOnce(67)
+      prismaMock.reserva.findMany.mockResolvedValueOnce([])
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?porPagina=500"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.paginacion.porPagina).toBe(100)
+      expect(prismaMock.reserva.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 100 })
+      )
+    })
+
+    it("debería devolver 400 cuando pagina no es un entero positivo válido", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?pagina=abc"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(400)
+      const body = await response.json()
+      expect(body.error).toContain("pagina")
+    })
+
+    it("debería devolver 400 cuando pagina es 0 o negativa", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?pagina=0"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(400)
+    })
+
+    it("debería devolver 400 cuando porPagina no es un entero positivo válido", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?porPagina=-5"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(400)
+      const body = await response.json()
+      expect(body.error).toContain("porPagina")
+    })
+
+    it("debería combinar el filtro estado con la paginación", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValueOnce({
+        user: { id: "admin-id", rol: "ADMIN" },
+      })
+
+      prismaMock.reserva.count.mockResolvedValueOnce(3)
+      prismaMock.reserva.findMany.mockResolvedValueOnce([
+        {
+          id: "res-1",
+          estado: "CANCELADA",
+          usuario: { nombre: "Juan", email: "juan@test.com" },
+          instalacion: { nombre: "Pádel 1" },
+        },
+      ])
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/admin/reservas?estado=CANCELADA&pagina=1&porPagina=10"
+      )
+      const response = await reservas_GET(request)
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.paginacion).toEqual({
+        pagina: 1,
+        porPagina: 10,
+        total: 3,
+        totalPaginas: 1,
+      })
+      expect(prismaMock.reserva.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ estado: "CANCELADA" }),
+          skip: 0,
+          take: 10,
+        })
+      )
+      expect(prismaMock.reserva.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ estado: "CANCELADA" }),
+        })
+      )
     })
   })
 

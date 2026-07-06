@@ -5,6 +5,16 @@ function getResend() {
 }
 
 /**
+ * Devuelve la URL base de la app.
+ * En producción usa NEXTAUTH_URL (siempre definida).
+ * En desarrollo sin NEXTAUTH_URL, usa localhost como fallback — los links de email
+ * en dev apuntan a localhost, lo cual es correcto para debug local.
+ */
+function obtenerBaseUrl(): string {
+  return process.env.NEXTAUTH_URL ?? "http://localhost:3000"
+}
+
+/**
  * Devuelve el destinatario real del email.
  * Si EMAIL_REDIRECCION_DEV está configurada, todos los emails se redirigen a esa dirección.
  * Útil para pruebas con el plan gratuito de Resend (solo permite enviar al email del propietario).
@@ -164,7 +174,7 @@ function plantillaReserva(datos: DatosReserva): string {
             <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
           </tr>
         </table>
-        <p style="font-size: 14px; color: #6b7280;">Puedes cancelar tu reserva en cualquier momento desde <a href="${process.env.NEXTAUTH_URL}/mis-reservas">Mis Reservas</a>.</p>
+        <p style="font-size: 14px; color: #6b7280;">Puedes cancelar tu reserva en cualquier momento desde <a href="${obtenerBaseUrl()}/mis-reservas">Mis Reservas</a>.</p>
       </div>
     </body>
     </html>
@@ -342,6 +352,121 @@ function plantillaRecuperacion(nombreUsuario: string, urlReset: string): string 
 }
 
 // ---------------------------------------------------------------------------
+// Lista de espera
+// ---------------------------------------------------------------------------
+
+/**
+ * Notifica al ciudadano que hay un hueco disponible en la lista de espera.
+ * Tiene 30 minutos para confirmar la reserva desde la app.
+ */
+export async function enviarEmailSlotDisponible(datos: DatosReserva): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de slot disponible omitido")
+    return
+  }
+
+  await getResend().emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(datos.emailUsuario),
+    subject: `¡Hueco disponible! — ${datos.nombreInstalacion}`,
+    html: plantillaSlotDisponible(datos),
+  })
+}
+
+function plantillaSlotDisponible(datos: DatosReserva): string {
+  const urlConfirmar = `${obtenerBaseUrl()}/mis-reservas`
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #f59e0b; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">¡Tienes 30 minutos para confirmar!</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${datos.nombreUsuario}</strong>:</p>
+        <p>Se ha liberado el slot que estabas esperando. Tienes <strong>30 minutos</strong> para confirmar tu reserva antes de que pase al siguiente en la lista.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Instalación</td>
+            <td style="padding: 10px;">${datos.nombreInstalacion}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Fecha</td>
+            <td style="padding: 10px;">${formatearFechaEmail(datos.fecha)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; color: #6b7280;">Horario</td>
+            <td style="padding: 10px;">${datos.horaInicio} - ${datos.horaFin}</td>
+          </tr>
+        </table>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${urlConfirmar}" style="display: inline-block; background: #f59e0b; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Confirmar reserva ahora</a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">Si no confirmas en 30 minutos, el hueco pasará al siguiente ciudadano en lista de espera.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
+// Funciones de suspensión de cuenta
+// ---------------------------------------------------------------------------
+
+/**
+ * Envía email al ciudadano cuando su cuenta es suspendida (por no-show o manualmente).
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ * Diseñado para llamarse con .catch() y nunca bloquear la respuesta HTTP.
+ */
+export async function enviarEmailSuspension(
+  emailUsuario: string,
+  nombreUsuario: string,
+  suspendidoHasta: Date,
+  motivo: string
+): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de suspensión omitido")
+    return
+  }
+
+  await getResend().emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailUsuario),
+    subject: "Tu cuenta ha sido suspendida temporalmente",
+    html: plantillaSuspension(nombreUsuario, suspendidoHasta, motivo),
+  })
+}
+
+function plantillaSuspension(nombreUsuario: string, suspendidoHasta: Date, motivo: string): string {
+  const fechaFinStr = suspendidoHasta.toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #b91c1c; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Cuenta suspendida temporalmente</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreUsuario}</strong>:</p>
+        <p>Tu cuenta ha sido suspendida temporalmente y no podrás realizar nuevas reservas hasta el:</p>
+        <p style="font-size: 18px; font-weight: bold; color: #b91c1c; margin: 16px 0;">${fechaFinStr}</p>
+        <p><strong>Motivo:</strong> ${motivo}</p>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Si crees que esto es un error, contacta con el ayuntamiento para más información.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
 // Funciones para grupos recurrentes
 // ---------------------------------------------------------------------------
 
@@ -505,7 +630,7 @@ function plantillaConfirmacionGrupo(
         <ul style="padding-left: 20px; color: #4b5563;">
           ${sesionesHtml}
         </ul>
-        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Puedes gestionar tu clase en: <a href="${process.env.NEXTAUTH_URL}/instructor/mis-clases" style="color: #2563eb; text-decoration: none;">Mis Clases</a></p>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Puedes gestionar tu clase en: <a href="${obtenerBaseUrl()}/instructor/mis-clases" style="color: #2563eb; text-decoration: none;">Mis Clases</a></p>
       </div>
     </body>
     </html>
@@ -590,5 +715,115 @@ function plantillaRecordatorioGrupo(
       </div>
     </body>
     </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
+// Verificación de email al registro
+// ---------------------------------------------------------------------------
+
+/**
+ * Envía email de verificación al ciudadano recién registrado.
+ * El enlace contiene un token único que caduca en 24 horas.
+ * Si RESEND_API_KEY no está configurada, omite el envío y lo registra en consola.
+ */
+export async function enviarEmailVerificacion({
+  emailUsuario,
+  nombreUsuario,
+  token,
+  baseUrl,
+}: {
+  emailUsuario: string
+  nombreUsuario: string
+  token: string
+  baseUrl: string
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — email de verificación omitido")
+    return
+  }
+
+  const enlaceVerificacion = `${baseUrl}/verificar-email?token=${token}`
+
+  const resultado = await getResend().emails.send({
+    from: "Reservas Pádel <onboarding@resend.dev>",
+    to: resolverDestinatario(emailUsuario),
+    subject: "Verifica tu cuenta — Reservas Pádel",
+    html: plantillaVerificacion(nombreUsuario, enlaceVerificacion),
+  })
+  console.log("[Email] Verificación de email →", JSON.stringify(resultado))
+}
+
+function plantillaVerificacion(nombreUsuario: string, enlaceVerificacion: string): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+      <div style="background: #16a34a; color: white; padding: 24px; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 20px;">Verifica tu cuenta</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p>Hola, <strong>${nombreUsuario}</strong>:</p>
+        <p>Gracias por registrarte. Haz clic en el botón de abajo para verificar tu cuenta y empezar a reservar instalaciones:</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${enlaceVerificacion}" style="display: inline-block; background: #16a34a; color: white; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: bold;">Verificar mi cuenta</a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">O copia y pega este enlace en tu navegador:</p>
+        <p style="font-size: 12px; color: #6b7280; word-break: break-all;">${enlaceVerificacion}</p>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Este enlace expira en 24 horas. Si no creaste esta cuenta, ignora este email.</p>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+// ---------------------------------------------------------------------------
+// Comunicados masivos
+// ---------------------------------------------------------------------------
+
+/**
+ * Envía un comunicado masivo a una lista de emails de ciudadanos.
+ * Respeta EMAIL_REDIRECCION_DEV. Fire-and-forget por diseño.
+ * Devuelve el número de emails enviados correctamente.
+ */
+export async function enviarEmailComunicadoMasivo(datos: {
+  emails: string[]
+  titulo: string
+  cuerpo: string
+  nombreServicio: string
+}): Promise<number> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY no configurada — comunicado masivo omitido")
+    return 0
+  }
+  let enviados = 0
+  await Promise.all(
+    datos.emails.map(async (email) => {
+      try {
+        await getResend().emails.send({
+          from: `${datos.nombreServicio} <onboarding@resend.dev>`,
+          to: resolverDestinatario(email),
+          subject: datos.titulo,
+          html: plantillaComunicado({ titulo: datos.titulo, cuerpo: datos.cuerpo, nombreServicio: datos.nombreServicio }),
+        })
+        enviados++
+      } catch (err) {
+        console.error("[Email] Error enviando comunicado a", email, err)
+      }
+    })
+  )
+  return enviados
+}
+
+function plantillaComunicado(datos: { titulo: string; cuerpo: string; nombreServicio: string }): string {
+  return `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <h2 style="color: #1e40af;">${datos.nombreServicio}</h2>
+      <h3 style="color: #111827;">${datos.titulo}</h3>
+      <p style="color: #374151; line-height: 1.6;">${datos.cuerpo}</p>
+      <hr style="border-color: #e5e7eb; margin: 24px 0;" />
+      <p style="color: #9ca3af; font-size: 12px;">Comunicado del ayuntamiento. Si no deseas recibir estas notificaciones, actualiza tus preferencias en tu perfil.</p>
+    </div>
   `
 }

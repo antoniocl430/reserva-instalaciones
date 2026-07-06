@@ -4,35 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { opcionesAuth } from "@/lib/auth"
 import { schemaCrearReservaRecurrente } from "@/lib/validaciones"
 import { enviarEmailConfirmacionGrupo } from "@/lib/email"
-
-/**
- * Crea un objeto Date cuyo instante UTC corresponde a la hora y minutos indicados
- * en la zona horaria Europe/Madrid (UTC+1 invierno / UTC+2 verano).
- */
-function crearHoraEnMadrid(fechaStr: string, hora: number, minutos: number = 0): Date {
-  const base = new Date(`${fechaStr}T${String(hora).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:00.000Z`)
-  const horaMadrid = parseInt(
-    base.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "numeric",
-      hour12: false,
-    })
-  )
-  let diff = horaMadrid - hora
-  if (diff > 12) diff -= 24
-  if (diff < -12) diff += 24
-  return new Date(base.getTime() - diff * 60 * 60 * 1000)
-}
-
-const SLOTS_VALIDOS: Record<string, string> = {
-  "08:00": "09:15",
-  "09:15": "10:30",
-  "10:30": "11:45",
-  "11:45": "13:00",
-  "16:45": "18:00",
-  "18:00": "19:15",
-  "19:15": "20:30",
-}
+import { crearHoraEnMadrid, generarMapaSlots, SLOTS_CONFIG_DEFAULT } from "@/lib/slots"
+import { parsearConfiguracion } from "@/lib/tenant"
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,6 +17,20 @@ export async function POST(request: NextRequest) {
     if (sesion.user.rol !== "INSTRUCTOR") {
       return NextResponse.json(
         { error: "Solo instructores pueden crear reservas recurrentes" },
+        { status: 403 }
+      )
+    }
+
+    // Verificar si el instructor tiene una suspensión vigente
+    const usuarioInstructor = await prisma.usuario.findUnique({
+      where: { id: sesion.user.id },
+      select: { suspendidoHasta: true, motivoSuspension: true },
+    })
+    if (usuarioInstructor?.suspendidoHasta && usuarioInstructor.suspendidoHasta > new Date()) {
+      return NextResponse.json(
+        {
+          error: `Tu cuenta está suspendida hasta el ${usuarioInstructor.suspendidoHasta.toLocaleDateString("es-ES")}. Motivo: ${usuarioInstructor.motivoSuspension ?? ""}`,
+        },
         { status: 403 }
       )
     }
@@ -60,6 +47,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { instalacionId, horaInicio, fechaInicio, fechaFin, frecuencia } = validacion.data
+
+    // Cargar la configuración de slots del tenant desde BD
+    const tenantData = await prisma.tenant.findUnique({
+      where: { id: sesion.user.tenantId },
+      select: { configuracion: true },
+    })
+    const configTenant = parsearConfiguracion(tenantData?.configuracion ?? null)
+    const slotsValidos = generarMapaSlots(configTenant.slots ?? SLOTS_CONFIG_DEFAULT)
 
     // Calcular todas las fechas
     const fechas: Date[] = []
@@ -85,11 +80,10 @@ export async function POST(request: NextRequest) {
 
       // Verificar conflictos para TODAS las fechas primero
       for (const fecha of fechas) {
-        const [hInicio, mInicio] = horaInicio.split(":").map(Number)
-        const horaInicioDate = crearHoraEnMadrid(fecha.toISOString().split("T")[0], hInicio, mInicio)
-        const horaFinStr = SLOTS_VALIDOS[horaInicio]
-        const [hFin, mFin] = horaFinStr.split(":").map(Number)
-        const horaFinDate = crearHoraEnMadrid(fecha.toISOString().split("T")[0], hFin, mFin)
+        const fechaStr = fecha.toISOString().split("T")[0]
+        const horaInicioDate = crearHoraEnMadrid(fechaStr, horaInicio)
+        const horaFinStr = slotsValidos[horaInicio]
+        const horaFinDate = crearHoraEnMadrid(fechaStr, horaFinStr)
 
         // Buscar reserva conflictiva
         const reservaConflictiva = await tx.reserva.findFirst({
@@ -101,7 +95,7 @@ export async function POST(request: NextRequest) {
         })
 
         if (reservaConflictiva) {
-          conflictos.push(fecha.toISOString().split("T")[0])
+          conflictos.push(fechaStr)
           continue
         }
 
@@ -116,7 +110,7 @@ export async function POST(request: NextRequest) {
         })
 
         if (bloqueoConflictivo) {
-          conflictos.push(fecha.toISOString().split("T")[0])
+          conflictos.push(fechaStr)
         }
       }
 
@@ -147,11 +141,9 @@ export async function POST(request: NextRequest) {
       const reservas = await Promise.all(
         fechas.map((fecha) => {
           const fechaStr = fecha.toISOString().split("T")[0]
-          const [hInicio, mInicio] = horaInicio.split(":").map(Number)
-          const horaInicioDate = crearHoraEnMadrid(fechaStr, hInicio, mInicio)
-          const horaFinStr = SLOTS_VALIDOS[horaInicio]
-          const [hFin, mFin] = horaFinStr.split(":").map(Number)
-          const horaFinDate = crearHoraEnMadrid(fechaStr, hFin, mFin)
+          const horaInicioDate = crearHoraEnMadrid(fechaStr, horaInicio)
+          const horaFinStr = slotsValidos[horaInicio]
+          const horaFinDate = crearHoraEnMadrid(fechaStr, horaFinStr)
 
           return tx.reserva.create({
             data: {
@@ -173,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     // Enviar email de confirmación (fire-and-forget)
     const horaInicioStr = resultado.grupo.horaInicio
-    const horaFinStr = SLOTS_VALIDOS[horaInicioStr] || "22:00"
+    const horaFinStr = slotsValidos[horaInicioStr] || "22:00"
 
     enviarEmailConfirmacionGrupo(sesion.user.email!, sesion.user.name || "Instructor", {
       instalacion: resultado.grupo.instalacion || { nombre: "" },

@@ -7,6 +7,7 @@ import { Header } from "@/components/header"
 import { TransicionPagina } from "@/components/TransicionPagina"
 import Footer from "@/components/Footer"
 import BannerCookies from "@/components/BannerCookies"
+import NextTopLoader from "nextjs-toploader"
 import { extraerSlugDelHost, obtenerTenantPorSlug } from "@/lib/tenant"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -57,22 +58,34 @@ export async function generateMetadata(): Promise<Metadata> {
       }
     }
 
+    // Se usa `||` en vez de `??` porque una cadena vacía guardada en BD
+    // también debe caer al valor por defecto (H6: `??` no cubre "" ).
     const nombreBase =
-      configuracion?.metadata?.title ??
+      configuracion?.metadata?.title ||
       `Reservas Deportivas — ${tenant.municipio}`
 
     const nombreServicioMeta =
-      configuracion?.nombreServicio ?? nombreBase
+      configuracion?.nombreServicio || nombreBase
 
     const descripcion =
-      configuracion?.metadata?.description ??
+      configuracion?.metadata?.description ||
       "Sistema de reservas de instalaciones deportivas municipales"
 
-    const colorTema = configuracion?.colores?.primario ?? "#2563eb"
+    const colorTema = configuracion?.colores?.primario || "#2563eb"
+
+    // Logo del tenant como favicon dinámico
+    const logoUrl = (tenant as any).logoUrl ?? null
 
     return {
       title: { template: `%s | ${nombreBase}`, default: nombreBase },
       description: descripcion,
+      // Favicon dinámico usando el logo del tenant
+      ...(logoUrl && {
+        icons: {
+          icon: logoUrl,
+          apple: logoUrl,
+        },
+      }),
       // Meta tags PWA para iOS (Safari no usa Web App Manifest para instalación)
       appleWebApp: {
         capable: true,
@@ -132,23 +145,23 @@ async function obtenerColoresTenant(): Promise<ColoresTenant> {
     }
 
     return {
-      primario: configuracion?.colores?.primario ?? "#2563eb",
-      secundario: configuracion?.colores?.secundario ?? "#16a34a",
+      primario: configuracion?.colores?.primario || "#2563eb",
+      secundario: configuracion?.colores?.secundario || "#16a34a",
     }
   } catch {
     return { primario: "#2563eb", secundario: "#16a34a" }
   }
 }
 
-// Obtiene el nombre del servicio para el Header a partir del tenant actual
-async function obtenerNombreServicio(): Promise<string> {
+// Obtiene el nombre del servicio y el logo para el Header a partir del tenant actual
+async function obtenerDatosTenant(): Promise<{ nombreServicio: string; logoUrl: string | null }> {
   try {
     const headersList = await headers()
     const host = headersList.get("host") ?? ""
     const slug = extraerSlugDelHost(host)
     const tenant = await obtenerTenantPorSlug(slug)
 
-    if (!tenant) return "Reservas Deportivas"
+    if (!tenant) return { nombreServicio: "Reservas Deportivas", logoUrl: null }
 
     let configuracion: ConfiguracionTenant | null = null
     if (tenant.configuracion) {
@@ -162,9 +175,12 @@ async function obtenerNombreServicio(): Promise<string> {
       }
     }
 
-    return configuracion?.nombreServicio ?? tenant.nombre ?? "Reservas Deportivas"
+    return {
+      nombreServicio: configuracion?.nombreServicio || (tenant as any).nombre || "Reservas Deportivas",
+      logoUrl: (tenant as any).logoUrl ?? null,
+    }
   } catch {
-    return "Reservas Deportivas"
+    return { nombreServicio: "Reservas Deportivas", logoUrl: null }
   }
 }
 
@@ -173,12 +189,13 @@ export default async function LayoutRaiz({
 }: {
   children: React.ReactNode
 }) {
-  const nombreServicio = await obtenerNombreServicio()
+  const { nombreServicio, logoUrl } = await obtenerDatosTenant()
   const colores = await obtenerColoresTenant()
 
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       style={
         {
           "--color-primario": colores.primario,
@@ -193,6 +210,7 @@ export default async function LayoutRaiz({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${inter.className} flex flex-col min-h-screen`}>
+        <NextTopLoader color={colores.primario} height={3} showSpinner={false} />
         {/* Enlace de salto al contenido principal — accesibilidad WCAG 2.1 */}
         <a
           href="#contenido-principal"
@@ -201,7 +219,7 @@ export default async function LayoutRaiz({
           Saltar al contenido principal
         </a>
         <Proveedores>
-          <Header nombreServicio={nombreServicio} />
+          <Header nombreServicio={nombreServicio} logoUrl={logoUrl} />
           <TransicionPagina>{children}</TransicionPagina>
           <Footer />
           <BannerCookies />

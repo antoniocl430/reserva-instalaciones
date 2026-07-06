@@ -36,6 +36,8 @@ export interface DatosFormularioAviso {
   descripcion: string
   tipo: TipoAviso
   fecha: string
+  /** Fecha de caducidad en formato YYYY-MM-DD, o null si el aviso no caduca */
+  caducaEn: string | null
 }
 
 export interface AvisoExistente extends DatosFormularioAviso {
@@ -65,6 +67,8 @@ export default function FormularioAviso({ aviso, onGuardar, onCancelar }: Formul
   const [descripcion, setDescripcion] = useState(aviso?.descripcion ?? "")
   const [tipo, setTipo] = useState<TipoAviso>(aviso?.tipo ?? "INFO")
   const [fecha, setFecha] = useState(aviso?.fecha ?? "")
+  // caducaEn es opcional: string con formato YYYY-MM-DD o vacío si no caduca
+  const [caducaEn, setCaducaEn] = useState(aviso?.caducaEn ?? "")
 
   // Estado de errores de validación por campo
   const [errores, setErrores] = useState<Partial<Record<"titulo" | "descripcion" | "fecha", string>>>({})
@@ -100,7 +104,14 @@ export default function FormularioAviso({ aviso, onGuardar, onCancelar }: Formul
 
     setEnviando(true)
     try {
-      await onGuardar({ titulo: titulo.trim(), descripcion: descripcion.trim(), tipo, fecha })
+      await onGuardar({
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        tipo,
+        fecha,
+        // Si el campo está vacío, se envía null (el aviso no caduca)
+        caducaEn: caducaEn.trim() || null,
+      })
     } finally {
       setEnviando(false)
     }
@@ -109,7 +120,7 @@ export default function FormularioAviso({ aviso, onGuardar, onCancelar }: Formul
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={manejarEnvio} className="space-y-4" noValidate>
+    <form onSubmit={manejarEnvio} className="space-y-4" noValidate aria-label="Formulario de aviso">
 
       {/* Campo: Título */}
       <div className="space-y-1.5">
@@ -185,6 +196,21 @@ export default function FormularioAviso({ aviso, onGuardar, onCancelar }: Formul
             </p>
           )}
         </div>
+      </div>
+
+      {/* Campo: Fecha de caducidad */}
+      <div className="space-y-1.5">
+        <Label htmlFor="aviso-caduca-en">Fecha de caducidad (opcional)</Label>
+        <Input
+          id="aviso-caduca-en"
+          type="date"
+          value={caducaEn}
+          onChange={(e) => setCaducaEn(e.target.value)}
+          aria-describedby="descripcion-caduca-en"
+        />
+        <p id="descripcion-caduca-en" className="text-xs text-gray-500">
+          Si se deja vacío, el aviso no caduca nunca.
+        </p>
       </div>
 
       {/* Botones de acción */}

@@ -159,6 +159,8 @@ describe("Aislamiento entre tenants", () => {
     prismaMock.$transaction.mockImplementation((fn: any) => fn(prismaMock))
     // Mockear usuario.findMany para notificaciones de admins (Bloque 8)
     prismaMock.usuario.findMany.mockResolvedValue([])
+    // La ruta GET /api/instalaciones llama a valoracion.groupBy para calcular medias
+    prismaMock.valoracion.groupBy.mockResolvedValue([])
   })
 
   // ── 1. GET /api/instalaciones ───────────────────────────────────────────────

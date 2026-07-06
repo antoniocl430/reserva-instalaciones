@@ -71,14 +71,14 @@ function FormularioNuevaPassword() {
     <>
       {/* Mensaje de éxito */}
       {completado && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-950/40 dark:border-green-900 dark:text-green-400">
           Contraseña cambiada correctamente. Ahora puedes iniciar sesión.
         </div>
       )}
 
       {/* Mensaje de enlace inválido */}
       {error === "Enlace inválido" && !completado && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-400" role="alert">
           Enlace inválido o expirado
         </div>
       )}
@@ -87,13 +87,13 @@ function FormularioNuevaPassword() {
       {!completado && token && (
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && error !== "Enlace inválido" && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-400" role="alert">
               {error}
             </div>
           )}
 
           <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground">
               Nueva contraseña
             </label>
             <input
@@ -103,13 +103,13 @@ function FormularioNuevaPassword() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Mínimo 8 caracteres"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="confirmarPassword" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="confirmarPassword" className="block text-sm font-medium text-foreground">
               Confirmar contraseña
             </label>
             <input
@@ -119,7 +119,7 @@ function FormularioNuevaPassword() {
               autoComplete="new-password"
               value={confirmarPassword}
               onChange={(e) => setConfirmarPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="••••••••"
             />
           </div>
@@ -135,14 +135,14 @@ function FormularioNuevaPassword() {
       )}
 
       {/* Pie */}
-      <div className="space-y-2 text-center text-sm text-gray-500">
+      <div className="space-y-2 text-center text-sm text-muted-foreground">
         {completado && (
           <Link href="/login" className="block font-medium text-blue-600 hover:underline">
             Ir a iniciar sesión
           </Link>
         )}
         {!completado && (
-          <Link href="/login" className="block text-gray-400 hover:text-gray-600">
+          <Link href="/login" className="block text-muted-foreground/60 hover:text-muted-foreground transition-colors">
             ← Volver al login
           </Link>
         )}
@@ -153,14 +153,14 @@ function FormularioNuevaPassword() {
 
 export default function PaginaNuevaPassword() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Establecer nueva contraseña</h1>
-          <p className="text-sm text-gray-500">Reservas Deportivas Municipales</p>
+          <h1 className="text-2xl font-bold text-foreground">Establecer nueva contraseña</h1>
+          <p className="text-sm text-muted-foreground">Reservas Deportivas Municipales</p>
         </div>
 
-        <Suspense fallback={<div className="text-center text-sm text-gray-400">Cargando...</div>}>
+        <Suspense fallback={<div className="text-center text-sm text-muted-foreground">Cargando...</div>}>
           <FormularioNuevaPassword />
         </Suspense>
       </div>

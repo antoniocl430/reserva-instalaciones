@@ -147,8 +147,14 @@ test-results/
 **/test-results/
 jest-results-*.json
 e2e/results.json
-playwright-report/
+.playwright-report/
+.playwright-mcp
 *.png
 *.jpg
 *.jpeg
 *.webp
+.vercel
+.env*
+
+# Cache de compilación SWC (Jest/Next.js)
+.swc

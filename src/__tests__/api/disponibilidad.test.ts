@@ -27,6 +27,9 @@ jest.mock('next-auth', () => ({
 jest.mock('@/lib/tenant', () => ({
   obtenerTenantIdPorSlug: jest.fn().mockResolvedValue('tenant-test'),
   extraerSlugDelHost: jest.fn().mockReturnValue('test'),
+  // parsearConfiguracion se usa en disponibilidad/route.ts para leer la config de slots.
+  // Devolvemos un objeto vacío para que el route use los slots por defecto.
+  parsearConfiguracion: jest.fn().mockReturnValue({}),
 }))
 
 import { GET } from '@/app/api/disponibilidad/route'
@@ -57,6 +60,11 @@ const instalacionActiva = {
 describe('GET /api/disponibilidad', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // El route consulta prisma.tenant.findUnique para cargar la config de slots.
+    prismaMock.tenant.findUnique.mockResolvedValue({ configuracion: null })
+    // Por defecto no hay festivos — cada test puede sobreescribir si lo necesita
+    prismaMock.festivo.findFirst.mockResolvedValue(null)
+    prismaMock.festivo.findMany.mockResolvedValue([])
   })
 
   it('debería devolver 404 cuando se consulta sin sesión y la instalación no existe', async () => {

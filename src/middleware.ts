@@ -1,6 +1,10 @@
 import { getToken } from "next-auth/jwt"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+// Se importa desde tenant-slug.ts (no desde @/lib/tenant) porque el middleware
+// corre en el Edge Runtime: tenant.ts importa Prisma dinámicamente, y aunque no
+// se use aquí, el bundler de Next lo incluiría igualmente en el bundle del
+// middleware (sin code-splitting en Edge), superando el límite de 1MB de Vercel.
 import { extraerSlugDelHost } from "@/lib/tenant-slug"
 
 // Rutas que requieren estar autenticado
@@ -17,7 +21,16 @@ const RUTAS_PUBLICAS_AUTH = ["/login", "/registro", "/recuperar-password", "/nue
 const RUTA_ADMIN_LOGIN = "/admin/login"
 // Rutas de API que son públicas (no requieren autenticación)
 // UI-FLOWS.md: la disponibilidad y las instalaciones son públicas (GAP-03)
-const RUTAS_API_PUBLICAS = ["/api/auth", "/api/instalaciones", "/api/disponibilidad"]
+// /api/verificar es pública: permite escanear QR sin estar autenticado
+// /api/verificar-email y /api/reenviar-verificacion: flujo de verificación de email al registro
+const RUTAS_API_PUBLICAS = [
+  "/api/auth",
+  "/api/instalaciones",
+  "/api/disponibilidad",
+  "/api/verificar",
+  "/api/verificar-email",
+  "/api/reenviar-verificacion",
+]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -164,5 +177,7 @@ export const config = {
     "/api/instalaciones/:path*",
     "/api/avisos/:path*",
     "/api/push/:path*",
+    "/api/verificar-email",
+    "/api/reenviar-verificacion",
   ],
 }
