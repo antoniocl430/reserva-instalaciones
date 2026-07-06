@@ -41,29 +41,59 @@ class InstalacionCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final icono = iconoPorTipo(instalacion.tipo);
+    // Las instalaciones desactivadas por el admin se muestran en gris y no se
+    // pueden pulsar (no reservables).
+    final activa = instalacion.activa;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant),
+    return Opacity(
+      opacity: activa ? 1.0 : 0.55,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        child: InkWell(
+          onTap: activa ? onTap : null,
+          child: compact
+              ? _CompactLayout(
+                  instalacion: instalacion,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  icono: icono,
+                )
+              : _FullLayout(
+                  instalacion: instalacion,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  icono: icono,
+                ),
+        ),
       ),
-      child: InkWell(
-        onTap: onTap,
-        child: compact
-            ? _CompactLayout(
-                instalacion: instalacion,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-                icono: icono,
-              )
-            : _FullLayout(
-                instalacion: instalacion,
-                colorScheme: colorScheme,
-                textTheme: textTheme,
-                icono: icono,
-              ),
+    );
+  }
+}
+
+/// Badge gris "No disponible" para instalaciones desactivadas.
+class _BadgeNoDisponible extends StatelessWidget {
+  const _BadgeNoDisponible({required this.textTheme});
+  final TextTheme textTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        'No disponible',
+        style: textTheme.labelSmall?.copyWith(
+          color: Colors.grey.shade800,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -123,6 +153,10 @@ class _CompactLayout extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (!instalacion.activa) ...[
+                  const SizedBox(height: 6),
+                  _BadgeNoDisponible(textTheme: textTheme),
+                ],
                 if (instalacion.mediaValoraciones != null) ...[
                   const SizedBox(height: 6),
                   Row(
@@ -203,6 +237,10 @@ class _FullLayout extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (!instalacion.activa) ...[
+                      const SizedBox(width: 8),
+                      _BadgeNoDisponible(textTheme: textTheme),
+                    ],
                     if (instalacion.mediaValoraciones != null) ...[
                       const SizedBox(width: 8),
                       Icon(Icons.star_rounded,
