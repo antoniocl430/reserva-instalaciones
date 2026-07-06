@@ -35,16 +35,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
 
-    final token = await SecureStorage.instance.obtenerToken();
+    // Si el almacenamiento seguro falla por cualquier motivo, tratamos al
+    // usuario como no autenticado en lugar de dejar la splash colgada.
+    String? token;
+    try {
+      token = await SecureStorage.instance.obtenerToken();
+    } catch (_) {
+      token = null;
+    }
 
     if (!mounted) return;
 
     // Ayuntamiento fijo (Herrera): no hay selección de municipio.
-    if (token != null) {
-      context.go('/home');
-    } else {
-      context.go('/login');
-    }
+    context.go(token != null ? '/home' : '/login');
   }
 
   @override
