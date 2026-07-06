@@ -30,6 +30,7 @@ interface Reserva {
   horaFin: string
   estado: string
   noShow: boolean
+  asistenciaConfirmada: boolean
   usuario: {
     nombre: string
     email: string
@@ -430,6 +431,12 @@ export default function PaginaReservasAdmin() {
                           {reserva.noShow && (
                             <Badge className="bg-red-100 text-red-700 text-xs">
                               No presentado
+                            </Badge>
+                          )}
+                          {/* Badge de asistencia confirmada por el ciudadano (escaneo QR) */}
+                          {reserva.asistenciaConfirmada && (
+                            <Badge className="bg-green-100 text-green-700 text-xs">
+                              Asistió
                             </Badge>
                           )}
                         </div>
