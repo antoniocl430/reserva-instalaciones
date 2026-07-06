@@ -17,12 +17,24 @@ import '../screens/lista_espera/lista_espera_screen.dart';
 import '../models/instalacion.dart';
 import '../models/reserva.dart';
 
+/// Puente entre Riverpod y go_router: notifica al router que reevalúe los
+/// redirects cuando cambia la sesión, SIN recrear el GoRouter. Recrear el
+/// router (con ref.watch) reiniciaba la navegación a la splash en cada cambio
+/// de estado del login, provocando el parpadeo splash → login.
+class _AuthRefreshNotifier extends ChangeNotifier {
+  _AuthRefreshNotifier(Ref ref) {
+    ref.listen(authProvider, (_, __) => notifyListeners());
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final refresh = _AuthRefreshNotifier(ref);
 
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refresh,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
 
