@@ -88,10 +88,42 @@ export async function POST(request: NextRequest) {
   })
 
   if (!reserva) {
+    // Mensaje más útil: si tiene una reserva ACTIVA futura hoy en esta pista,
+    // indicar a qué hora podrá confirmar; si no, decir que no hay reserva.
+    const inicioHoy = new Date(ahora)
+    inicioHoy.setUTCHours(0, 0, 0, 0)
+    const finHoy = new Date(inicioHoy.getTime() + 24 * 60 * 60 * 1000)
+
+    const proxima = await prisma.reserva.findFirst({
+      where: {
+        tenantId,
+        usuarioId,
+        instalacionId,
+        estado: "ACTIVA",
+        horaInicio: { gte: ahora, lt: finHoy },
+      },
+      orderBy: { horaInicio: "asc" },
+      select: { horaInicio: true },
+    })
+
+    if (proxima) {
+      const hora = proxima.horaInicio.toLocaleTimeString("es-ES", {
+        timeZone: "Europe/Madrid",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      return NextResponse.json(
+        {
+          error: `Tu reserva en ${instalacion.nombre} es a las ${hora}. Podrás confirmar tu asistencia a partir de 1 hora antes.`,
+        },
+        { status: 404, headers: CORS_HEADERS }
+      )
+    }
+
     return NextResponse.json(
       {
         error:
-          "No tienes ninguna reserva activa en esta instalación en este momento. La asistencia solo puede confirmarse cerca de la hora de tu reserva.",
+          "No tienes ninguna reserva activa en esta instalación en este momento.",
       },
       { status: 404, headers: CORS_HEADERS }
     )
