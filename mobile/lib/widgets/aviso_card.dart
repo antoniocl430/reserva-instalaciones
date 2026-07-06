@@ -60,16 +60,20 @@ class AvisoCard extends StatelessWidget {
   }
 
   String _formatearFecha(DateTime fecha) {
+    // Los avisos se basan en una FECHA (día), no en una hora concreta. Comparamos
+    // por días de calendario en hora local para evitar valores negativos por
+    // desfases de zona horaria o del reloj del dispositivo.
+    final f = fecha.toLocal();
     final ahora = DateTime.now();
-    final diferencia = ahora.difference(fecha);
-    if (diferencia.inMinutes < 60) {
-      return 'Hace ${diferencia.inMinutes} min';
-    } else if (diferencia.inHours < 24) {
-      return 'Hace ${diferencia.inHours} h';
-    } else if (diferencia.inDays < 7) {
-      return 'Hace ${diferencia.inDays} días';
-    }
-    return '${fecha.day}/${fecha.month}/${fecha.year}';
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final diaAviso = DateTime(f.year, f.month, f.day);
+    final dias = hoy.difference(diaAviso).inDays;
+
+    if (dias == 0) return 'Hoy';
+    if (dias == 1) return 'Ayer';
+    if (dias > 1 && dias < 7) return 'Hace $dias días';
+    // Fechas más antiguas o futuras (avisos programados): mostrar la fecha
+    return '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
   }
 
   @override
